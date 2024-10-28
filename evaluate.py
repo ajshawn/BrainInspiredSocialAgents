@@ -47,13 +47,13 @@ def main(_):
         list(scenario.SCENARIOS_BY_SUBSTRATE[FLAGS.map_name]))
 
     # running evaluations on scenarios
-    for scenario_name in scenarios_for_substrate:
-      env_factory = functools.partial(
-          helpers.make_meltingpot_scenario, scenario_name=scenario_name)
-      env_factory(0)
-      config.environment_factory = env_factory
-      experiments.run_evaluation(
-          config, ckpt_config, environment_name=scenario_name)
+    # for scenario_name in scenarios_for_substrate:
+    #   env_factory = functools.partial(
+    #       helpers.make_meltingpot_scenario, scenario_name=scenario_name)
+    #   env_factory(0)
+    #   config.environment_factory = env_factory
+    #   experiments.run_evaluation(
+    #       config, ckpt_config, environment_name=scenario_name)
   else:
     # running evaluation on substrate
     experiments.run_evaluation(
