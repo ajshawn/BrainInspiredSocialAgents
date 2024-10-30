@@ -185,15 +185,15 @@ class MALearner(acme.Learner):
     counts = self._counter.increment(steps=1, time_elapsed=time.time() - start)
 
     # Shuffle the parameters every 1 learner steps
-    if counts["learner_steps"] % 1 == 0:
-      selected_order = jax.random.choice(
-          next(self._rng), self.n_agents, (self.n_agents,), replace=False)
-      # converting the selected_order to numpy as the parameters are also in numpy
-      selected_order = jax.device_get(selected_order)
+    # if counts["learner_steps"] % 1 == 0:
+    #   selected_order = jax.random.choice(
+    #       next(self._rng), self.n_agents, (self.n_agents,), replace=False)
+    #   # converting the selected_order to numpy as the parameters are also in numpy
+    #   selected_order = jax.device_get(selected_order)
 
-      shuffle_state = self.save()
-      shuffle_state = ma_utils.select_idx(shuffle_state, selected_order)
-      self.restore(shuffle_state)
+    #   shuffle_state = self.save()
+    #   shuffle_state = ma_utils.select_idx(shuffle_state, selected_order)
+    #   self.restore(shuffle_state)
 
     # Maybe write logs.
     self._logger.write({**results, **counts})
