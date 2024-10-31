@@ -76,6 +76,8 @@ flags.DEFINE_integer("actors_per_node", 1, "Number of actors per thread.")
 flags.DEFINE_bool("inference_server", False, "Whether to run inference server.")
 flags.DEFINE_string("experiment_dir", None,
                     "Directory to resume experiment from.")
+flags.DEFINE_string("frozen_agents", None,
+                    "Comma separated list of frozen agents.")
 
 
 def build_experiment_config():
@@ -89,6 +91,7 @@ def build_experiment_config():
   prosocial = FLAGS.prosocial
   record = FLAGS.record_video
   memory_efficient = not FLAGS.all_parallel
+  frozen_agents = set([int(agent) for agent in FLAGS.frozen_agents.split(",")] if FLAGS.frozen_agents else [])
 
   if FLAGS.experiment_dir:
     assert FLAGS.algo_name in FLAGS.experiment_dir, f"experiment_dir must be a {FLAGS.algo_name} experiment"
@@ -208,6 +211,9 @@ def build_experiment_config():
     builder = opre.PopArtOPREBuilder(config, core_state_spec=core_spec)
   else:
     raise ValueError(f"Unknown algo_name {FLAGS.algo_name}")
+  
+  # Add frozen agents
+  builder._config.frozen_agents = frozen_agents
 
   return (
       experiments.MAExperimentConfig(

@@ -24,6 +24,9 @@ class MAConfig:
   # Environment Details
   n_agents: int = None
 
+  # Freeze agents
+  frozen_agents: set[int] = None
+
   # Optimization configuration
   use_parameter_sampling: bool = False
 

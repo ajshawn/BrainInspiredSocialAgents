@@ -1,4 +1,4 @@
-EXP_DIR="/local/shawn/marl-jax/results/PopArtIMPALA_0_meltingpot_predator_prey__open_2024-10-21_20:05:04.446458"
+EXP_DIR="/local/shawn/marl-jax/results/PopArtIMPALA_0_meltingpot_predator_prey__open_2024-10-30_11:15:28.422241"
 
 CUDA_VISIBLE_DEVICES="4,5" python evaluate.py \
     --async_distributed \

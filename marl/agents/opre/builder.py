@@ -74,6 +74,7 @@ class OPREBuilder(MABuilder):
         max_abs_reward=self._config.max_abs_reward,
         counter=counter,
         logger=logger_fn(label="learner"),
+        frozen_agents=self._config.frozen_agents,
     )
 
 
@@ -150,4 +151,5 @@ class PopArtOPREBuilder(MABuilder):
         max_abs_reward=self._config.max_abs_reward,
         counter=counter,
         logger=logger_fn(label="learner"),
+        frozen_agents=self._config.frozen_agents,
     )
