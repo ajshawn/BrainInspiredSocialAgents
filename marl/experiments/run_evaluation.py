@@ -24,7 +24,7 @@ def run_evaluation(
     experiment: ma_config.MAExperimentConfig,
     checkpointing_config: ma_config.CheckpointingConfig,
     environment_name: str,
-    num_eval_episodes: int = 3,
+    num_eval_episodes: int = 5,
 ):
   """Runs a simple, single-threaded evaluation loop using the default evaluators.
 
@@ -144,10 +144,13 @@ class Evaluate(core.Actor):
       self._states = self._initial_states
       self.update(True)
       self.loaded_params = self._params
-      self.selected_params = jax.random.choice(
-          next(self._rng), self.n_params, (self.n_agents,), replace=True)
-      self.episode_params = ma_utils.select_idx(self.loaded_params,
-                                                self.selected_params)
+      # Replace the random parameter selection with deterministic sequential selection
+      self.selected_params = jnp.arange(self.n_agents) % self.n_params
+      self.episode_params = ma_utils.select_idx(self.loaded_params, self.selected_params)
+      # self.selected_params = jax.random.choice(
+      #     next(self._rng), self.n_params, (self.n_agents,), replace=False)
+      # self.episode_params = ma_utils.select_idx(self.loaded_params,
+      #                                           self.selected_params)
 
     (logits, _), new_states = self._p_forward(self.episode_params, observations,
                                               self._states)
