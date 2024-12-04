@@ -23,7 +23,7 @@ from marl.utils.experiment_utils import make_experiment_logger
 import train
 
 FLAGS = flags.FLAGS
-
+flags.DEFINE_bool("run_eval_on_scenarios", False, "Whether to run evaluation on meltingpot scenarios.")
 
 def main(_):
   if FLAGS.experiment_dir is None:
@@ -39,21 +39,23 @@ def main(_):
 
   if FLAGS.env_name == "meltingpot":
 
-    # running evaluation on substrate
-    experiments.run_evaluation(
-        config, ckpt_config, environment_name=FLAGS.map_name)
-
-    scenarios_for_substrate = sorted(
-        list(scenario.SCENARIOS_BY_SUBSTRATE[FLAGS.map_name]))
-
-    # running evaluations on scenarios
-    # for scenario_name in scenarios_for_substrate:
-    #   env_factory = functools.partial(
-    #       helpers.make_meltingpot_scenario, scenario_name=scenario_name)
-    #   env_factory(0)
-    #   config.environment_factory = env_factory
-    #   experiments.run_evaluation(
-    #       config, ckpt_config, environment_name=scenario_name)
+    if FLAGS.run_eval_on_scenarios:
+      scenarios_for_substrate = sorted(list(scenario.SCENARIOS_BY_SUBSTRATE[FLAGS.map_name]))
+      
+      print(f"Running evaluation on scenarios: {scenarios_for_substrate}")
+      
+      for scenario_name in scenarios_for_substrate:
+        env_factory = functools.partial(
+            helpers.make_meltingpot_scenario, scenario_name=scenario_name, record=True)
+        env_factory(0)
+        config.environment_factory = env_factory
+        experiments.run_evaluation(
+            config, ckpt_config, environment_name=scenario_name)
+    else:
+      # running evaluation on substrate
+      experiments.run_evaluation(
+          config, ckpt_config, environment_name=FLAGS.map_name)
+      
   else:
     # running evaluation on substrate
     experiments.run_evaluation(
