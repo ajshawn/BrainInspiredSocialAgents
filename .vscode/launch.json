@@ -9,14 +9,55 @@
             "console": "integratedTerminal",
             "args": [
                 "--async_distributed",
-                "--available_gpus", "4,5,6,7",
+                "--available_gpus", "0,1,2,3",
                 "--num_actors", "4",
-                "--algo_name", "IMPALA",
+                "--algo_name", "PopArtIMPALA",
                 "--env_name", "meltingpot",
-                "--map_name", "predator_prey__open"
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-05_19:25:40.371381",
             ],
             "env": {
                 "CUDA_VISIBLE_DEVICES": "4,5,6,7"
+            }
+        },
+        {
+            "name": "Python Debugger: eval.py with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--async_distributed",
+                "--available_gpus", "6,7",
+                "--num_actors", "16",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-13_22:19:52.007527",
+                "--record_video", "true"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "6,7"
+            }
+        },
+        {
+            "name": "Python Debugger: eval.py with scenarios",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "0,1",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp1950",
+                "--record_video", "true",
+                "--run_eval_on_scenarios", "true",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0,1"
             }
         }
     ]
