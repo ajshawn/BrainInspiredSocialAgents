@@ -18,6 +18,7 @@ import jax.numpy as jnp
 from marl import specs as ma_specs
 from marl.experiments import config as ma_config
 from marl.utils import experiment_utils as ma_utils
+from marl.utils.scenario2agent_idx import SCENARIO_2_AGENT_IDX_OFFSET
 
 
 def run_evaluation(
@@ -93,11 +94,13 @@ def run_evaluation(
       steps_key=eval_counter.get_steps_key(),
       task_instance=0)
 
+  agent_idx_offset = SCENARIO_2_AGENT_IDX_OFFSET.get(environment_name, 0)
   eval_actor = Evaluate(
       network.forward_fn,
       network.initial_state_fn,
       n_agents=environment.num_agents,
       n_params=environment_specs.num_agents,
+      agent_idx_offset=agent_idx_offset,
       variable_client=variable_client,
       rng=hk.PRNGSequence(experiment.seed),
   )
@@ -120,12 +123,14 @@ class Evaluate(core.Actor):
       initial_state_fn,
       n_agents,
       n_params,
+      agent_idx_offset,
       variable_client,
       rng,
   ):
     self.forward_fn = forward_fn
     self.n_agents = n_agents
     self.n_params = n_params
+    self.agent_idx_offset = agent_idx_offset
     self._rng = rng
     self._variable_client = variable_client
 
@@ -145,8 +150,10 @@ class Evaluate(core.Actor):
       self.update(True)
       self.loaded_params = self._params
       # Replace the random parameter selection with deterministic sequential selection
-      self.selected_params = jnp.arange(self.n_agents) % self.n_params
+      # Add agent_idx_offset to the selected_params to ensure the correct roles in scenario evaluations
+      self.selected_params = (jnp.arange(self.n_agents) % self.n_params) + self.agent_idx_offset
       self.episode_params = ma_utils.select_idx(self.loaded_params, self.selected_params)
+      
       # self.selected_params = jax.random.choice(
       #     next(self._rng), self.n_params, (self.n_agents,), replace=False)
       # self.episode_params = ma_utils.select_idx(self.loaded_params,
