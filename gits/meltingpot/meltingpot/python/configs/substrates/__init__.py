@@ -48,7 +48,7 @@ def _validated(build):
   return lab2d_settings_builder
 
 
-def get_config(substrate: str) -> config_dict.ConfigDict:
+def get_config(substrate: str, **kwargs) -> config_dict.ConfigDict:
   """Returns the specified config.
 
   Args:
@@ -61,7 +61,7 @@ def get_config(substrate: str) -> config_dict.ConfigDict:
     raise ValueError(f'{substrate} not in {SUBSTRATES}.')
   path = f'{__name__}.{substrate}'
   module = importlib.import_module(path)
-  config = module.get_config()
+  config = module.get_config(**kwargs)
   with config.unlocked():
     config.lab2d_settings_builder = _validated(module.build)
   return config.lock()

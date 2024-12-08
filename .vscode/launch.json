@@ -8,16 +8,14 @@
             "program": "${workspaceFolder}/train.py",
             "console": "integratedTerminal",
             "args": [
-                "--async_distributed",
-                "--available_gpus", "0,1,2,3",
-                "--num_actors", "4",
+                "--available_gpus", "0",
+                "--num_actors", "1",
                 "--algo_name", "PopArtIMPALA",
                 "--env_name", "meltingpot",
                 "--map_name", "predator_prey__open",
-                "--experiment_dir", "/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-05_19:25:40.371381",
             ],
             "env": {
-                "CUDA_VISIBLE_DEVICES": "4,5,6,7"
+                "CUDA_VISIBLE_DEVICES": "0"
             }
         },
         {
@@ -59,6 +57,25 @@
             "env": {
                 "CUDA_VISIBLE_DEVICES": "0,1"
             }
-        }
+        },
+        {
+            "name": "Python Debugger: train coop_mining",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "0",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "coop_mining",
+                "--conservative_mine_beam", "true",
+                "--dense_ore_regrow", "true",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
     ]
 }

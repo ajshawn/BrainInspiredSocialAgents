@@ -24,12 +24,12 @@ from meltingpot.python.utils.substrates import substrate_factory
 SUBSTRATES = substrate_configs.SUBSTRATES
 
 
-def get_config(name: str) -> config_dict.ConfigDict:
+def get_config(name: str, **kwargs) -> config_dict.ConfigDict:
   """Returns the configs for the specified substrate."""
-  return substrate_configs.get_config(name).lock()
+  return substrate_configs.get_config(name, **kwargs).lock()
 
 
-def build(name: str, *, roles: Sequence[str]) -> substrate.Substrate:
+def build(name: str, *, roles: Sequence[str], **kwargs) -> substrate.Substrate:
   """Builds an instance of the specified substrate.
 
   Args:
@@ -40,7 +40,7 @@ def build(name: str, *, roles: Sequence[str]) -> substrate.Substrate:
   Returns:
     The training substrate.
   """
-  return get_factory(name).build(roles)
+  return get_factory(name, **kwargs).build(roles)
 
 
 def build_from_config(
@@ -61,9 +61,9 @@ def build_from_config(
   return get_factory_from_config(config).build(roles)
 
 
-def get_factory(name: str) -> substrate_factory.SubstrateFactory:
+def get_factory(name: str, **kwargs) -> substrate_factory.SubstrateFactory:
   """Returns the factory for the specified substrate."""
-  config = substrate_configs.get_config(name)
+  config = substrate_configs.get_config(name, **kwargs)
   return get_factory_from_config(config)
 
 

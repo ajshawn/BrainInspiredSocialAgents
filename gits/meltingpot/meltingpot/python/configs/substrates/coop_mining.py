@@ -300,11 +300,35 @@ ORE = {
     ]
 }
 
+DENSER_ORE_REGROW = {
+    "component": "FixedRateRegrow",
+    "kwargs": {
+        "liveStates": ["ironRaw", "goldRaw"],
+        "liveRates": [0.0004, 0.000016],
+        "waitState": "oreWait",
+    }
+}
+
 
 PLAYER_COLOR_PALETTES = []
 for human_readable_color in colors.human_readable:
   PLAYER_COLOR_PALETTES.append(shapes.get_palette(human_readable_color))
 
+CONSERVATIVE_MINE_BEAM ={
+    "component": "MineBeam",
+    "kwargs": {
+        "cooldownTime": 3,
+        "beamLength": 3,
+        "beamRadius": 0,
+        "agentRole": "none",
+        "roleRewardForMining": {
+            "none": [-0.1, -0.1],
+            "golddigger": [0, 0.2], "irondigger": [0, 0]},
+        "roleRewardForExtracting": {
+            "none": [1, 8],
+            "golddigger": [-1, 8], "irondigger": [8, -1]},
+    }
+}
 
 def get_avatar_object(num_players: int, player_index: int):
   """Construct an avatar object."""
@@ -443,9 +467,11 @@ ACTION_SET = (
 )
 
 
-def get_config():
+def get_config(**kwargs):
   """Default configuration for the coop_mining level."""
   config = config_dict.ConfigDict()
+
+  config.custom_args = kwargs
 
   # Action set configuration.
   config.action_set = ACTION_SET
@@ -479,8 +505,25 @@ def build(
     config: config_dict.ConfigDict,
 ) -> Mapping[str, Any]:
   """Build substrate given player roles."""
-  del config
+
   num_players = len(roles)
+  gameObjects = get_avatar_objects(num_players)
+  prefabs = PREFABS
+
+  if 'conservative_mine_beam' in config.custom_args:
+    for avatar in gameObjects:
+        # Remove old MineBeam component.
+        avatar["components"] = [c for c in avatar["components"]
+                                if c["component"] != "MineBeam"]
+        # Add new MineBeam component.
+        avatar["components"].append(CONSERVATIVE_MINE_BEAM)
+
+  if 'dense_ore_regrow' in config.custom_args:
+    # Remove old FixedRateRegrow component.
+    prefabs["ore"]["components"] = [c for c in prefabs["ore"]["components"]
+                                    if c["component"] != "FixedRateRegrow"]
+    # Add new FixedRateRegrow component.
+    prefabs["ore"]["components"].append(DENSER_ORE_REGROW)
 
   return dict(
       levelName="coop_mining",
@@ -492,9 +535,9 @@ def build(
       topology="BOUNDED",  # Choose from ["BOUNDED", "TORUS"],
       simulation={
           "map": ASCII_MAP,
-          "gameObjects": get_avatar_objects(num_players),
+          "gameObjects": gameObjects,
           "scene": SCENE,
-          "prefabs": PREFABS,
+          "prefabs": prefabs,
           "charPrefabMap": CHAR_PREFAB_MAP,
       },
   )
