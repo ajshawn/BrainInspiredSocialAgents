@@ -1,0 +1,14 @@
+# Ignore byte-compiled Python code.
+*.py[cod]
+
+# Ignore common venv names.
+/*venv/
+
+# Ignore setup files created by install.sh.
+*.egg-info
+/build/
+/lab2d/
+
+# Ignore saved models.
+/examples/results/
+/meltingpot/assets/
