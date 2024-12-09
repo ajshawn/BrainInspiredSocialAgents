@@ -72,6 +72,7 @@
                 "--map_name", "coop_mining",
                 "--conservative_mine_beam", "true",
                 "--dense_ore_regrow", "true",
+                "--agent_roles", "default, default, default",
             ],
             "env": {
                 "CUDA_VISIBLE_DEVICES": "0"

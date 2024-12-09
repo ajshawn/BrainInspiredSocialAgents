@@ -78,6 +78,8 @@ flags.DEFINE_string("experiment_dir", None,
                     "Directory to resume experiment from.")
 flags.DEFINE_string("frozen_agents", None,
                     "Comma separated list of frozen agents.")
+flags.DEFINE_string("agent_roles", None,
+                    "Comma separated list of agent roles.")
 
 # Coop-Mining specific flags
 flags.DEFINE_bool("conservative_mine_beam", False, "Whether to use conservative mining beam that penalizes mining")
@@ -104,6 +106,7 @@ def build_experiment_config():
   record = FLAGS.record_video
   memory_efficient = not FLAGS.all_parallel
   frozen_agents = set([int(agent) for agent in FLAGS.frozen_agents.split(",")] if FLAGS.frozen_agents else [])
+  agent_roles = [role.strip() for role in FLAGS.agent_roles.split(",")] if FLAGS.agent_roles else None
 
   if FLAGS.experiment_dir:
     assert FLAGS.algo_name in FLAGS.experiment_dir, f"experiment_dir must be a {FLAGS.algo_name} experiment"
@@ -160,6 +163,7 @@ def build_experiment_config():
         reward_scale=reward_scale,
         shared_obs=False,
         record=record,
+        agent_roles=agent_roles,
         **custom_env_configs)
     feature_extractor = MeltingpotFE
     num_options = 16
