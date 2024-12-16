@@ -81,6 +81,9 @@ flags.DEFINE_string("frozen_agents", None,
 flags.DEFINE_string("agent_roles", None,
                     "Comma separated list of agent roles.")
 
+# Custom flag for map selection
+flags.DEFINE_string("map_layout", None, "Custom map layout for meltingpot maps")
+
 # Coop-Mining specific flags
 flags.DEFINE_bool("conservative_mine_beam", False, "Whether to use conservative mining beam that penalizes mining")
 flags.DEFINE_bool("dense_ore_regrow", False, "Whether to use a larger ore regrowth rate")
@@ -92,6 +95,8 @@ def _get_custom_env_configs():
       result["conservative_mine_beam"] = True
     if FLAGS.dense_ore_regrow:
       result["dense_ore_regrow"] = True
+  if FLAGS.map_layout:
+    result[FLAGS.map_layout] = True
   return result
 
 def build_experiment_config():

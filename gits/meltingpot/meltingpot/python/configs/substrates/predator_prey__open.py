@@ -55,6 +55,22 @@ L+*******************=J
 /L~~~~~~~~~~~~~~~~~~~J/
 """
 
+SMALLER_13x13_ASCII_MAP = """
+/;_________,/
+;]*********[,
+!vvvvvvvvvvv|
+!''XXXXXXX''|
+!''XaaaAaX''|
+!aAa&aaAaaa'|
+!aaaaaaaaaA'|
+!AaAaaa&aaA'|
+!''XaaAaaX''|
+!''XXXXXXX''|
+!^^^^^^^^^^^|
+L+*********=J
+/L~~~~~~~~~J/
+"""
+
 # `prefab` determines which prefab game object to use for each `char` in the
 # ascii map.
 CHAR_PREFAB_MAP = {
@@ -89,13 +105,17 @@ CHAR_PREFAB_MAP = {
 }
 
 
-def get_config():
+def get_config(**kwargs):
   """Default configuration."""
   config = base_config.get_config()
 
   # Override the map layout settings.
   config.layout = config_dict.ConfigDict()
-  config.layout.ascii_map = ASCII_MAP
+  # Select the map layout.
+  if kwargs.get("smaller_13x13"):
+    config.layout.ascii_map = SMALLER_13x13_ASCII_MAP
+  else:  
+    config.layout.ascii_map = ASCII_MAP
   config.layout.char_prefab_map = CHAR_PREFAB_MAP
 
   # The specs of the environment (from a single-agent perspective).
