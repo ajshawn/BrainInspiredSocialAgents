@@ -173,7 +173,7 @@ class OPRENetwork(hk.RNNCore):
     #                               (auxiliary_state.shape[0], -1))
     auxiliary_state = jnp.sum(auxiliary_state, axis=1)  # B, embedding_dim
 
-    q_options = self._q_options_head(auxiliary_state)  # B, num_options
+    q_options = self._q_options_head(auxiliary_state)  # B, num_options NOTE: seems like the self observation is not excluded
     q_options = jax.nn.softmax(q_options, axis=-1)  # B, num_options
     q_logits = (
         options_action_probs *
