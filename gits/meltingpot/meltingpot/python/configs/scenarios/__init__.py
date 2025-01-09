@@ -2385,6 +2385,20 @@ SCENARIO_CONFIGS: Mapping[str, ScenarioConfig] = immutabledict.immutabledict(
                          'predator_prey__open__basic_predator_1',},
         },
     ),
+    predator_prey__open_7=ScenarioConfig(
+        description=(
+            'custom scenario; one focal prey plays against one background predator'),
+        tags={
+            'visitor',
+        },
+        substrate='predator_prey__open',
+        roles=('prey',) + ('predator',),
+        is_focal=(True,) + (False,),
+        bots_by_role={
+            'predator': {'predator_prey__open__basic_predator_0',
+                         'predator_prey__open__basic_predator_1',},
+        },
+    ),
     predator_prey__orchard_0=ScenarioConfig(
         description='focal prey visited by background predators',
         tags={

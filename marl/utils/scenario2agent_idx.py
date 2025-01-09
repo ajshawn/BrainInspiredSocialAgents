@@ -8,4 +8,5 @@ SCENARIO_2_AGENT_IDX_OFFSET = {
     "predator_prey__open_4": 0, # Focal predators hunt smarter resident prey
     "predator_prey__open_5": 0, # A focal predator competes with background predators to hunt smarter prey
     "predator_prey__open_6": 3, # One focal prey ad hoc cooperates with background smart prey to avoid predation
+    "predator_prey__open_7": 3, # custom scenario; one focal prey plays against one background predator
 }
