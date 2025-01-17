@@ -5,7 +5,9 @@ import numpy as np
 N_TOTAL_AGENTS = 13
 window_size = 20  # Choose a window size that suits your data
 
-csv_file = '/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-05_19:25:40.371381/csv_logs/actor.csv'
+prefix='results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp8202/csv_logs'
+
+csv_file = f'{prefix}/actor.csv'
 
 df = pd.read_csv(csv_file)
 
@@ -36,7 +38,7 @@ for agent_idx in range(N_TOTAL_AGENTS):
     plt.legend()
 
     # Save the plot
-    plt.savefig(f'/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-05_19:25:40.371381/csv_logs/agent_{agent_idx}_reward_smoothed.png')
+    plt.savefig(f'{prefix}/agent_{agent_idx}_reward_smoothed.png')
 
     # Clear the plot
     plt.clf()
