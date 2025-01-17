@@ -3,7 +3,7 @@
 from collections.abc import Iterator
 from collections.abc import Sequence
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 
 from absl import logging
 import acme
@@ -35,6 +35,7 @@ class MALearner(acme.Learner):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
+      frozen_agents: Optional[set] = None,
   ):
     local_devices = jax.local_devices()
     process_id = jax.process_index()
@@ -53,6 +54,7 @@ class MALearner(acme.Learner):
     self.network = network
     self.optimizer = optimizer
     self.n_agents = n_agents
+    self.frozen_agents = frozen_agents or set()
     self.n_devices = len(self._local_devices)
     self._rng = hk.PRNGSequence(random_key)
 
@@ -85,13 +87,19 @@ class MALearner(acme.Learner):
 
     @jax.jit
     def sgd_step(
-        state: types.TrainingState, sample: types.TrainingData
+        state: types.TrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray
     ) -> tuple[types.TrainingState, dict[str, jnp.ndarray]]:
       """Computes an SGD step, returning new state and metrics for logging."""
 
       # Compute gradients.
       grad_fn = jax.grad(self._loss_fn, has_aux=True)
       gradients, metrics = grad_fn(state.params, sample)
+
+      # Create a mask where 0 means frozen, and 1 means not frozen.
+      mask = jnp.where(is_frozen, 0.0, 1.0)
+
+      # Apply the mask to the gradients.
+      gradients = jax.tree_map(lambda g: g * mask, gradients)
 
       # Apply updates.
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
@@ -116,7 +124,7 @@ class MALearner(acme.Learner):
     self._loss_fn = loss_fn(network=network)
 
     self._sgd_step = jax.pmap(
-        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2))
+        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0))
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()
@@ -179,7 +187,12 @@ class MALearner(acme.Learner):
           extras=slice_data_2(samples.extras, i, self.n_devices),
       )
 
-      new_state, result = self._sgd_step(cur_state, cur_sample)
+      # Check which agents in the current chunk are frozen
+      is_frozen_chunk = jnp.array([
+          agent_idx in self.frozen_agents for agent_idx in range(i, min(i + self.n_devices, self.n_agents))
+      ])
+
+      new_state, result = self._sgd_step(cur_state, cur_sample, is_frozen_chunk)
 
       new_states.append(jax.device_get(new_state))
       results.append(jax.device_get(result))
@@ -191,15 +204,15 @@ class MALearner(acme.Learner):
     counts = self._counter.increment(steps=1, time_elapsed=time.time() - start)
 
     # Shuffle the parameters every 1 learner steps
-    if counts["learner_steps"] % 1 == 0:
-      selected_order = jax.random.choice(
-          next(self._rng), self.n_agents, (self.n_agents,), replace=False)
-      # converting the selected_order to numpy as the parameters are also in numpy
-      selected_order = jax.device_get(selected_order)
+    # if counts["learner_steps"] % 1 == 0:
+    #   selected_order = jax.random.choice(
+    #       next(self._rng), self.n_agents, (self.n_agents,), replace=False)
+    #   # converting the selected_order to numpy as the parameters are also in numpy
+    #   selected_order = jax.device_get(selected_order)
 
-      shuffle_state = self.save()
-      shuffle_state = ma_utils.select_idx(shuffle_state, selected_order)
-      self.restore(shuffle_state)
+    #   shuffle_state = self.save()
+    #   shuffle_state = ma_utils.select_idx(shuffle_state, selected_order)
+    #   self.restore(shuffle_state)
 
     # Maybe write logs.
     self._logger.write({**results, **counts})
@@ -230,6 +243,7 @@ class MALearnerPopArt(MALearner):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
+      frozen_agents: Optional[set] = None,
   ):
     local_devices = jax.local_devices()
     process_id = jax.process_index()
@@ -249,6 +263,7 @@ class MALearnerPopArt(MALearner):
     popart = popart(_PMAP_AXIS_NAME)
     self.optimizer = optimizer
     self.n_agents = n_agents
+    self.frozen_agents = frozen_agents or set()
     self.n_devices = len(self._local_devices)
     self._rng = hk.PRNGSequence(random_key)
 
@@ -283,7 +298,7 @@ class MALearnerPopArt(MALearner):
 
     @jax.jit
     def sgd_step(
-        state: types.PopArtTrainingState, sample: types.TrainingData
+        state: types.PopArtTrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray
     ) -> tuple[types.PopArtTrainingState, dict[str, jnp.ndarray]]:
       """Computes an SGD step, returning new state and metrics for logging."""
 
@@ -292,6 +307,12 @@ class MALearnerPopArt(MALearner):
       gradients, (new_popart_state, metrics) = grad_fn(state.params,
                                                        state.popart_state,
                                                        sample)
+      
+      # Create a mask where 0 means frozen, and 1 means not frozen.
+      mask = jnp.where(is_frozen, 0.0, 1.0)
+
+      # Apply the mask to the gradients.
+      gradients = jax.tree_map(lambda g: g * mask, gradients)
 
       # Apply updates.
       updates, new_opt_state = optimizer.update(gradients, state.opt_state)
@@ -317,7 +338,7 @@ class MALearnerPopArt(MALearner):
     self._loss_fn = loss_fn(network=network, popart_update_fn=popart.update_fn)
 
     self._sgd_step = jax.pmap(
-        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2))
+        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0))
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()

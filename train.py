@@ -76,7 +76,28 @@ flags.DEFINE_integer("actors_per_node", 1, "Number of actors per thread.")
 flags.DEFINE_bool("inference_server", False, "Whether to run inference server.")
 flags.DEFINE_string("experiment_dir", None,
                     "Directory to resume experiment from.")
+flags.DEFINE_string("frozen_agents", None,
+                    "Comma separated list of frozen agents.")
+flags.DEFINE_string("agent_roles", None,
+                    "Comma separated list of agent roles.")
 
+# Custom flag for map selection
+flags.DEFINE_string("map_layout", None, "Custom map layout for meltingpot maps")
+
+# Coop-Mining specific flags
+flags.DEFINE_bool("conservative_mine_beam", False, "Whether to use conservative mining beam that penalizes mining")
+flags.DEFINE_bool("dense_ore_regrow", False, "Whether to use a larger ore regrowth rate")
+
+def _get_custom_env_configs():
+  result = {} 
+  if FLAGS.env_name == "meltingpot" and FLAGS.map_name == "coop_mining":
+    if FLAGS.conservative_mine_beam:
+      result["conservative_mine_beam"] = True
+    if FLAGS.dense_ore_regrow:
+      result["dense_ore_regrow"] = True
+  if FLAGS.map_layout:
+    result[FLAGS.map_layout] = True
+  return result
 
 def build_experiment_config():
   """Builds experiment config which can be executed in different ways."""
@@ -89,6 +110,8 @@ def build_experiment_config():
   prosocial = FLAGS.prosocial
   record = FLAGS.record_video
   memory_efficient = not FLAGS.all_parallel
+  frozen_agents = set([int(agent) for agent in FLAGS.frozen_agents.split(",")] if FLAGS.frozen_agents else [])
+  agent_roles = [role.strip() for role in FLAGS.agent_roles.split(",")] if FLAGS.agent_roles else None
 
   if FLAGS.experiment_dir:
     assert FLAGS.algo_name in FLAGS.experiment_dir, f"experiment_dir must be a {FLAGS.algo_name} experiment"
@@ -136,6 +159,7 @@ def build_experiment_config():
     feature_extractor = ImageFE
     num_options = 8
   elif FLAGS.env_name == "meltingpot":
+    custom_env_configs = _get_custom_env_configs()
     env_factory = lambda seed: helpers.env_factory(
         seed,
         map_name,
@@ -143,7 +167,9 @@ def build_experiment_config():
         shared_reward=prosocial,
         reward_scale=reward_scale,
         shared_obs=False,
-        record=record)
+        record=record,
+        agent_roles=agent_roles,
+        **custom_env_configs)
     feature_extractor = MeltingpotFE
     num_options = 16
   else:
@@ -208,6 +234,9 @@ def build_experiment_config():
     builder = opre.PopArtOPREBuilder(config, core_state_spec=core_spec)
   else:
     raise ValueError(f"Unknown algo_name {FLAGS.algo_name}")
+  
+  # Add frozen agents
+  builder._config.frozen_agents = frozen_agents
 
   return (
       experiments.MAExperimentConfig(
@@ -224,7 +253,7 @@ def build_experiment_config():
           environment_spec=environment_specs,
           evaluator_env_factories=None,
           seed=FLAGS.seed,
-          max_num_actor_steps=FLAGS.num_steps,
+          max_num_actor_steps=None,
           resume_training=True if FLAGS.experiment_dir else False,
       ),
       experiment_dir,

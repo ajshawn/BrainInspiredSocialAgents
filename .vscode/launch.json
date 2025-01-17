@@ -1,0 +1,101 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Train.py with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "0",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "Python Debugger: eval.py with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "2,3",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "coop_mining",
+                "--experiment_dir", "/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_coop_mining_2024-12-08_17:16:42.390336_ckp513",
+                "--record_video", "true"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2,3"
+            }
+        },
+        {
+            "name": "Python Debugger: eval.py with scenarios",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "0,1",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp1950",
+                "--record_video", "true",
+                "--run_eval_on_scenarios", "true",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0,1"
+            }
+        },
+        {
+            "name": "Python Debugger: train coop_mining",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "0",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "coop_mining",
+                "--conservative_mine_beam", "true",
+                "--dense_ore_regrow", "true",
+                "--agent_roles", "default, default, default",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "Python Debugger: eval predator_and_prey__open",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "2,3",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-12-15_17:17:26.569224_ckptest",
+                "--record_video", "true",
+                "--map_layout", "smaller_13x13"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2,3"
+            }
+        },
+    ]
+}

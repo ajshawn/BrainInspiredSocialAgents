@@ -7,6 +7,7 @@ sys.path.append(cwd)
 import datetime
 import functools
 from functools import partial
+from typing import List
 
 from acme.wrappers import SinglePrecisionWrapper
 import cv2
@@ -55,10 +56,13 @@ def make_meltingpot_environment(seed: int,
                                 reward_scale: float = 1.0,
                                 global_observation_sharing: bool = False,
                                 diversity_dim: int = None,
-                                record: bool = False) -> dmlab2d.Environment:
+                                record: bool = False,
+                                agent_roles: List[str] = None,
+                                **kwargs) -> dmlab2d.Environment:
   """Returns a MeltingPot environment."""
   env_config = substrate.get_config(substrate_name)
-  env = substrate.build(substrate_name, roles=env_config.default_player_roles)
+  roles = agent_roles or env_config.default_player_roles
+  env = substrate.build(substrate_name, roles=roles, **kwargs)
   if record:
     vid_rec = partial(
         my_render_func_efficient,
@@ -148,7 +152,9 @@ def env_factory(seed: int,
                 reward_scale: float = 1.0,
                 shared_obs: bool = False,
                 diversity_dim: int = None,
-                record: bool = False):
+                record: bool = False,
+                agent_roles: List[str] = None,
+                **kwargs):
   if env_name[-1].isdigit():
     final_env = make_meltingpot_scenario(
         seed,
@@ -167,7 +173,9 @@ def env_factory(seed: int,
         reward_scale=reward_scale,
         global_observation_sharing=shared_obs,
         diversity_dim=diversity_dim,
-        record=record)
+        record=record,
+        agent_roles=agent_roles,
+        **kwargs)
   return final_env
 
 

@@ -121,6 +121,7 @@ class OPRELearnerME(learning_memory_efficient.MALearner):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
+      frozen_agents: Optional[set] = None,
   ):
     loss_fn = functools.partial(
         batched_opre_loss,
@@ -133,7 +134,7 @@ class OPRELearnerME(learning_memory_efficient.MALearner):
         max_abs_reward=max_abs_reward,
     )
     super().__init__(network, iterator, optimizer, n_agents, random_key,
-                     loss_fn, counter, logger, devices)
+                     loss_fn, counter, logger, devices, frozen_agents)
 
 
 class PopArtOPRELearnerME(learning_memory_efficient.MALearnerPopArt):
@@ -156,6 +157,7 @@ class PopArtOPRELearnerME(learning_memory_efficient.MALearnerPopArt):
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
+      frozen_agents: Optional[set] = None,
   ):
     loss_fn = (
         functools.partial(
@@ -178,4 +180,4 @@ class PopArtOPRELearnerME(learning_memory_efficient.MALearnerPopArt):
             max_abs_reward=max_abs_reward,
         ))
     super().__init__(network, popart[0], iterator, optimizer, n_agents,
-                     random_key, loss_fn, counter, logger, devices)
+                     random_key, loss_fn, counter, logger, devices, frozen_agents)
