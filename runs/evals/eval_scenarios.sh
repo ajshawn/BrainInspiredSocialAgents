@@ -1,11 +1,11 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_coop_mining_2024-11-25_18:34:32.922299_ckp"
-EVN_NAME="coop_mining"
+EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp"
+EVN_NAME="predator_prey__open"
 ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2024-11-25_18:34:32.922299"
-GPUS="0, 1"
-N_SCENES=6
+TIME_STAMP="2024-11-26_17:36:18.023323"
+GPUS="1,2"
+N_SCENES=8
 
-for ckp in 836
+for ckp in 6752
 do
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --available_gpus ${GPUS} \
