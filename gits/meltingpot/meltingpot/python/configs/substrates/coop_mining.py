@@ -304,7 +304,7 @@ DENSER_ORE_REGROW = {
     "component": "FixedRateRegrow",
     "kwargs": {
         "liveStates": ["ironRaw", "goldRaw"],
-        "liveRates": [0.0004, 0.000016],
+        "liveRates": [0.0004, 0.0004],
         "waitState": "oreWait",
     }
 }
