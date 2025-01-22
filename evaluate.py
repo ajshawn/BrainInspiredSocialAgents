@@ -24,6 +24,7 @@ import train
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool("run_eval_on_scenarios", False, "Whether to run evaluation on meltingpot scenarios.")
+flags.DEFINE_string("agent_param_indices", None, "Comma separated list of agent param indices.") 
 
 def main(_):
   if FLAGS.experiment_dir is None:
@@ -36,6 +37,10 @@ def main(_):
 
   config.logger_factory = functools.partial(
       make_experiment_logger, log_dir=experiment_dir, use_tb=False)
+  
+  if FLAGS.agent_param_indices is not None:
+    agent_param_indices = [int(idx) for idx in FLAGS.agent_param_indices.split(",")]
+    config.agent_param_indices = agent_param_indices
 
   if FLAGS.env_name == "meltingpot":
 

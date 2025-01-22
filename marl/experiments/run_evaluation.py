@@ -74,7 +74,13 @@ def run_evaluation(
       max_to_keep=checkpointing_config.max_to_keep,
   )
   checkpointer.restore()
-  s1 = learner._combined_states.params.copy()
+  s1 = learner._combined_states.params
+  
+  assert environment_specs.num_agents == len(experiment.agent_param_indices), \
+      f'Number of agents in the environment ({environment_specs.num_agents}) does not match the number of agent param indices (experiment.agent_param_indices)'
+      
+  # Select the agent param indices to evaluate from s1
+  s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices)).copy()
 
   # # testing that the learner parameters are actually loaded
   # for k, v in s0.items():
@@ -103,6 +109,7 @@ def run_evaluation(
       agent_idx_offset=agent_idx_offset,
       variable_client=variable_client,
       rng=hk.PRNGSequence(experiment.seed),
+      agent_param_indices=experiment.agent_param_indices,
   )
   eval_loop = acme.EnvironmentLoop(
       environment,
@@ -126,6 +133,7 @@ class Evaluate(core.Actor):
       agent_idx_offset,
       variable_client,
       rng,
+      agent_param_indices,
   ):
     self.forward_fn = forward_fn
     self.n_agents = n_agents
@@ -133,6 +141,7 @@ class Evaluate(core.Actor):
     self.agent_idx_offset = agent_idx_offset
     self._rng = rng
     self._variable_client = variable_client
+    self._agent_param_indices = agent_param_indices
 
     def initialize_states(rng_sequence: hk.PRNGSequence,) -> list[hk.LSTMState]:
       """Initialize the recurrent states of the actor."""
@@ -151,7 +160,7 @@ class Evaluate(core.Actor):
       self.loaded_params = self._params
       # Replace the random parameter selection with deterministic sequential selection
       # Add agent_idx_offset to the selected_params to ensure the correct roles in scenario evaluations
-      self.selected_params = (jnp.arange(self.n_agents) % self.n_params) + self.agent_idx_offset
+      self.selected_params = (jnp.array(self._agent_param_indices))
       self.episode_params = ma_utils.select_idx(self.loaded_params, self.selected_params)
       
       # self.selected_params = jax.random.choice(

@@ -5,7 +5,7 @@ ALGORITHM_NAME="PopArtIMPALA"
 TIME_STAMP="2024-11-26_17:36:18.023323"
 GPUS="0"
 
-for ckp in 7357
+for ckp in 9651
 do
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
@@ -16,8 +16,9 @@ do
         --map_name ${EVN_NAME} \
         --record_video true \
         --experiment_dir ${EXP_DIR_PREFIX}${ckp} \
-         --agent_roles "predator, prey"
-#         --map_layout smaller_13x13 \
+        --map_layout smaller_13x13 \
+        --agent_roles "predator, prey" \
+        --agent_param_indices "1, 7"
 
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
