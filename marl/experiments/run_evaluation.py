@@ -82,11 +82,11 @@ def run_evaluation(
   # Select the agent param indices to evaluate from s1
   s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices)).copy()
 
-  # # testing that the learner parameters are actually loaded
-  # for k, v in s0.items():
-  #   for k_, v_ in v.items():
-  #     assert (s0[k][k_] - s1[k][k_]
-  #            ).sum() != 0, f'New parameters are the same as old {k}.{k_}'
+  # testing that the learner parameters are actually loaded
+  for k, v in s0.items():
+    for k_, v_ in v.items():
+      assert (s0[k][k_] - s1[k][k_]
+             ).sum() != 0, f'New parameters are the same as old {k}.{k_}'
   print(f'Learner parameters successfully updated!')
 
   variable_client = variable_utils.VariableClient(
