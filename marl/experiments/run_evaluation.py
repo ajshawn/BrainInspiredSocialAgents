@@ -74,19 +74,19 @@ def run_evaluation(
       max_to_keep=checkpointing_config.max_to_keep,
   )
   checkpointer.restore()
-  s1 = learner._combined_states.params
+  s1 = learner._combined_states.params.copy()
   
   assert environment_specs.num_agents == len(experiment.agent_param_indices), \
       f'Number of agents in the environment ({environment_specs.num_agents}) does not match the number of agent param indices (experiment.agent_param_indices)'
       
   # Select the agent param indices to evaluate from s1
-  s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices)).copy()
+  s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices))
 
-  # # testing that the learner parameters are actually loaded
-  # for k, v in s0.items():
-  #   for k_, v_ in v.items():
-  #     assert (s0[k][k_] - s1[k][k_]
-  #            ).sum() != 0, f'New parameters are the same as old {k}.{k_}'
+  # testing that the learner parameters are actually loaded
+  for k, v in s0.items():
+    for k_, v_ in v.items():
+      assert (s0[k][k_] - s1[k][k_]
+             ).sum() != 0, f'New parameters are the same as old {k}.{k_}'
   print(f'Learner parameters successfully updated!')
 
   variable_client = variable_utils.VariableClient(
@@ -162,6 +162,8 @@ class Evaluate(core.Actor):
       # Add agent_idx_offset to the selected_params to ensure the correct roles in scenario evaluations
       self.selected_params = (jnp.array(self._agent_param_indices))
       self.episode_params = ma_utils.select_idx(self.loaded_params, self.selected_params)
+      
+      # TODO: Fix agent idx offset in scenario evaluations
       
       # self.selected_params = jax.random.choice(
       #     next(self._rng), self.n_params, (self.n_agents,), replace=False)
