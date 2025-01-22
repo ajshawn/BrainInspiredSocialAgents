@@ -1,10 +1,11 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/mikan/miniconda3/envs/kilosort/lib/python3.9/site-packages/nvidia/cudnn/lib/
+EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp"
 EVN_NAME="predator_prey__open"
 ALGORITHM_NAME="PopArtIMPALA"
 TIME_STAMP="2024-11-26_17:36:18.023323"
-GPUS="5, 6"
+GPUS="0"
 
-for ckp in 6752
+for ckp in 7357
 do
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
@@ -14,9 +15,9 @@ do
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
         --record_video true \
-        --experiment_dir ${EXP_DIR_PREFIX}${ckp}
-        # --map_layout smaller_13x13 \
-        # --agent_roles "predator, prey, prey, prey"        
+        --experiment_dir ${EXP_DIR_PREFIX}${ckp} \
+         --agent_roles "predator, prey"
+#         --map_layout smaller_13x13 \
 
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
