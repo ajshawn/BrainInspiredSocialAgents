@@ -89,9 +89,11 @@
                 "--algo_name", "PopArtIMPALA",
                 "--env_name", "meltingpot",
                 "--map_name", "predator_prey__open",
-                "--experiment_dir", "/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-12-15_17:17:26.569224_ckptest",
+                "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp8872",
                 "--record_video", "true",
-                "--map_layout", "smaller_13x13"
+                "--map_layout", "smaller_13x13",
+                "--agent_roles", "predator, prey",
+                "--agent_param_indices", "1, 7",
             ],
             "env": {
                 "CUDA_VISIBLE_DEVICES": "2,3"

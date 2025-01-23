@@ -1,5 +1,4 @@
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/mikan/miniconda3/envs/kilosort/lib/python3.9/site-packages/nvidia/cudnn/lib/
-EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp"
+EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp"
 EVN_NAME="predator_prey__open"
 ALGORITHM_NAME="PopArtIMPALA"
 TIME_STAMP="2024-11-26_17:36:18.023323"
@@ -16,7 +15,7 @@ do
         --map_name ${EVN_NAME} \
         --record_video true \
         --experiment_dir ${EXP_DIR_PREFIX}${ckp} \
-        --map_layout smaller_13x13 \
+        --map_layout smaller_10x10 \
         --agent_roles "predator, prey" \
         --agent_param_indices "1, 7"
 
