@@ -5,7 +5,7 @@ TIME_STAMP="2024-11-26_17:36:18.023323"
 GPUS="1,2"
 N_SCENES=8
 
-for ckp in 6752
+for ckp in 10684
 do
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --available_gpus ${GPUS} \
@@ -15,7 +15,8 @@ do
         --map_name ${EVN_NAME} \
         --record_video true \
         --experiment_dir ${EXP_DIR_PREFIX}${ckp} \
-        --run_eval_on_scenarios true
+        --run_eval_on_scenarios true \
+        --agent_param_indices "3,4,5,6,7,8,9,10,11,12" \
 
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
 

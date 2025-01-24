@@ -26,6 +26,7 @@ def run_evaluation(
     checkpointing_config: ma_config.CheckpointingConfig,
     environment_name: str,
     num_eval_episodes: int = 5,
+    run_eval_on_scenario: bool = False,
 ):
   """Runs a simple, single-threaded evaluation loop using the default evaluators.
 
@@ -76,11 +77,12 @@ def run_evaluation(
   checkpointer.restore()
   s1 = learner._combined_states.params
   
-  assert environment_specs.num_agents == len(experiment.agent_param_indices), \
-      f'Number of agents in the environment ({environment_specs.num_agents}) does not match the number of agent param indices (experiment.agent_param_indices)'
-      
-  # Select the agent param indices to evaluate from s1
-  s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices)).copy()
+  if not run_eval_on_scenario:
+    assert environment_specs.num_agents == len(experiment.agent_param_indices), \
+        f'Number of agents in the environment ({environment_specs.num_agents}) does not match the number of agent param indices {experiment.agent_param_indices}'
+        
+    # Select the agent param indices to evaluate from s1
+    s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices)).copy()
 
   # testing that the learner parameters are actually loaded
   for k, v in s0.items():

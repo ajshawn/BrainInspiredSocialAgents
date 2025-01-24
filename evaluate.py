@@ -55,7 +55,7 @@ def main(_):
         env_factory(0)
         config.environment_factory = env_factory
         experiments.run_evaluation(
-            config, ckpt_config, environment_name=scenario_name)
+            config, ckpt_config, environment_name=scenario_name, run_eval_on_scenario=True)
     else:
       # running evaluation on substrate
       experiments.run_evaluation(

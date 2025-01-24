@@ -99,5 +99,26 @@
                 "CUDA_VISIBLE_DEVICES": "2,3"
             }
         },
+        {
+            "name": "Python Debugger: eval predator_and_prey__open scenarios",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "2,3",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651",
+                "--record_video", "true",
+                "--agent_param_indices", "1",
+                "--run_eval_on_scenarios", "true",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2,3"
+            }
+        },
     ]
 }
