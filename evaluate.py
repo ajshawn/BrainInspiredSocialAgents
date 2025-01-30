@@ -24,7 +24,8 @@ import train
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool("run_eval_on_scenarios", False, "Whether to run evaluation on meltingpot scenarios.")
-flags.DEFINE_string("agent_param_indices", None, "Comma separated list of agent param indices.") 
+flags.DEFINE_string("agent_param_indices", None, "Comma separated list of agent param indices.")
+flags.DEFINE_string("run_scenario_by_name", None, "Run scenario by name.")
 
 def main(_):
   if FLAGS.experiment_dir is None:
@@ -43,8 +44,20 @@ def main(_):
     config.agent_param_indices = agent_param_indices
 
   if FLAGS.env_name == "meltingpot":
-
-    if FLAGS.run_eval_on_scenarios:
+    # running evaluation on one specific scenario
+    if FLAGS.run_scenario_by_name:
+      scenarios_for_substrate = sorted(list(scenario.SCENARIOS_BY_SUBSTRATE[FLAGS.map_name]))
+      scenario_name = FLAGS.run_scenario_by_name
+      if scenario_name not in scenarios_for_substrate:
+        raise ValueError(f"Scenario {scenario_name} not in scenarios for substrate {FLAGS.map_name}")
+      env_factory = functools.partial(
+          helpers.make_meltingpot_scenario, scenario_name=scenario_name, record=True)
+      env_factory(0)
+      config.environment_factory = env_factory
+      experiments.run_evaluation(
+          config, ckpt_config, environment_name=scenario_name, run_eval_on_scenario=True)
+    # running evaluation on all scenarios. warning: the agent indices might not be compatible with all scenarios
+    elif FLAGS.run_eval_on_scenarios:
       scenarios_for_substrate = sorted(list(scenario.SCENARIOS_BY_SUBSTRATE[FLAGS.map_name]))
       
       print(f"Running evaluation on scenarios: {scenarios_for_substrate}")
