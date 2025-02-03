@@ -98,7 +98,9 @@ def make_meltingpot_scenario(seed: int,
                              reward_scale: float = 1.0,
                              global_observation_sharing: bool = False,
                              diversity_dim: int = None,
-                             record: bool = False) -> dmlab2d.Environment:
+                             record: bool = False,
+                             agent_roles: List[str] = None,
+                             **kwargs) -> dmlab2d.Environment:
   """Returns a `MeltingPotWrapper` environment."""
 
   def transform_substrate(env, wrappers):
@@ -163,7 +165,9 @@ def env_factory(seed: int,
         shared_reward=shared_reward,
         reward_scale=reward_scale,
         global_observation_sharing=shared_obs,
-        record=record)
+        record=record,
+        agent_roles=agent_roles,
+        **kwargs)
   else:
     final_env = make_meltingpot_environment(
         seed,
