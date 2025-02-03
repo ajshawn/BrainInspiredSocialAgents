@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Train.py with Arguments",
+            "name": "Python Debugger: train predator_prey__open",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/train.py",
@@ -13,6 +13,23 @@
                 "--algo_name", "PopArtIMPALA",
                 "--env_name", "meltingpot",
                 "--map_name", "predator_prey__open",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "Python Debugger: train w/ scenario",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "0",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open_0",
             ],
             "env": {
                 "CUDA_VISIBLE_DEVICES": "0"

@@ -155,8 +155,7 @@ class Evaluate(core.Actor):
       self._states = self._initial_states
       self.update(True)
       self.loaded_params = self._params
-      # Replace the random parameter selection with deterministic sequential selection
-      # Add agent_idx_offset to the selected_params to ensure the correct roles in scenario evaluations
+      # Replace the random parameter selection with deterministic selection
       self.selected_params = (jnp.array(self._agent_param_indices))
       self.episode_params = ma_utils.select_idx(self.loaded_params, self.selected_params)
       
