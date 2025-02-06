@@ -8,5 +8,6 @@ CUDA_VISIBLE_DEVICES=${GPUS} python train.py \
   --algo_name PopArtIMPALA \
   --env_name meltingpot \
   --map_name predator_prey__open_0 \
-  --seed 2
+  --seed 2 \
+  --recurrent_dim 256
   # --experiment_dir ${EXP_DIR}

@@ -88,6 +88,9 @@ flags.DEFINE_string("map_layout", None, "Custom map layout for meltingpot maps")
 flags.DEFINE_bool("conservative_mine_beam", False, "Whether to use conservative mining beam that penalizes mining")
 flags.DEFINE_bool("dense_ore_regrow", False, "Whether to use a larger ore regrowth rate")
 
+# Agent network related
+flags.DEFINE_integer("recurrent_dim", 128, "Recurrent dimension for agent network")
+
 def _get_custom_env_configs():
   result = {} 
   if FLAGS.env_name == "meltingpot" and FLAGS.map_name == "coop_mining":
@@ -180,7 +183,10 @@ def build_experiment_config():
   if FLAGS.algo_name == "IMPALA":
     # Create network
     network_factory = functools.partial(
-        impala.make_network, feature_extractor=feature_extractor)
+        impala.make_network, 
+        feature_extractor=feature_extractor, 
+        recurrent_dim=FLAGS.recurrent_dim
+      )
     network = network_factory(
         environment_specs.get_single_agent_environment_specs())
     # Construct the agent.
@@ -192,7 +198,10 @@ def build_experiment_config():
   elif FLAGS.algo_name == "PopArtIMPALA":
     # Create network
     network_factory = functools.partial(
-        impala.make_network_2, feature_extractor=feature_extractor)
+        impala.make_network_2, 
+        feature_extractor=feature_extractor,
+        recurrent_dim=FLAGS.recurrent_dim
+      )
     network = network_factory(
         environment_specs.get_single_agent_environment_specs())
     # Construct the agent.

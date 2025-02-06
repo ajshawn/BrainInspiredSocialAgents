@@ -9,4 +9,5 @@ CUDA_VISIBLE_DEVICES=${GPUS} python train.py \
   --env_name meltingpot \
   --map_name predator_prey__open_4 \
   --seed 2 \
-  --experiment_dir ${EXP_DIR}
+  --recurrent_dim 256
+  # --experiment_dir ${EXP_DIR}
