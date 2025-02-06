@@ -84,11 +84,19 @@ def run_evaluation(
     s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices)).copy()
 
   # testing that the learner parameters are actually loaded
-  for k, v in s0.items():
-    for k_, v_ in v.items():
-      assert (s0[k][k_] - s1[k][k_]
-             ).sum() != 0, f'New parameters are the same as old {k}.{k_}'
-  print(f'Learner parameters successfully updated!')
+  def test_param_update(s0, s1):
+    for k, v in s0.items():
+      for k_, v_ in v.items():
+        assert (s0[k][k_] - s1[k][k_]
+               ).sum() != 0, f'New parameters are the same as old {k}.{k_}'
+    print(f'Learner parameters successfully updated!')
+  
+  try:
+    test_param_update(s0, s1)
+  except:
+    s0 = ma_utils.select_idx(s0, jnp.array(experiment.agent_param_indices)).copy()
+    s1 = ma_utils.select_idx(s1, jnp.array(experiment.agent_param_indices)).copy()
+    test_param_update(s0, s1)
 
   variable_client = variable_utils.VariableClient(
       client=learner, key="network", update_period=int(1), device="cpu")
