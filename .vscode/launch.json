@@ -97,5 +97,63 @@
                 "CUDA_VISIBLE_DEVICES": "2,3"
             }
         },
+        {
+            "name": "Python Debugger: eval coop_mining",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "0, 1",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "coop_mining",
+                "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-01-16_00:59:42.892261_ckp165",
+                "--record_video", "true",
+                "--conservative_mine_beam", "true",
+                "--dense_ore_regrow", "true",
+                "--agent_roles", "default, default, default",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0,1",
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH};${workspaceFolder}${pathSeparator}gits"
+            }
+        },
+        {
+            "name": "Linfan's Evaluate Script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "./evaluate.py",
+            "console": "integratedTerminal",
+            "env": {
+              "EXP_DIR_PREFIX": "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-01-22_10:53:20.839330",
+              "EVN_NAME": "coop_mining",
+              "ALGORITHM_NAME": "PopArtIMPALA",
+              "TIME_STAMP": "2025-01-22_10:53:20.839330",
+              "GPUS": "1",
+              "PYTHONPATH": "./gits/meltingpot:gits/acme:${PYTHONPATH}",
+              "LD_LIBRARY_PATH": "$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/lib",
+            },
+            "args": [
+              "--async_distributed",
+              "--available_gpus", "1",
+              "--num_actors", "8",
+              "--algo_name", "PopArtIMPALA",
+              "--env_name", "meltingpot",
+              "--map_name", "coop_mining",
+              "--record_video", "true",
+              "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-01-22_10:53:20.839330",
+              "--agent_roles", "default, default, default",
+              "--dense_ore_regrow", "True",
+              "--iron_rate", "0.0002",
+              "--gold_rate", "0.0001",
+              "--conservative_mine_beam", "True",
+              "--iron_reward", "1",
+              "--gold_reward", "4",
+              "--mining_reward", "0"
+            ],
+            "envFile": "${workspaceFolder}/.env"
+          }
     ]
 }

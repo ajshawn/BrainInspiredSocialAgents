@@ -10,7 +10,6 @@ import math
 from typing import Callable, Optional
 
 from acme import core
-from acme import environment_loop
 from acme.agents.jax import builders
 from acme.jax import networks as networks_lib
 from acme.jax import savers
@@ -30,6 +29,7 @@ from marl import specs as ma_specs
 from marl import types
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
+from marl.experiments.environment_loop_event_log import EnvironmentLoopEvents
 
 ActorId = int
 InferenceServer = inference_server.InferenceServer[types.PolicyValueFn]
@@ -208,7 +208,7 @@ def make_distributed_experiment(
       counter: counting.Counter,
       actor_id: ActorId,
       inference_server: Optional[InferenceServer],
-  ) -> environment_loop.EnvironmentLoop:
+  ) -> EnvironmentLoopEvents:
     """The actor process."""
     environment_key, actor_key = jax.random.split(random_key)
 
@@ -237,7 +237,7 @@ def make_distributed_experiment(
     logger = experiment.logger_factory("actor", counter.get_steps_key(),
                                        actor_id)
     # Create the loop to connect environment and agent.
-    return environment_loop.EnvironmentLoop(
+    return EnvironmentLoopEvents(
         environment, actor, counter, logger, observers=experiment.observers)
 
   def build_evaluator(
@@ -245,7 +245,7 @@ def make_distributed_experiment(
       variable_source: core.VariableSource,
       eval_env_factory: Callable[[int], dm_env.Environment],
       evaluator_id: ActorId,
-  ) -> environment_loop.EnvironmentLoop:
+  ) -> EnvironmentLoopEvents:
     """The actor process."""
     environment_key, actor_key = jax.random.split(random_key)
     # Create environment and policy core.
@@ -268,7 +268,7 @@ def make_distributed_experiment(
     # counter = counting.Counter(counter, f"evaluator_{evaluator_id}")
     logger = experiment.logger_factory(f"evaluator_{evaluator_id}")
     # Create the loop to connect environment and agent.
-    return environment_loop.EnvironmentLoop(
+    return EnvironmentLoopEvents(
         eval_env,
         evaluator,
         logger=logger,

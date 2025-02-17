@@ -21,7 +21,7 @@ import reverb
 
 from marl import specs as ma_specs
 from marl.experiments import config as ma_config
-
+from marl.experiments.environment_loop_event_log import EnvironmentLoopEvents
 
 def run_experiment(
     experiment: ma_config.MAExperimentConfig,
@@ -127,14 +127,20 @@ def run_experiment(
   actor = _LearningActor(actor, learner, dataset, replay_tables,
                          rate_limiters_max_diff)
 
-  train_loop = acme.EnvironmentLoop(
+  # train_loop = acme.EnvironmentLoop(
+  #     environment,
+  #     actor,
+  #     counter=train_counter,
+  #     logger=train_logger,
+  #     observers=experiment.observers,
+  # )
+  train_loop = EnvironmentLoopEvents(
       environment,
       actor,
       counter=train_counter,
       logger=train_logger,
       observers=experiment.observers,
   )
-
   if num_eval_episodes == 0:
     # No evaluation. Just run the training loop.
     train_loop.run(num_steps=experiment.max_num_actor_steps)
@@ -153,13 +159,20 @@ def run_experiment(
       environment_spec=environment_specs,
       variable_source=learner,
   )
-  eval_loop = acme.EnvironmentLoop(
+  eval_loop = EnvironmentLoopEvents(
       environment,
       eval_actor,
       counter=eval_counter,
       logger=eval_logger,
       observers=experiment.observers,
   )
+  # eval_loop = acme.EnvironmentLoop(
+  #     environment,
+  #     eval_actor,
+  #     counter=eval_counter,
+  #     logger=eval_logger,
+  #     observers=experiment.observers,
+  # )
 
   steps = 0
   while steps < experiment.max_num_actor_steps:

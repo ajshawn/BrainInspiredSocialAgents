@@ -22,7 +22,7 @@ from marl.utils import experiment_utils
 
 @dataclasses.dataclass
 class MAExperimentConfig:
-  """Config which defines aspects of constructing an experiment.
+    """Config which defines aspects of constructing an experiment.
 
     Attributes:
       builder: Builds components of an RL agent (Learner, Actor...).
@@ -46,58 +46,57 @@ class MAExperimentConfig:
         actors and evaluators.
     """
 
-  # Below fields must be explicitly specified for any Agent.
-  builder: builders.ActorLearnerBuilder
-  network_factory: config.NetworkFactory
-  environment_factory: types.EnvironmentFactory
-  max_num_actor_steps: int
-  seed: int
-  # Fields below are optional. If you just started with Acme do not worry about
-  # them. You might need them later when you want to customize your RL agent.
-  # TODO(stanczyk): Introduce a marker for the default value (instead of None).
-  evaluator_env_factories: Optional[Sequence[types.EnvironmentFactory]] = None
-  evaluator_factories: Optional[Sequence[config.EvaluatorFactory]] = None
-  eval_policy_network_factory: Optional[config.DeprecatedPolicyFactory] = None
+    # Below fields must be explicitly specified for any Agent.
+    builder: builders.ActorLearnerBuilder
+    network_factory: config.NetworkFactory
+    environment_factory: types.EnvironmentFactory
+    max_num_actor_steps: int
+    seed: int
+    # Fields below are optional. If you just started with Acme do not worry about
+    # them. You might need them later when you want to customize your RL agent.
+    # TODO(stanczyk): Introduce a marker for the default value (instead of None).
+    evaluator_env_factories: Optional[Sequence[types.EnvironmentFactory]] = None
+    evaluator_factories: Optional[Sequence[config.EvaluatorFactory]] = None
+    eval_policy_network_factory: Optional[config.DeprecatedPolicyFactory] = None
 
-  logger_factory: loggers.LoggerFactory = (
-      experiment_utils.make_experiment_logger)
-  environment_spec: Optional[ma_specs.MAEnvironmentSpec] = None
-  observers: Sequence[observers_lib.EnvLoopObserver] = ()
+    logger_factory: loggers.LoggerFactory = experiment_utils.make_experiment_logger
+    environment_spec: Optional[ma_specs.MAEnvironmentSpec] = None
+    observers: Sequence[observers_lib.EnvLoopObserver] = ()
 
-  resume_training: bool = False
+    resume_training: bool = False
 
-  # TODO(stanczyk): Make get_evaluator_factories a standalone function.
-  def get_evaluator_factories(self):
-    """Constructs the evaluator factories."""
-    if self.evaluator_factories is not None:
-      return self.evaluator_factories
+    # TODO(stanczyk): Make get_evaluator_factories a standalone function.
+    def get_evaluator_factories(self):
+        """Constructs the evaluator factories."""
+        if self.evaluator_factories is not None:
+            return self.evaluator_factories
 
-    def eval_policy_factory(
-        networks: builders.Networks,
-        environment_spec: specs.EnvironmentSpec,
-        evaluation: bool,
-    ) -> builders.Networks:
-      del evaluation
-      # The config factory has precedence until all agents are migrated to use
-      # builder.make_policy
-      if self.eval_policy_network_factory is not None:
-        return self.eval_policy_network_factory(networks)
-      else:
-        return self.builder.make_policy(
-            networks=networks,
-            environment_spec=environment_spec,
-            evaluation=True,
-        )
+        def eval_policy_factory(
+            networks: builders.Networks,
+            environment_spec: specs.EnvironmentSpec,
+            evaluation: bool,
+        ) -> builders.Networks:
+            del evaluation
+            # The config factory has precedence until all agents are migrated to use
+            # builder.make_policy
+            if self.eval_policy_network_factory is not None:
+                return self.eval_policy_network_factory(networks)
+            else:
+                return self.builder.make_policy(
+                    networks=networks,
+                    environment_spec=environment_spec,
+                    evaluation=True,
+                )
 
-    return [
-        default_evaluator_factory(
-            environment_factory=self.environment_factory,
-            network_factory=self.network_factory,
-            policy_factory=eval_policy_factory,
-            logger_factory=self.logger_factory,
-            observers=self.observers,
-        )
-    ]
+        return [
+            default_evaluator_factory(
+                environment_factory=self.environment_factory,
+                network_factory=self.network_factory,
+                policy_factory=eval_policy_factory,
+                logger_factory=self.logger_factory,
+                observers=self.observers,
+            )
+        ]
 
 
 def default_evaluator_factory(
@@ -107,39 +106,40 @@ def default_evaluator_factory(
     logger_factory: loggers.LoggerFactory,
     observers: Sequence[observers_lib.EnvLoopObserver] = (),
 ) -> config.EvaluatorFactory:
-  """Returns a default evaluator process."""
+    """Returns a default evaluator process."""
 
-  def evaluator(
-      random_key: types.PRNGKey,
-      variable_source: core.VariableSource,
-      counter: counting.Counter,
-      make_actor: config.MakeActorFn,
-  ):
-    """The evaluation process."""
+    def evaluator(
+        random_key: types.PRNGKey,
+        variable_source: core.VariableSource,
+        counter: counting.Counter,
+        make_actor: config.MakeActorFn,
+    ):
+        """The evaluation process."""
 
-    # Create environment and evaluator networks
-    environment_key, actor_key = jax.random.split(random_key)
-    # Environments normally require uint32 as a seed.
-    environment = environment_factory(utils.sample_uint32(environment_key))
-    environment_spec = specs.make_environment_spec(environment)
-    networks = network_factory(environment_spec)
-    policy = policy_factory(networks, environment_spec, True)
-    actor = make_actor(actor_key, policy, environment_spec, variable_source)
+        # Create environment and evaluator networks
+        environment_key, actor_key = jax.random.split(random_key)
+        # Environments normally require uint32 as a seed.
+        environment = environment_factory(utils.sample_uint32(environment_key))
+        environment_spec = specs.make_environment_spec(environment)
+        networks = network_factory(environment_spec)
+        policy = policy_factory(networks, environment_spec, True)
+        actor = make_actor(actor_key, policy, environment_spec, variable_source)
 
-    # Create logger and counter.
-    counter = counting.Counter(counter, "evaluator")
-    logger = logger_factory("evaluator", "actor_steps", 0)
+        # Create logger and counter.
+        counter = counting.Counter(counter, "evaluator")
+        logger = logger_factory("evaluator", "actor_steps", 0)
 
-    # Create the run loop and return it.
-    return environment_loop.EnvironmentLoop(
-        environment, actor, counter, logger, observers=observers)
+        # Create the run loop and return it.
+        return environment_loop.EnvironmentLoop(
+            environment, actor, counter, logger, observers=observers
+        )
 
-  return evaluator
+    return evaluator
 
 
 @dataclasses.dataclass
 class CheckpointingConfig:
-  """Configuration options for checkpointing.
+    """Configuration options for checkpointing.
 
     Attributes:
       max_to_keep: Maximum number of checkpoints to keep. Does not apply to replay
@@ -157,8 +157,8 @@ class CheckpointingConfig:
           take up to 10 minutes so keep that in mind when setting this frequency.
     """
 
-  max_to_keep: int = 3
-  directory: str = "~/acme"
-  add_uid: bool = False
-  model_time_delta_minutes: int = 60
-  replay_checkpointing_time_delta_minutes: Optional[int] = None
+    max_to_keep: int = 5000
+    directory: str = "~/acme"
+    add_uid: bool = False
+    model_time_delta_minutes: int = 60
+    replay_checkpointing_time_delta_minutes: Optional[int] = None
