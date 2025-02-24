@@ -12,7 +12,7 @@ import numpy as np
 
 from marl import types as marl_types
 
-USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT"}
+USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "STAMINA", "POSITIONS", "POSITION", "ORIENTATION", "AGENT_ID"}
 
 
 class MeltingPotWrapper(dmlab2d.Environment):

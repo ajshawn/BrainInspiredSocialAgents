@@ -15,9 +15,9 @@ do
         --map_name ${EVN_NAME} \
         --record_video true \
         --experiment_dir ${EXP_DIR_PREFIX}${ckp} \
-        --map_layout smaller_10x10 \
-        --agent_roles "predator, prey" \
-        --agent_param_indices "1, 7"
+        --agent_param_indices "0, 1,2,3,4,5,6,7,8,9,10,11,12"
+#        --map_layout smaller_10x10 \
+#        --agent_roles "predator, prey" \
 
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
