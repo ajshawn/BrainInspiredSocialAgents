@@ -397,6 +397,9 @@ def get_avatar_object(num_players: int, player_index: int):
               }
           },
           {
+            "component": "AvatarIdsInViewObservation",
+          },
+          {
               "component": "MineBeam",
               "kwargs": {
                   "cooldownTime": 3,
@@ -479,6 +482,8 @@ def get_config(**kwargs):
   config.individual_observation_names = [
       "RGB",
       "READY_TO_SHOOT",
+      "OBJECTS_IN_VIEW",
+      "AVATAR_IDS_IN_VIEW",
   ]
   config.global_observation_names = [
       "WORLD.RGB",
@@ -491,6 +496,8 @@ def get_config(**kwargs):
       "READY_TO_SHOOT": specs.OBSERVATION["READY_TO_SHOOT"],
       # Debug only (do not use the following observations in policies).
       "WORLD.RGB": specs.rgb(216, 216),
+      "OBJECTS_IN_VIEW": specs.OBSERVATION["OBJECTS_IN_VIEW"],
+      "AVATAR_IDS_IN_VIEW": specs.OBSERVATION["AVATAR_IDS_IN_VIEW"],
   })
 
   # The roles assigned to each player.
