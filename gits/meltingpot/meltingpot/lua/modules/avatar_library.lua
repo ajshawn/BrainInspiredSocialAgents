@@ -281,8 +281,7 @@ function Avatar:addObservations(tileSet, world, observations)
     shape = {},
     func = function(grid)
       -- 1) Query objects in the partial observation window on the same layer:
-      local layer = self.gameObject:getLayer()
-      local objectsInView = self:queryPartialObservationWindow(layer)
+      local objectsInView = self:queryPartialObservationWindow('upperPhysical')
   
       -- Also gather objects on layer "lowerPhysical" (if that layer exists):
       local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
