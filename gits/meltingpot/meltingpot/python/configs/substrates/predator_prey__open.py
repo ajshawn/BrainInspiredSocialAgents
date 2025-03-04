@@ -135,10 +135,21 @@ def get_config(**kwargs):
     config.layout.ascii_map = ASCII_MAP
   config.layout.char_prefab_map = CHAR_PREFAB_MAP
 
+  config.individual_observation_names = [
+      "RGB",
+      "OBJECTS_IN_VIEW",
+      "AVATAR_IDS_IN_VIEW",
+  ]
+  config.global_observation_names = [
+      "WORLD.RGB",
+  ]
+
   # The specs of the environment (from a single-agent perspective).
   config.timestep_spec = specs.timestep({
       "RGB": specs.OBSERVATION["RGB"],
       "STAMINA": specs.float64(),
+      "OBJECTS_IN_VIEW": specs.OBSERVATION["OBJECTS_IN_VIEW"],
+      "AVATAR_IDS_IN_VIEW": specs.OBSERVATION["AVATAR_IDS_IN_VIEW"],
       # Debug only (do not use the following observations in policies).
       "WORLD.RGB": specs.rgb(152, 184),
   })

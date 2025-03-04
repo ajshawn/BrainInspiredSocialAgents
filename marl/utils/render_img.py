@@ -29,7 +29,7 @@ if __name__ == "__main__":
     with open('observations.jsonl') as f:
         lines = f.readlines()
     
-    lines = lines[:10]
+    lines = lines[10:20]
     
     for idx, line in enumerate(lines):
         obs = json.loads(line)
