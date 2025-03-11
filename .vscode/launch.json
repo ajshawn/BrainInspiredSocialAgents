@@ -137,5 +137,58 @@
                 "CUDA_VISIBLE_DEVICES": "2,3"
             }
         },
+        {
+            "name": "CNN Probing",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/marl/cnn_study/probe_cnn.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "2,3",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651",
+                "--ckp_idx", "9651",
+                "--agent_idx", "0",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2,3",
+                "PYTHONPATH": "."
+            }
+        },
+        {
+            "name": "CNN Probing random baseline",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/marl/cnn_study/probe_cnn.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "2,3",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651",
+                "--ckp_idx", "9651",
+                "--agent_idx", "0",
+                "--random_baseline", "true",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2,3",
+                "PYTHONPATH": "."
+            }
+        },
+        {
+            "name": "Make CNN Probing Dataset",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/marl/cnn_study/make_dataset.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "."
+            }
+        },
     ]
 }

@@ -63,7 +63,7 @@ flags.DEFINE_integer("num_steps", 200_000_000, "Number of env steps to run.")
 flags.DEFINE_string("exp_log_dir", "./results/",
                     "Directory to store experiment logs in.")
 flags.DEFINE_bool("use_tb", False, "Flag to enable tensorboard logging.")
-flags.DEFINE_bool("use_wandb", True, "Flag to enable wandb.ai logging.")
+flags.DEFINE_bool("use_wandb", False, "Flag to enable wandb.ai logging.")
 flags.DEFINE_string("wandb_entity", "ajshawn723", "Entity name for wandb account.")
 flags.DEFINE_string("wandb_project", "marl-jax",
                     "Project name for wandb logging.")
@@ -90,6 +90,7 @@ flags.DEFINE_bool("dense_ore_regrow", False, "Whether to use a larger ore regrow
 
 # Agent network related
 flags.DEFINE_integer("recurrent_dim", 128, "Recurrent dimension for agent network")
+flags.DEFINE_bool("log_agent_views", False, "Whether to log agent views.")
 
 def _get_custom_env_configs():
   result = {} 
@@ -172,6 +173,7 @@ def build_experiment_config():
         shared_obs=False,
         record=record,
         agent_roles=agent_roles,
+        record_agent_views=FLAGS.log_agent_views,
         **custom_env_configs)
     feature_extractor = MeltingpotFE
     num_options = 16

@@ -51,7 +51,11 @@ def main(_):
       if scenario_name not in scenarios_for_substrate:
         raise ValueError(f"Scenario {scenario_name} not in scenarios for substrate {FLAGS.map_name}")
       env_factory = functools.partial(
-          helpers.make_meltingpot_scenario, scenario_name=scenario_name, record=True)
+          helpers.make_meltingpot_scenario, 
+          scenario_name=scenario_name, 
+          record=True, 
+          log_agent_views=FLAGS.log_agent_views,
+        )
       env_factory(0)
       config.environment_factory = env_factory
       experiments.run_evaluation(
@@ -64,7 +68,11 @@ def main(_):
       
       for scenario_name in scenarios_for_substrate:
         env_factory = functools.partial(
-            helpers.make_meltingpot_scenario, scenario_name=scenario_name, record=True)
+            helpers.make_meltingpot_scenario, 
+            scenario_name=scenario_name, 
+            record=True,
+            log_agent_views=FLAGS.log_agent_views,
+          )
         env_factory(0)
         config.environment_factory = env_factory
         experiments.run_evaluation(

@@ -58,6 +58,7 @@ def make_meltingpot_environment(seed: int,
                                 diversity_dim: int = None,
                                 record: bool = False,
                                 agent_roles: List[str] = None,
+                                record_agent_views: bool = False,
                                 **kwargs) -> dmlab2d.Environment:
   """Returns a MeltingPot environment."""
   env_config = substrate.get_config(substrate_name)
@@ -79,7 +80,7 @@ def make_meltingpot_environment(seed: int,
         share_actions=True,
         share_rewards=True)
   env = MeltingPotWrapper(
-      env, shared_reward=shared_reward, reward_scale=reward_scale)
+      env, shared_reward=shared_reward, reward_scale=reward_scale, log_obs=record_agent_views)
   env = SinglePrecisionWrapper(env)
   env = ObservationActionRewardWrapper(env)
   if diversity_dim is not None:
@@ -100,6 +101,7 @@ def make_meltingpot_scenario(seed: int,
                              diversity_dim: int = None,
                              record: bool = False,
                              agent_roles: List[str] = None,
+                             record_agent_views: bool = False,
                              **kwargs) -> dmlab2d.Environment:
   """Returns a `MeltingPotWrapper` environment."""
 
@@ -135,7 +137,7 @@ def make_meltingpot_scenario(seed: int,
         recorder=MeltingPotRecorder(f"{scenario_name}"))
     env.observables().substrate.timestep.subscribe(vid_rec)
   env = MeltingPotWrapper(
-      env, shared_reward=shared_reward, reward_scale=reward_scale)
+      env, shared_reward=shared_reward, reward_scale=reward_scale, log_obs=record_agent_views)
   env = SinglePrecisionWrapper(env)
   env = ObservationActionRewardWrapper(env)
   if diversity_dim is not None:
@@ -156,6 +158,7 @@ def env_factory(seed: int,
                 diversity_dim: int = None,
                 record: bool = False,
                 agent_roles: List[str] = None,
+                record_agent_views: bool = False,
                 **kwargs):
   if env_name[-1].isdigit():
     final_env = make_meltingpot_scenario(
@@ -167,6 +170,7 @@ def env_factory(seed: int,
         global_observation_sharing=shared_obs,
         record=record,
         agent_roles=agent_roles,
+        record_agent_views=record_agent_views,
         **kwargs)
   else:
     final_env = make_meltingpot_environment(
@@ -179,6 +183,7 @@ def env_factory(seed: int,
         diversity_dim=diversity_dim,
         record=record,
         agent_roles=agent_roles,
+        record_agent_views=record_agent_views,
         **kwargs)
   return final_env
 

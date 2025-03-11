@@ -2,6 +2,7 @@
 
 from typing import Union
 
+import os
 import json
 from acme import specs
 from acme import types
@@ -10,6 +11,7 @@ import dmlab2d
 from meltingpot.python.utils.scenarios.scenario import Scenario
 from meltingpot.python.utils.substrates.substrate import Substrate
 import numpy as np
+from PIL import Image
 
 from marl import types as marl_types
 
@@ -39,7 +41,9 @@ class MeltingPotWrapper(dmlab2d.Environment):
                shared_reward: bool = False,
                reward_scale: float = 1.0,
                log_obs: bool = False,
-               log_filename: str = "observations.jsonl"):
+               log_filename: str = "observations.jsonl",
+               log_img_dir: str = "agent_view_images",
+               log_interval: int = 50):
     self._environment = environment
     self.reward_scale = reward_scale
     self._reset_next_step = True
@@ -53,11 +57,28 @@ class MeltingPotWrapper(dmlab2d.Environment):
         for obs_spec in self._environment.observation_spec()
     ]
     self.log_obs = log_obs
+    self.log_interval = log_interval
+    self.steps = 0
     
     # Set up observaiton logging
     self._log_filename = log_filename
+    self.log_img_dir = log_img_dir
     if self.log_obs:
       self.log_file = open(self._log_filename, "w", encoding="utf-8")
+      if not os.path.exists(self.log_img_dir):
+        os.makedirs(self.log_img_dir)
+      
+  def _show_rgb_image(self, obs_dict, step, output_dir):
+    for agent_id, agent_obs in obs_dict.items():
+        rgb_array = np.array(agent_obs['RGB'], dtype=np.uint8)
+        # Convert the NumPy array to a PIL Image and resize to 88x88
+        pil_img = Image.fromarray(rgb_array)
+        pil_img = pil_img.resize((88, 88), Image.BICUBIC)  # or Image.ANTIALIAS for older PIL versions
+        os.makedirs(output_dir, exist_ok=True)
+        save_path = os.path.join(output_dir, f"step_{step}_agent_{agent_id}.png")
+        pil_img.save(save_path)
+        del agent_obs['RGB']
+        del agent_obs['WORLD.RGB']
 
   def _remove_unwanted_observations(self, observation: marl_types.Observation):
     """Removes unwanted observations from a marl observation."""
@@ -79,7 +100,10 @@ class MeltingPotWrapper(dmlab2d.Environment):
     # Log observation
     if self.log_obs:
       obs_dict = obs_to_json_dict(timestep.observation)
-      self.log_file.write(json.dumps(obs_dict) + "\n")
+      if self.steps % self.log_interval == 0:
+        self._show_rgb_image(obs_dict, self.steps, self.log_img_dir)
+        self.log_file.write(json.dumps(obs_dict) + "\n")
+      self.steps += 1
     return dm_env.TimeStep(timestep.step_type, reward, discount, observation)
 
   def reset(self) -> dm_env.TimeStep:
