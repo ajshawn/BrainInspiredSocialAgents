@@ -159,7 +159,7 @@ def make_distributed_experiment(
         )
         checkpointer.restore()
 
-      if checkpointing_config.external_cnn_directory:
+      if checkpointing_config.external_cnn_directory is not None:
         old_param = learner._combined_states.params
         external_learner = experiment.builder.make_learner(
             random_key=learner_key,
@@ -198,7 +198,8 @@ def make_distributed_experiment(
           key="learner",
           subdirectory="learner",
           time_delta_minutes=checkpointing_config.model_time_delta_minutes,
-          directory=checkpointing_config.directory,
+          directory=checkpointing_config.external_cnn_finetune_directory or \
+              checkpointing_config.directory,
           add_uid=checkpointing_config.add_uid,
           max_to_keep=checkpointing_config.max_to_keep,
       )

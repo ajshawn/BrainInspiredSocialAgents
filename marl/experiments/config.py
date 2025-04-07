@@ -159,8 +159,8 @@ class CheckpointingConfig:
 
   max_to_keep: int = 3
   directory: str = "~/acme"
-  external_cnn_directory: str = "~/acme"
-  external_cnn_finetune_directory: str = "~/acme"
+  external_cnn_directory: Optional[str] = None
+  external_cnn_finetune_directory: Optional[str] = None
   replace_cnn_agent_idx_lhs: Optional[int] = None
   replace_cnn_agent_idx_rhs: Optional[int] = None
   add_uid: bool = False

@@ -123,6 +123,7 @@ def build_experiment_config():
   memory_efficient = not FLAGS.all_parallel
   frozen_agents = set([int(agent) for agent in FLAGS.frozen_agents.split(",")] if FLAGS.frozen_agents else [])
   agent_roles = [role.strip() for role in FLAGS.agent_roles.split(",")] if FLAGS.agent_roles else None
+  log_agent_views = FLAGS.log_agent_views
 
   if FLAGS.experiment_dir:
     assert FLAGS.algo_name in FLAGS.experiment_dir, f"experiment_dir must be a {FLAGS.algo_name} experiment"
@@ -180,7 +181,7 @@ def build_experiment_config():
         shared_obs=False,
         record=record,
         agent_roles=agent_roles,
-        record_agent_views=FLAGS.log_agent_views,
+        record_agent_views=log_agent_views,
         **custom_env_configs)
     feature_extractor = MeltingpotFE
     num_options = 16
@@ -286,7 +287,7 @@ def main(_):
   config, experiment_dir = build_experiment_config()
   ckpt_config = ma_config.CheckpointingConfig(
       max_to_keep=3, directory=experiment_dir, add_uid=False)
-  if FLAGS.external_cnn_dir:
+  if FLAGS.external_cnn_dir is not None:
     assert FLAGS.external_cnn_finetune_dir, \
       "external_cnn_finetune_dir must be provided if external_cnn_dir is provided"
     assert FLAGS.replace_cnn_agent_idx_lhs and FLAGS.replace_cnn_agent_idx_rhs, \
