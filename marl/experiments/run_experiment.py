@@ -15,12 +15,16 @@ from acme import types
 from acme.jax import savers
 from acme.jax import utils
 from acme.utils import counting
+from acme.tf import savers as tf_savers
 import dm_env
 import jax
 import reverb
 
 from marl import specs as ma_specs
 from marl.experiments import config as ma_config
+from marl.types import PopArtTrainingState
+
+LAYER_PREFIX = 'impala_network/~/meltingpot_features/~/meltingpot_visual_features/~/'
 
 
 def run_experiment(
@@ -92,12 +96,63 @@ def run_experiment(
       counter=counting.Counter(
           parent_counter, prefix="learner", time_delta=0.0),
   )
+  
+  # Load the model from the checkpoint
+  if experiment.resume_training:
+        checkpointer = tf_savers.Checkpointer(
+            objects_to_save={"learner": learner},
+            directory=checkpointing_config.directory,
+            subdirectory="learner",
+            time_delta_minutes=checkpointing_config.model_time_delta_minutes,
+            add_uid=checkpointing_config.add_uid,
+            max_to_keep=checkpointing_config.max_to_keep,
+        )
+        checkpointer.restore()
+        
+  # Load the external model from the checkpoint for CNN parameters
+  if checkpointing_config.external_cnn_directory:
+    old_param = learner._combined_states.params
+    external_learner = experiment.builder.make_learner(
+        random_key=learner_key,
+        networks=network,
+        dataset=dataset,
+        logger_fn=experiment.logger_factory,
+        environment_spec=environment_specs,
+    )
+    checkpointer = tf_savers.Checkpointer(
+        objects_to_save={"learner": external_learner},
+        directory=checkpointing_config.external_cnn_directory,
+        subdirectory="learner",
+        time_delta_minutes=checkpointing_config.model_time_delta_minutes,
+        add_uid=checkpointing_config.add_uid,
+        max_to_keep=checkpointing_config.max_to_keep,
+    )
+    checkpointer.restore()
+    external_param = external_learner._combined_states.params
+
+    old_param_copy = old_param.copy()
+
+    # Update the model with the external cnn parameters
+    new_params = _update_cnn_param(
+       old_param, 
+       external_param, 
+       checkpointing_config.replace_cnn_agent_idx_lhs,
+       checkpointing_config.replace_cnn_agent_idx_rhs,
+    )
+    new_training_state = PopArtTrainingState(
+        params=new_params,
+        opt_state=learner._combined_states.opt_state,
+        popart_state=learner._combined_states.popart_state,
+    )
+    learner.restore(new_training_state)
+
+  # Save the model to the new checkpoint
   learner = savers.CheckpointingRunner(
       learner,
       key="learner",
       subdirectory="learner",
       time_delta_minutes=checkpointing_config.model_time_delta_minutes,
-      directory=checkpointing_config.directory,
+      directory=checkpointing_config.external_cnn_finetune_directory,
       add_uid=checkpointing_config.add_uid,
       max_to_keep=checkpointing_config.max_to_keep,
   )
@@ -268,3 +323,28 @@ def _disable_insert_blocking(
             int((rate_limiter_info.max_diff - rate_limiter_info.min_diff) / 2),
         ))
   return modified_tables, sample_sizes
+
+def _update_cnn_param(
+    old_param,
+    external_param,
+    replace_cnn_agent_idx_lhs,
+    replace_cnn_agent_idx_rhs,
+):
+  for layer in ["conv2_d", "conv2_d_1", "linear", "linear_1"]:
+    for ele in ["w", "b"]:
+      # Pull out the array to be updated (e.g. shape [agents, ...])
+      updated_arr = old_param[LAYER_PREFIX + layer][ele]
+      external_arr = external_param[LAYER_PREFIX + layer][ele]
+
+      for lhs_idx, rhs_idx in zip(replace_cnn_agent_idx_lhs, replace_cnn_agent_idx_rhs):
+
+        # Grab the external params for rhs agent
+        rhs_params = external_arr[rhs_idx]
+
+        # Update that slice (or row) in updated_arr
+        updated_arr = updated_arr.at[lhs_idx].set(rhs_params)
+
+      # Put updated_arr back into old_param
+      old_param[LAYER_PREFIX + layer][ele] = updated_arr
+
+  return old_param

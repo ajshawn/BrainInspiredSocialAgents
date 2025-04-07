@@ -190,5 +190,28 @@
                 "PYTHONPATH": "."
             }
         },
+        {
+            "name": "External CNN predator_prey__open",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--available_gpus", "1",
+                "--num_actors", "1",
+                "--algo_name", "PopArtIMPALA",
+                "--env_name", "meltingpot",
+                "--map_name", "predator_prey__open",
+                "--experiment_dir", "results/predator_prey__open_1B_step/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp10684",
+                "--external_cnn_dir", "results/predator_prey__open_1B_step/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp10684",
+                "--external_cnn_finetune_dir", "temp_2",
+                "--replace_cnn_agent_idx_lhs", "7,9",
+                "--replace_cnn_agent_idx_rhs", "9,7",
+                "--frozen_agents", "0,1,2,3,4,5,6,8,10,11,12"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1"
+            }
+        },
     ]
 }

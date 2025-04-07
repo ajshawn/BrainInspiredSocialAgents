@@ -60,6 +60,7 @@ flags.DEFINE_bool("prosocial", False,
                   "Whether to use shared reward for prosocial training.")
 flags.DEFINE_integer("seed", 0, "Random seed.")
 flags.DEFINE_integer("num_steps", 200_000_000, "Number of env steps to run.")
+flags.DEFINE_integer("unlimited_steps", 1, "Whether to run unlimited steps.") 
 flags.DEFINE_string("exp_log_dir", "./results/",
                     "Directory to store experiment logs in.")
 flags.DEFINE_bool("use_tb", False, "Flag to enable tensorboard logging.")
@@ -90,7 +91,13 @@ flags.DEFINE_bool("dense_ore_regrow", False, "Whether to use a larger ore regrow
 
 # Agent network related
 flags.DEFINE_integer("recurrent_dim", 128, "Recurrent dimension for agent network")
-flags.DEFINE_bool("log_agent_views", False, "Whether to log agent views.")
+flags.DEFINE_bool("log_agent_views", False, "Whether to log agent views")
+
+# Flags for load and freeze external CNN weights
+flags.DEFINE_string("external_cnn_dir", None, "Directory to load external CNN weights from")
+flags.DEFINE_string("external_cnn_finetune_dir", None, "Directory to save finetuned weights based on external CNN")
+flags.DEFINE_string("replace_cnn_agent_idx_lhs", None, "Comma separated list of agent indices to replace CNN weights, left hand side of assignment")
+flags.DEFINE_string("replace_cnn_agent_idx_rhs", None, "Comma separated list of agent indices to replace CNN weights, right hand side of assignment")
 
 def _get_custom_env_configs():
   result = {} 
@@ -249,6 +256,9 @@ def build_experiment_config():
   # Add frozen agents
   builder._config.frozen_agents = frozen_agents
 
+  # Add flag to freeze CNN weights
+  builder._config.freeze_cnn = True if FLAGS.external_cnn_dir else False
+
   return (
       experiments.MAExperimentConfig(
           builder=builder,
@@ -256,7 +266,7 @@ def build_experiment_config():
           network_factory=network_factory,
           logger_factory=functools.partial(
               make_experiment_logger,
-              log_dir=experiment_dir,
+              log_dir=FLAGS.external_cnn_finetune_dir if FLAGS.external_cnn_finetune_dir else experiment_dir,
               use_tb=FLAGS.use_tb,
               use_wandb=FLAGS.use_wandb,
               wandb_config=wandb_config,
@@ -264,7 +274,7 @@ def build_experiment_config():
           environment_spec=environment_specs,
           evaluator_env_factories=None,
           seed=FLAGS.seed,
-          max_num_actor_steps=None,
+          max_num_actor_steps=None if FLAGS.unlimited_steps else FLAGS.num_steps,
           resume_training=True if FLAGS.experiment_dir else False,
       ),
       experiment_dir,
@@ -276,8 +286,19 @@ def main(_):
   config, experiment_dir = build_experiment_config()
   ckpt_config = ma_config.CheckpointingConfig(
       max_to_keep=3, directory=experiment_dir, add_uid=False)
+  if FLAGS.external_cnn_dir:
+    assert FLAGS.external_cnn_finetune_dir, \
+      "external_cnn_finetune_dir must be provided if external_cnn_dir is provided"
+    assert FLAGS.replace_cnn_agent_idx_lhs and FLAGS.replace_cnn_agent_idx_rhs, \
+      "replace_cnn_agent_idx_lhs and replace_cnn_agent_idx_rhs must be provided if external_cnn_dir is provided"
+    ckpt_config.external_cnn_directory = FLAGS.external_cnn_dir
+    ckpt_config.external_cnn_finetune_directory = FLAGS.external_cnn_finetune_dir
+    ckpt_config.replace_cnn_agent_idx_lhs = [int(idx) for idx in FLAGS.replace_cnn_agent_idx_lhs.split(",")]
+    ckpt_config.replace_cnn_agent_idx_rhs = [int(idx) for idx in FLAGS.replace_cnn_agent_idx_rhs.split(",")]
+    assert len(ckpt_config.replace_cnn_agent_idx_lhs) == len(ckpt_config.replace_cnn_agent_idx_rhs), \
+      "replace_cnn_agent_idx_lhs and replace_cnn_agent_idx_rhs must have the same number of elements"
+    
   if FLAGS.async_distributed:
-
     nodes_on_gpu = helpers.node_allocation(
         FLAGS.available_gpus,
         FLAGS.inference_server)

@@ -21,6 +21,22 @@ from marl.utils import experiment_utils as ma_utils
 
 _PMAP_AXIS_NAME = "data"
 
+def build_freeze_mask(params) -> hk.Params:
+  """Build a tree-structured mask (0/1) with 0 where the module name contains
+  'meltingpot_visual_features' and 1 otherwise."""
+
+  def should_freeze(module_name: str) -> bool:
+    return "meltingpot_visual_features" in module_name
+
+  mask = {}
+  for module_name, param_dict in params.items():
+    freeze = 1.0
+    if should_freeze(module_name):
+      freeze = 0.0
+    mask[module_name] = {}
+    for param_name, param_value in param_dict.items():
+      mask[module_name][param_name] = jnp.ones_like(param_value) * freeze
+  return mask
 
 class MALearner(acme.Learner):
 
@@ -36,6 +52,7 @@ class MALearner(acme.Learner):
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       frozen_agents: Optional[set] = None,
+      freeze_cnn: bool = False,
   ):
     local_devices = jax.local_devices()
     process_id = jax.process_index()
@@ -57,6 +74,7 @@ class MALearner(acme.Learner):
     self.frozen_agents = frozen_agents or set()
     self.n_devices = len(self._local_devices)
     self._rng = hk.PRNGSequence(random_key)
+    self._freeze_cnn = freeze_cnn
 
     def make_initial_state(key: jnp.ndarray) -> types.TrainingState:
       """Initialises the training state (parameters and optimiser state)."""
@@ -85,24 +103,41 @@ class MALearner(acme.Learner):
         states.append(agent_state)
       return states
 
+    # Initialise training state (parameters and optimiser state).
+    self._states = make_initial_states(next(self._rng))
+    self._combined_states = ma_utils.merge_data(self._states)
+
+    # Build a mask for CNN freezing if requested.
+    # Use the first agent's params as representative (all have the same structure).
+    if self._freeze_cnn:
+      self._freeze_mask = build_freeze_mask(self._states[0].params)
+    else:
+      # A mask of all ones => no freezing
+      self._freeze_mask = jax.tree_map(jnp.ones_like, self._states[0].params)
+
+    self._loss_fn = loss_fn(network=network)
+
     @jax.jit
     def sgd_step(
-        state: types.TrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray
+        state: types.TrainingState,
+        sample: types.TrainingData,
+        is_frozen: jnp.ndarray,
+        freeze_mask: hk.Params,
     ) -> tuple[types.TrainingState, dict[str, jnp.ndarray]]:
       """Computes an SGD step, returning new state and metrics for logging."""
-
-      # Compute gradients.
       grad_fn = jax.grad(self._loss_fn, has_aux=True)
       gradients, metrics = grad_fn(state.params, sample)
 
-      # Create a mask where 0 means frozen, and 1 means not frozen.
-      mask = jnp.where(is_frozen, 0.0, 1.0)
+      # 1) Zero-out gradients for the CNN if freeze_cnn=True
+      gradients = jax.tree_map(lambda g, m: g * m, gradients, freeze_mask)
 
-      # Apply the mask to the gradients.
+      # 2) Zero-out all gradients if the agent is in the 'frozen_agents' set
+      #    (this mask is broadcast over the param shape)
+      mask = jnp.where(is_frozen, 0.0, 1.0)
       gradients = jax.tree_map(lambda g: g * mask, gradients)
 
-      # Apply updates.
-      updates, new_opt_state = optimizer.update(gradients, state.opt_state)
+      # Apply updates
+      updates, new_opt_state = self.optimizer.update(gradients, state.opt_state)
       new_params = optax.apply_updates(state.params, updates)
 
       metrics.update({
@@ -117,14 +152,8 @@ class MALearner(acme.Learner):
 
       return new_state, metrics
 
-    # Initialise training state (parameters and optimiser state).
-    self._states = make_initial_states(next(self._rng))
-    self._combined_states = ma_utils.merge_data(self._states)
-
-    self._loss_fn = loss_fn(network=network)
-
     self._sgd_step = jax.pmap(
-        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0))
+        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0, None))
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()
@@ -192,7 +221,7 @@ class MALearner(acme.Learner):
           agent_idx in self.frozen_agents for agent_idx in range(i, min(i + self.n_devices, self.n_agents))
       ])
 
-      new_state, result = self._sgd_step(cur_state, cur_sample, is_frozen_chunk)
+      new_state, result = self._sgd_step(cur_state, cur_sample, is_frozen_chunk, self._freeze_mask)
 
       new_states.append(jax.device_get(new_state))
       results.append(jax.device_get(result))
@@ -244,6 +273,7 @@ class MALearnerPopArt(MALearner):
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       frozen_agents: Optional[set] = None,
+      freeze_cnn: bool = False
   ):
     local_devices = jax.local_devices()
     process_id = jax.process_index()
@@ -266,6 +296,7 @@ class MALearnerPopArt(MALearner):
     self.frozen_agents = frozen_agents or set()
     self.n_devices = len(self._local_devices)
     self._rng = hk.PRNGSequence(random_key)
+    self._freeze_cnn = freeze_cnn
 
     def make_initial_state(key: jnp.ndarray) -> types.PopArtTrainingState:
       """Initialises the training state (parameters and optimiser state)."""
@@ -296,26 +327,41 @@ class MALearnerPopArt(MALearner):
         states.append(agent_state)
       return states
 
+    # Initialise training state (parameters and optimiser state).
+    self._states = make_initial_states(next(self._rng))
+    self._combined_states = ma_utils.merge_data(self._states)
+
+    # Build a mask for CNN freezing if requested.
+    # Use the first agent's params as representative (all have the same structure).
+    if self._freeze_cnn:
+      self._freeze_mask = build_freeze_mask(self._states[0].params)
+    else:
+      # A mask of all ones => no freezing
+      self._freeze_mask = jax.tree_map(jnp.ones_like, self._states[0].params)
+
+    self._loss_fn = loss_fn(network=network, popart_update_fn=popart.update_fn)
+
     @jax.jit
     def sgd_step(
-        state: types.PopArtTrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray
+        state: types.PopArtTrainingState,
+        sample: types.TrainingData,
+        is_frozen: jnp.ndarray,
+        freeze_mask: hk.Params,
     ) -> tuple[types.PopArtTrainingState, dict[str, jnp.ndarray]]:
       """Computes an SGD step, returning new state and metrics for logging."""
-
-      # Compute gradients.
       grad_fn = jax.grad(self._loss_fn, has_aux=True)
-      gradients, (new_popart_state, metrics) = grad_fn(state.params,
-                                                       state.popart_state,
-                                                       sample)
-      
-      # Create a mask where 0 means frozen, and 1 means not frozen.
-      mask = jnp.where(is_frozen, 0.0, 1.0)
+      gradients, (new_popart_state, metrics) = grad_fn(
+          state.params, state.popart_state, sample)
 
-      # Apply the mask to the gradients.
+      # 1) Zero-out gradients for the CNN if freeze_cnn=True
+      gradients = jax.tree_map(lambda g, m: g * m, gradients, freeze_mask)
+
+      # 2) Zero-out all gradients if the agent is in 'frozen_agents'
+      mask = jnp.where(is_frozen, 0.0, 1.0)
       gradients = jax.tree_map(lambda g: g * mask, gradients)
 
-      # Apply updates.
-      updates, new_opt_state = optimizer.update(gradients, state.opt_state)
+      # Apply updates
+      updates, new_opt_state = self.optimizer.update(gradients, state.opt_state)
       new_params = optax.apply_updates(state.params, updates)
 
       metrics.update({
@@ -328,17 +374,10 @@ class MALearnerPopArt(MALearner):
           opt_state=new_opt_state,
           popart_state=new_popart_state,
       )
-
       return new_state, metrics
 
-    # Initialise training state (parameters and optimiser state).
-    self._states = make_initial_states(next(self._rng))
-    self._combined_states = ma_utils.merge_data(self._states)
-
-    self._loss_fn = loss_fn(network=network, popart_update_fn=popart.update_fn)
-
     self._sgd_step = jax.pmap(
-        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0))
+        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0, None))
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()

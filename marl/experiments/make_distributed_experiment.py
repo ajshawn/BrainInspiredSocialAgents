@@ -30,6 +30,8 @@ from marl import specs as ma_specs
 from marl import types
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
+from marl.experiments.run_experiment import _update_cnn_param
+from marl.types import PopArtTrainingState
 
 ActorId = int
 InferenceServer = inference_server.InferenceServer[types.PolicyValueFn]
@@ -156,6 +158,41 @@ def make_distributed_experiment(
             max_to_keep=checkpointing_config.max_to_keep,
         )
         checkpointer.restore()
+
+      if checkpointing_config.external_cnn_directory:
+        old_param = learner._combined_states.params
+        external_learner = experiment.builder.make_learner(
+            random_key=learner_key,
+            networks=networks,
+            dataset=iterator,
+            logger_fn=experiment.logger_factory,
+            environment_spec=spec,
+        )
+        checkpointer = tf_savers.Checkpointer(
+            objects_to_save={"learner": external_learner},
+            directory=checkpointing_config.external_cnn_directory,
+            subdirectory="learner",
+            time_delta_minutes=checkpointing_config.model_time_delta_minutes,
+            add_uid=checkpointing_config.add_uid,
+            max_to_keep=checkpointing_config.max_to_keep,
+        )
+        checkpointer.restore()
+        external_param = external_learner._combined_states.params
+
+        # Update the model with the external cnn parameters
+        new_params = _update_cnn_param(
+          old_param, 
+          external_param, 
+          checkpointing_config.replace_cnn_agent_idx_lhs,
+          checkpointing_config.replace_cnn_agent_idx_rhs,
+        )
+        new_training_state = PopArtTrainingState(
+            params=new_params,
+            opt_state=learner._combined_states.opt_state,
+            popart_state=learner._combined_states.popart_state,
+        )
+        learner.restore(new_training_state)
+
       learner = savers.CheckpointingRunner(
           learner,
           key="learner",

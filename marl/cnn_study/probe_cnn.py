@@ -21,8 +21,10 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer("ckp_idx", 0, "Checkpoint index loaded")
 flags.DEFINE_integer("agent_idx", 0, "Agent index for which to train the probe")
 flags.DEFINE_bool("random_baseline", False, "Probe a random CNN baseline")
+flags.DEFINE_string("task", "binary_cls", "Task type: 'binary_cls' or 'regression'")
 
-class CNNProbe(hk.Module):
+
+class CNNProbeCls(hk.Module):
 
   def __init__(self, output_size: int):
     super().__init__("meltingpot_cnn_probe")
@@ -35,6 +37,20 @@ class CNNProbe(hk.Module):
     vis_op = self._visual_torso(ip_img)
     logits = self._linear(vis_op)
     return logits
+  
+class CNNProbeReg(hk.Module):
+
+    def __init__(self, hidden_size: int = 256):
+        super().__init__("meltingpot_cnn_probe")
+        self._visual_torso = VisualFeatures()
+        self._linear = hk.Linear(1)
+    
+    def __call__(self, obs):
+        # extract visual features form RGB observation
+        ip_img = obs.astype(jnp.float32) / 255
+        vis_op = self._visual_torso(ip_img)
+        count = self._linear(vis_op)
+        return count
 
 def load_checkpoint(agent_idx: int = 0):
     """
@@ -299,29 +315,138 @@ def train_binary_cls_model(
 
     return params
 
+def train_regression_model(
+    transformed_forward: hk.Transformed,
+    init_params,
+    rng,
+    dataset_config,
+    num_steps=2000,
+    validation_interval=100,
+    verbose=False
+):
+    """
+    Freezes the CNN params, trains only the linear head using the
+    provided train_ds (training set) and val_ds (validation set),
+    but applies a regression objective (MSE) instead of a
+    classification objective.
+    """
+
+    # Create param mask & multi-transform
+    mask = freeze_cnn_mask(init_params)
+    transforms, label_fn = create_linear_only_optimizer(learning_rate=1e-4)
+    tx = optax.multi_transform(transforms, jax.tree_map(label_fn, mask))
+    opt_state = tx.init(init_params)
+
+    @jax.jit
+    def loss_fn(params, batch_images, batch_targets):
+        """
+        For regression, we'll compute the mean squared error (MSE).
+        """
+        preds = transformed_forward.apply(params, rng, batch_images)
+        return jnp.mean((preds - batch_targets) ** 2)
+
+    @jax.jit
+    def update(params, opt_state, batch_images, batch_targets):
+        grads = jax.grad(loss_fn)(params, batch_images, batch_targets)
+        updates, new_opt_state = tx.update(grads, opt_state, params)
+        new_params = optax.apply_updates(params, updates)
+        return new_params, new_opt_state
+
+    params = init_params
+
+    # Build the dataset (now presumed to be for regression)
+    train_ds, val_ds = build_tf_dataset(**dataset_config)
+
+    for step in tqdm(range(num_steps)):
+        # -- TRAINING --
+        try:
+            batch_images, batch_targets = next(train_ds)
+        except StopIteration:
+            # Reset the iterator if exhausted
+            train_ds, _ = build_tf_dataset(**dataset_config)
+            batch_images, batch_targets = next(train_ds)
+
+        # Convert from tf-style float32 to JAX's jnp.float32
+        batch_images = jnp.array(batch_images)
+        batch_targets = jnp.array(batch_targets)
+
+        # Perform a training step
+        params, opt_state = update(params, opt_state, batch_images, batch_targets)
+        train_loss_val = loss_fn(params, batch_images, batch_targets)
+
+        # -- VALIDATION --
+        if step % validation_interval == 0:
+            # Reinitialize the validation data iterator for a fresh pass
+            _, val_ds = build_tf_dataset(**dataset_config)
+
+            sum_val_loss = 0.0
+            sum_count = 0
+
+            while True:
+                try:
+                    val_images, val_targets = next(val_ds)
+                except StopIteration:
+                    break
+
+                val_images = jnp.array(val_images)
+                val_targets = jnp.array(val_targets)
+
+                batch_val_loss = loss_fn(params, val_images, val_targets)
+                sum_val_loss += float(batch_val_loss) * val_images.shape[0]
+                sum_count += val_images.shape[0]
+
+            # Compute average validation loss
+            val_loss_avg = sum_val_loss / sum_count if sum_count > 0 else 0.0
+
+            # Optional console output
+            if verbose:
+                print(
+                    f"Step {step}: "
+                    f"train_loss={train_loss_val:.4f}, "
+                    f"val_loss={val_loss_avg:.4f}"
+                )
+
+            # Log to Weights & Biases
+            wandb.log(
+                {
+                    "step": step,
+                    "train_loss": float(train_loss_val),
+                    "val_loss": float(val_loss_avg),
+                }
+            )
+
+    return params
+
 def main(_):
+    task = FLAGS.task
+
     for label_key in ["apple", "floorAcorn", "preys", "predators"]:
-    
         env_name = "predator_prey__open"
-        log_name = f"{env_name}_{label_key}_agent{FLAGS.agent_idx}_ckpt{FLAGS.ckp_idx}" \
-            if not FLAGS.random_baseline else f"{env_name}_{label_key}_random_baseline"
+        log_name = (
+            f"{task}_{env_name}_{label_key}_agent{FLAGS.agent_idx}_ckpt{FLAGS.ckp_idx}"
+            if not FLAGS.random_baseline
+            else f"{task}_{env_name}_{label_key}_random_baseline"
+        )
+
         wandb.init(
             project="cnn_probe",
             name=log_name,
             config={
-                "num_steps": 5000,
+                "num_steps": 50000,
                 "batch_size": 16,
                 "learning_rate": 1e-4,
                 "agent_idx": FLAGS.agent_idx,
+                "task": task,
             }
         )
-        
+
+        # Configure dataset
         dataset_config = {
             "label_key": label_key,
-            "image_dir": "data/predator_prey__open_random/agent_view_images",
-            "label_file": "data/predator_prey__open_random/observations.jsonl",
+            "image_dir": "data/predator_prey__open_random_xl/agent_view_images",
+            "label_file": "data/predator_prey__open_random_xl/observations.jsonl",
             "batch_size": wandb.config.batch_size,
-            "task": "binary_cls",
+            "task": task,
             "num_epochs": None,
             "shuffle": False,
             "step_interval": 50,
@@ -329,28 +454,41 @@ def main(_):
             "split_ratio": 0.8
         }
 
-        # Build the forward
-        def forward_fn(x):
-            model = CNNProbe(output_size=2)  # 2-class classification
-            return model(x)
+        # Select model and trainer based on `task`
+        if task == "binary_cls":
+            def forward_fn(x):
+                # 2-class classification probe
+                return CNNProbeCls(output_size=2)(x)
+            train_fn = train_binary_cls_model
+        elif task == "regression":
+            def forward_fn(x):
+                # Single-output regression probe
+                return CNNProbeReg()(x)
+            train_fn = train_regression_model
+        else:
+            raise ValueError(
+                f"Unknown task: {task}. Must be 'binary_cls' or 'regression'."
+            )
+
         transformed_forward = hk.transform(forward_fn)
 
-        # Load CNN parameters from checkpoint
+        # Load CNN parameters from checkpoint or random if specified
         new_params = build_standalone_model_from_checkpoint(
             transformed_forward,
             agent_idx=FLAGS.agent_idx,
-            random_baseline=FLAGS.random_baseline
+            random_baseline=FLAGS.random_baseline,
         )
 
         rng = jax.random.PRNGKey(999)
 
-        # Train the new linear head with the real dataset
-        trained_params = train_binary_cls_model(
+        # Train the linear head
+        trained_params = train_fn(
             transformed_forward=transformed_forward,
             init_params=new_params,
             dataset_config=dataset_config,
             rng=rng,
-            num_steps=wandb.config.num_steps
+            num_steps=wandb.config.num_steps,
+            verbose=True  # can turn off if you prefer
         )
 
         wandb.finish()

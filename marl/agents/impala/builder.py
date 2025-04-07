@@ -72,6 +72,7 @@ class IMPALABuilder(MABuilder):
         counter=counter,
         logger=logger_fn(label="learner"),
         frozen_agents=self._config.frozen_agents,
+        freeze_cnn=self._config.freeze_cnn,
     )
 
 
@@ -146,4 +147,5 @@ class PopArtIMPALABuilder(MABuilder):
         counter=counter,
         logger=logger_fn(label="learner"),
         frozen_agents=self._config.frozen_agents,
+        freeze_cnn=self._config.freeze_cnn,
     )

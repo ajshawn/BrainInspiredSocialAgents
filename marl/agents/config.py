@@ -24,8 +24,10 @@ class MAConfig:
   # Environment Details
   n_agents: int = None
 
-  # Freeze agents
+  # Freeze agents 
   frozen_agents: set[int] = None
+  # Freeze CNN weights
+  freeze_cnn: bool = False
 
   # Optimization configuration
   use_parameter_sampling: bool = False

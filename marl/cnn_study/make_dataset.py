@@ -86,12 +86,16 @@ def build_tf_dataset(
     train_filenames = filenames[:split_index]
     train_labels = out_labels[:split_index]
     val_filenames = filenames[split_index:]
-    val_labels = out_labels[split_index:]\
+    val_labels = out_labels[split_index:]
         
     # Optionally balance each split if this is a binary classification task
-    if balance_data and task == "binary_cls":
-        train_filenames, train_labels = _balance_dataset(train_filenames, train_labels)
-        val_filenames, val_labels = _balance_dataset(val_filenames, val_labels)
+    if balance_data:
+        if task == "binary_cls":    
+            train_filenames, train_labels = _balance_dataset_cls(train_filenames, train_labels)
+            val_filenames, val_labels = _balance_dataset_cls(val_filenames, val_labels)
+        else:
+            train_filenames, train_labels = _balance_dataset_regression(train_filenames, train_labels)
+            val_filenames, val_labels = _balance_dataset_regression(val_filenames, val_labels)
     
     # print(f"Training label distribution: {Counter(train_labels)}")
     # print(f"Validation label distribution: {Counter(val_labels)}")
@@ -102,7 +106,7 @@ def build_tf_dataset(
         train_labels,
         batch_size,
         num_epochs,
-        shuffle=False  # We already shuffled above.
+        shuffle=True
     )
     val_ds = _build_single_dataset(
         val_filenames,
@@ -114,7 +118,7 @@ def build_tf_dataset(
 
     return train_ds, val_ds
 
-def _balance_dataset(filenames: np.ndarray, labels: np.ndarray, seed: int = 42):
+def _balance_dataset_cls(filenames: np.ndarray, labels: np.ndarray, seed: int = 42):
     """
     Simple undersampling to balance 0/1 labels.
     Returns balanced filenames, labels arrays.
@@ -137,6 +141,38 @@ def _balance_dataset(filenames: np.ndarray, labels: np.ndarray, seed: int = 42):
     np.random.shuffle(new_indices)
 
     return filenames[new_indices], labels[new_indices]
+
+def _balance_dataset_regression(filenames: np.ndarray, labels: np.ndarray, max_per_label: int = 300, seed: int = 42):
+    """
+    Caps the maximum number of samples for each unique label to `max_per_label`.
+    Suitable for regression tasks.
+    
+    Returns capped filenames and labels arrays.
+    """
+    np.random.seed(seed)
+
+    # Convert labels to float (if not already)
+    labels = labels.astype(float)
+    
+    # Group by unique labels (if labels are floats, you may want to round them first)
+    # Optional: adjust rounding depending on your task
+    rounded_labels = np.round(labels, decimals=2)  # adjust decimals if needed
+    
+    unique_labels = np.unique(rounded_labels)
+    selected_indices = []
+
+    for lbl in unique_labels:
+        indices = np.where(rounded_labels == lbl)[0]
+        if len(indices) > max_per_label:
+            sampled = np.random.choice(indices, max_per_label, replace=False)
+        else:
+            sampled = indices
+        selected_indices.extend(sampled)
+
+    selected_indices = np.array(selected_indices)
+    
+    return filenames[selected_indices], labels[selected_indices]
+
 
 def _build_single_dataset(filenames, labels, batch_size, num_epochs, shuffle=False):
     """
