@@ -12,7 +12,7 @@ import numpy as np
 
 from marl import types as marl_types
 
-USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT"}
+USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "POSITION", "ORIENTATION"}
 
 
 class MeltingPotWrapper(dmlab2d.Environment):
@@ -33,6 +33,7 @@ class MeltingPotWrapper(dmlab2d.Environment):
     self.num_agents = len(self._environment.action_spec())
     self.num_actions = self._environment.action_spec()[0].num_values
     self.agents = list(range(self.num_agents))
+    obs_specs = self._environment.observation_spec()
     self.obs_spec = [
         self._remove_unwanted_observations(obs_spec)
         for obs_spec in self._environment.observation_spec()

@@ -27,6 +27,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool(
     "run_eval_on_scenarios", False, "Whether to run evaluation on meltingpot scenarios."
 )
+flags.DEFINE_bool(
+    "log_timesteps", False, "Whether to log each timestep's activations, locations, actions, rewards."
+)
+flags.DEFINE_integer(
+    "n_episodes", 1, "The number of roll out episode to run"
+)
 flags.DEFINE_string("ckp", None, "Which checkpoint to load")
 
 
@@ -54,10 +60,14 @@ def main(_):
             print(f"Running evaluation on scenarios: {scenarios_for_substrate}")
 
             for scenario_name in scenarios_for_substrate:
-                env_factory = functools.partial(
-                    helpers.make_meltingpot_scenario,
+                # env_factory = functools.partial(
+                #     helpers.make_meltingpot_scenario,
+                #     scenario_name=scenario_name,
+                #     #record= False, #True if FLAGS.record_video=="True" else False,
+                # )
+                env_factory = lambda: helpers.make_meltingpot_scenario(
                     scenario_name=scenario_name,
-                    record=True,
+                    record=False
                 )
                 env_factory(0)
                 config.environment_factory = env_factory
@@ -70,7 +80,8 @@ def main(_):
         else:
             # running evaluation on substrate
             experiments.run_evaluation(
-                config, ckpt_config, environment_name=FLAGS.map_name, ckp=FLAGS.ckp
+                config, ckpt_config, environment_name=FLAGS.map_name, ckp=FLAGS.ckp,log_timesteps = FLAGS.log_timesteps,
+                num_eval_episodes = FLAGS.n_episodes,
             )
 
     else:
@@ -80,6 +91,8 @@ def main(_):
             ckpt_config,
             environment_name=f"{FLAGS.env_name}_{FLAGS.map_name}",
             ckp=FLAGS.ckp,
+            num_eval_episodes = FLAGS.n_episodes,
+            log_timesteps = FLAGS.log_timesteps,
         )
 
 

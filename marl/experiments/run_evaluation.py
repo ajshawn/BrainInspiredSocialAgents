@@ -27,8 +27,9 @@ def run_evaluation(
     experiment: ma_config.MAExperimentConfig,
     checkpointing_config: ma_config.CheckpointingConfig,
     environment_name: str,
-    num_eval_episodes: int = 5,
+    num_eval_episodes: int = 1,
     ckp: Optional[int] = None,
+    log_timesteps: bool = False,
 ):
     """Runs a simple, single-threaded evaluation loop using the default evaluators.
 
@@ -77,6 +78,7 @@ def run_evaluation(
         max_to_keep=checkpointing_config.max_to_keep,
     )
     checkpointer.restore(ckp=ckp)
+
     s1 = learner._combined_states.params.copy()
 
     # testing that the learner parameters are actually loaded
@@ -96,8 +98,11 @@ def run_evaluation(
         parent_counter, prefix=environment_name, time_delta=0.0
     )
     eval_logger = experiment.logger_factory(
-        label=environment_name, steps_key=eval_counter.get_steps_key(), task_instance=0
+        label=f"{environment_name}{ckp}", steps_key=eval_counter.get_steps_key(), task_instance=0
     )
+    timestep_logger = experiment.logger_factory(
+        label=f"{environment_name}{ckp}-timesteps", steps_key=eval_counter.get_steps_key(), task_instance=0
+    ) if log_timesteps else None
 
     agent_idx_offset = SCENARIO_2_AGENT_IDX_OFFSET.get(environment_name, 0)
     eval_actor = Evaluate(
@@ -115,6 +120,8 @@ def run_evaluation(
         counter=eval_counter,
         logger=eval_logger,
         should_update=False,
+        log_timesteps= log_timesteps,
+        timestep_logger = timestep_logger
     )
     # eval_loop = acme.EnvironmentLoop(
     #     environment,

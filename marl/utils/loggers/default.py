@@ -52,7 +52,7 @@ def make_default_logger(
   del steps_key
   if not print_fn:
     print_fn = logging.info
-  terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
+    terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
 
   loggers = [terminal_logger]
 

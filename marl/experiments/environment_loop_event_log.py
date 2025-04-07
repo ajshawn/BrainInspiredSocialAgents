@@ -17,6 +17,7 @@ from collections import defaultdict
 import operator
 import time
 from typing import List, Optional, Sequence
+import json
 
 from acme import core
 from acme.utils import counting
@@ -63,6 +64,8 @@ class EnvironmentLoopEvents(core.Worker):
         should_update: bool = True,
         label: str = "environment_loop",
         observers: Sequence[observers_lib.EnvLoopObserver] = (),
+        log_timesteps: bool = False,
+        timestep_logger: Optional[loggers.Logger] = None,
     ):
         # Internalize agent and environment.
         self._environment = environment
@@ -73,6 +76,8 @@ class EnvironmentLoopEvents(core.Worker):
         )
         self._should_update = should_update
         self._observers = observers
+        self._log_timesteps = log_timesteps
+        self._timestep_logger = timestep_logger
 
     def run_episode(self) -> loggers.LoggingData:
         """Run one episode.
@@ -95,9 +100,9 @@ class EnvironmentLoopEvents(core.Worker):
             "mine_iron": defaultdict(int),
             "mine_gold": defaultdict(int),
             "extract_gold": defaultdict(int),
-            "gold_reward": defaultdict(int),
+            "follower_mining": defaultdict(int),
         }
-
+        timestep_data = []
         # For evaluation, this keeps track of the total undiscounted reward
         # accumulated during the episode.
 
@@ -113,7 +118,7 @@ class EnvironmentLoopEvents(core.Worker):
             # Initialize the observer with the current state of the env after reset
             # and the initial timestep.
             observer.observe_first(self._environment, timestep)
-
+        
         # Run an episode.
         while not timestep.last():
             # Book-keeping.
@@ -129,22 +134,50 @@ class EnvironmentLoopEvents(core.Worker):
             timestep = self._environment.step(action)
             env_step_durations.append(time.time() - env_step_start)
 
-            # log events
             rewards = timestep.reward
+            #OBS = self._environment.observation_spec()
             events = self._environment.environment.events()
+            
+            # add a small punishment for the zapping action 
+            # for i, x in enumerate(action):
+            #     if x == 7:
+            #         timestep.reward[i] -= 0.1
+            # f = open("temp_obs.json", "w")
+            
+            # episode_steps
+            # log events - training 
+            mine_iron = [0] * len(rewards)
+            mine_gold = [0] * len(rewards)
+            extract_gold = [0] * len(rewards)
             for event in events:
                 event_type = event[0]
                 if event_type == "mining" and event[1][4] == 1:
                     episode_data["mine_iron"][int(event[1][2])] += 1
-                elif event_type == "mining" and event[1][4] == 2:
+                    mine_iron[int(event[1][2])-1] = 1
+                elif event_type == "mining" and event[1][4] == 2: # mined gold 
                     episode_data["mine_gold"][int(event[1][2])] += 1
-                elif event_type == "extraction" and event[1][4] == 2:
+                    mine_gold[int(event[1][2])-1] = 1
+                    if rewards[int(event[1][2])-1]>=2: # mine and extract at the same time - follower 
+                        episode_data["follower_mining"][int(event[1][2])] += 1
+                elif event_type == "extraction" and event[1][4] == 2: # extracted gold 
                     episode_data["extract_gold"][int(event[1][2])] += 1
-                    indices = [
-                        i for i, x in enumerate(rewards) if x >= 2
-                    ]  # better fix this by importing gold reward from config
-                    for i in indices:
-                        episode_data["gold_reward"][i + 1] += 1
+                    extract_gold[int(event[1][2])-1] = 1
+                # elif event_type == "overextration" or any([r == -0.5 for r in rewards]):
+                #     print(rewards)
+                #     f.write(json.dump(timestep.observation.to_list()))
+                # log events - each time step  action and rewards
+            if self._log_timesteps:
+                timestep_data.append({"action":[int(arr.item()) for arr in action],
+                "mine_iron":mine_iron,
+                "mine_gold":mine_gold,
+                "extract_gold":extract_gold,
+                "reward":list(map(float, rewards)),
+                "timestep":int(episode_steps),
+                "position": timestep.observation['observation'].get('POSITION', []).tolist(),
+                "orientation": timestep.observation['observation'].get('ORIENTATION', []).tolist(),
+                "hidden": self._actor._states.hidden.tolist(),
+                })
+
             # Have the agent and observers observe the timestep.
             self._actor.observe(action, next_timestep=timestep)
             for observer in self._observers:
@@ -170,6 +203,7 @@ class EnvironmentLoopEvents(core.Worker):
 
         # Collect the results and combine with counts.
         steps_per_second = episode_steps / (time.time() - episode_start_time)
+        
         result = {
             "episode_length": episode_steps,
             "episode_return": episode_return,
@@ -177,29 +211,24 @@ class EnvironmentLoopEvents(core.Worker):
             "env_reset_duration_sec": env_reset_duration,
             "select_action_duration_sec": np.mean(select_action_durations),
             "env_step_duration_sec": np.mean(env_step_durations),
-            "episode_data": episode_data,
+            #"timestep_data":timestep_data,
         }
         # Add episode custom data
-        all_indices = (
-            set(episode_data["mine_iron"].keys())
-            | set(episode_data["mine_gold"].keys())
-            | set(episode_data["extract_gold"].keys())
-            | set(episode_data["gold_reward"].keys())
-        )
         update_dict = {}
-        for idx in sorted(all_indices):
+        for agent_id in range(1,len(rewards)+1):
             update_dict.update(
                 {
-                    f"mine_iron_{idx}": episode_data["mine_iron"].get(idx, 0),
-                    f"mine_gold_{idx}": episode_data["mine_gold"].get(idx, 0),
-                    f"extract_gold_{idx}": episode_data["extract_gold"].get(idx, 0),
-                    f"gold_reward_{idx}": episode_data["gold_reward"].get(idx, 0),
+                    f"mine_iron_{agent_id}": episode_data["mine_iron"].get(agent_id, 0),
+                    f"mine_gold_{agent_id}": episode_data["mine_gold"].get(agent_id, 0),
+                    f"extract_gold_{agent_id}": episode_data["extract_gold"].get(agent_id, 0),
+                    f"follower_mining_{agent_id}": episode_data["follower_mining"].get(agent_id, 0),
                 }
             )
 
         result.update(update_dict)
-
         result.update(counts)
+        if self._log_timesteps:
+            result.update({"timestep_data":timestep_data})
         for observer in self._observers:
             result.update(observer.get_metrics())
         return result
@@ -246,11 +275,16 @@ class EnvironmentLoopEvents(core.Worker):
                 episode_start = time.time()
                 result = self.run_episode()
                 result = {**result, **{"episode_duration": time.time() - episode_start}}
-                episode_data = result["episode_data"]
                 episode_count += 1
                 step_count += int(result["episode_length"])
                 # Log the given episode results.
-                self._logger.write(result)
+                if self._log_timesteps:
+                    self._timestep_logger.write({"timestep_data": result.get("timestep_data", {})})
+                    result.pop("timestep_data")
+                    self._logger.write(result)
+
+                else:
+                    self._logger.write(result)
 
         return step_count
 

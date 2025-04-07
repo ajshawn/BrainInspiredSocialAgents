@@ -124,36 +124,31 @@
             "name": "Linfan's Evaluate Script",
             "type": "debugpy",
             "request": "launch",
-            "program": "./evaluate.py",
+            "program": "evaluate.py",
             "console": "integratedTerminal",
             "env": {
-              "EXP_DIR_PREFIX": "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-01-22_10:53:20.839330",
-              "EVN_NAME": "coop_mining",
-              "ALGORITHM_NAME": "PopArtIMPALA",
-              "TIME_STAMP": "2025-01-22_10:53:20.839330",
-              "GPUS": "1",
+              "CUDA_VISIBLE_DEVICES": "0, 1",
               "PYTHONPATH": "./gits/meltingpot:gits/acme:${PYTHONPATH}",
-              "LD_LIBRARY_PATH": "$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/lib",
+              "LD_LIBRARY_PATH": "$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/lib:/home/kumquat/miniconda3/envs/marl-jax/lib",
             },
             "args": [
-              "--async_distributed",
               "--available_gpus", "1",
-              "--num_actors", "8",
+              "--num_actors", "1",
               "--algo_name", "PopArtIMPALA",
               "--env_name", "meltingpot",
               "--map_name", "coop_mining",
               "--record_video", "true",
-              "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-01-22_10:53:20.839330",
-              "--agent_roles", "default, default, default",
+              "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188",
+              "--agent_roles", "default, default",
               "--dense_ore_regrow", "True",
-              "--iron_rate", "0.0002",
-              "--gold_rate", "0.0001",
-              "--conservative_mine_beam", "True",
+              "--iron_rate", "0.0001",
+              "--gold_rate", "0.00008",
               "--iron_reward", "1",
-              "--gold_reward", "4",
-              "--mining_reward", "0"
+              "--gold_reward", "6",
+              "--mining_reward", "0",
+              "--ckp", "73",
+              "--log_timesteps", "true"
             ],
-            "envFile": "${workspaceFolder}/.env"
           }
     ]
 }

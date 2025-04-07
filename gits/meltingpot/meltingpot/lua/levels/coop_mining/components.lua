@@ -111,6 +111,7 @@ function Ore:addMiner(minerId)
 end
 
 function Ore:onHit(hitterGameObject, hitName)
+  --print(self:currentMiners())
   if hitName == 'mine' and
       (self.gameObject:getState() == self._config.rawState or
        self.gameObject:getState() == self._config.partialState) then
@@ -119,8 +120,10 @@ function Ore:onHit(hitterGameObject, hitName)
 
     local hitterMineBeam = hitterGameObject:getComponent('MineBeam')
     hitterMineBeam:processRoleMineEvent(self._config.minNumMiners)
+    
     -- If the Ore has enough miners, process rewards.
     if self:currentMiners() == self._config.minNumMiners then
+      --print(self:currentMiners())
       for id, _ in pairs(self._miners) do
         local avatarGO = self.gameObject.simulation:getAvatarFromIndex(id)
         avatarGO:getComponent('MineBeam'):processRoleExtractEvent(
@@ -134,6 +137,17 @@ function Ore:onHit(hitterGameObject, hitName)
       end
       self:reset()
       self.gameObject:setState(self._config.waitState)
+      
+    -- elseif self:currentMiners() > self._config.minNumMiners then
+    -- -- If the Ore has too many miners, add a negative reward 
+    --   print("overextract")
+    --   for id, _ in pairs(self._miners) do
+    --     local avatarGO = self.gameObject.simulation:getAvatarFromIndex(id)
+    --     avatarGO:getComponent('MineBeam'):processRoleOverExtractEvent(
+    --         self._config.minNumMiners)
+    --   end
+    --   self._miners = {}
+    --   self._miningCountdown = 0
     end
     -- return `true` to prevent the beam from passing through a hit ore.
     return true
@@ -223,6 +237,16 @@ function MineBeam:processRolePairExtractEvent(otherId, oreType)
   "ore_type", oreType)
   
   self.coExtracted(otherId, oreType):add(1)
+end
+
+function MineBeam:processRoleOverExtractEvent(oreType)
+  local amount = -0.5
+  local avatar = self.gameObject:getComponent('Avatar')
+  avatar:addReward(amount)
+  local index = avatar:getIndex()
+  events:add("overextraction", "dict",
+  "player", index,
+  "ore_type", oreType)
 end
 
 function MineBeam:update()

@@ -11,4 +11,4 @@ class IMPALAConfig(MAConfig):
 
   # Loss configuration.
   baseline_cost: float = 0.5
-  entropy_cost: float = 0.003
+  entropy_cost: float = 0.006

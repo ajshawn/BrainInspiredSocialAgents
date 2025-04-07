@@ -4,7 +4,7 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
-    "0.4"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+    "0.3"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 

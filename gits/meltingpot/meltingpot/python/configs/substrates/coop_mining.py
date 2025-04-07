@@ -42,7 +42,7 @@ from meltingpot.python.utils.substrates import shapes
 from meltingpot.python.utils.substrates import specs
 
 # Warning: setting `_ENABLE_DEBUG_OBSERVATIONS = True` may cause slowdown.
-_ENABLE_DEBUG_OBSERVATIONS = False
+_ENABLE_DEBUG_OBSERVATIONS = True
 
 NUM_ORE_TYPES = 2
 MAX_TOKENS_PER_TYPE = 6
@@ -492,6 +492,8 @@ def get_config(**kwargs):
     config.individual_observation_names = [
         "RGB",
         "READY_TO_SHOOT",
+        "POSITION",
+        "ORIENTATION",
     ]
     config.global_observation_names = [
         "WORLD.RGB",
@@ -505,6 +507,8 @@ def get_config(**kwargs):
             "READY_TO_SHOOT": specs.OBSERVATION["READY_TO_SHOOT"],
             # Debug only (do not use the following observations in policies).
             "WORLD.RGB": specs.rgb(216, 216),
+            "POSITION": specs.OBSERVATION["POSITION"],
+            "ORIENTATION": specs.OBSERVATION["ORIENTATION"],
         }
     )
 
