@@ -176,6 +176,7 @@ class EnvironmentLoopEvents(core.Worker):
                 "position": timestep.observation['observation'].get('POSITION', []).tolist(),
                 "orientation": timestep.observation['observation'].get('ORIENTATION', []).tolist(),
                 "hidden": self._actor._states.hidden.tolist(),
+                "embedding": self._actor._embedding.tolist(),
                 })
 
             # Have the agent and observers observe the timestep.

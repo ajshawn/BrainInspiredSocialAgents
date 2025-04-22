@@ -99,11 +99,11 @@ class IMPALANetwork(hk.RNNCore):
     self._value_layer = hk.Linear(1, name="value_layer")
 
   def __call__(self, inputs, state: hk.LSTMState):
-    op = self._embed(inputs)
-    op, new_state = self._recurrent(op, state)
+    embedding = self._embed(inputs)
+    op, new_state = self._recurrent(embedding, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value), new_state
+    return (logits, value, embedding), new_state
 
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
     return self._recurrent.initial_state(batch_size)

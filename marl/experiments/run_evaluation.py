@@ -184,14 +184,14 @@ class Evaluate(core.Actor):
             # self.episode_params = ma_utils.select_idx(self.loaded_params,
             #                                           self.selected_params)
 
-        (logits, _), new_states = self._p_forward(
+        (logits, _, embedding), new_states = self._p_forward(
             self.episode_params, observations, self._states
         )
         # probability based action selection
         # actions = jax.random.categorical(next(self._rng), logits)
         # greedy action selection
         actions = jnp.argmax(logits, axis=-1)
-
+        self._embedding = embedding
         self._states = new_states
         return jax.tree_util.tree_map(lambda a: [*a], actions)
 

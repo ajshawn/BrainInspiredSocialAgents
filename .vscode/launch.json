@@ -137,8 +137,8 @@
               "--algo_name", "PopArtIMPALA",
               "--env_name", "meltingpot",
               "--map_name", "coop_mining",
-              "--record_video", "true",
-              "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188",
+              "--record_video", "True",
+              "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572",
               "--agent_roles", "default, default",
               "--dense_ore_regrow", "True",
               "--iron_rate", "0.0001",
@@ -146,8 +146,8 @@
               "--iron_reward", "1",
               "--gold_reward", "6",
               "--mining_reward", "0",
-              "--ckp", "73",
-              "--log_timesteps", "true"
+              "--ckp", "70",
+              "--log_timesteps", "True"
             ],
           }
     ]
