@@ -104,6 +104,8 @@ SUBSTRATES: Set[str] = frozenset({
     'predator_prey__open',
     'predator_prey__orchard',
     'predator_prey__random_forest',
+    'predator_prey__simplified10x10_OneVsOne',    # Here is a customer environment for 1 vs 1 test
+    'predator_prey__open_debug',  # Here is a customer environment for 2 vs 4 test
     'prisoners_dilemma_in_the_matrix__arena',
     'prisoners_dilemma_in_the_matrix__repeated',
     'pure_coordination_in_the_matrix__arena',

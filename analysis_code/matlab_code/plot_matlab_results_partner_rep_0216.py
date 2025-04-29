@@ -50,11 +50,13 @@ def plot_histograms_seaborn(ax, results, xlabel=None, title=None, legends=None):
 
 if __name__ == '__main__':
   result_path = './results/'
-  figure_path = './figures_partner_rep_0216/'
+  figure_path = './figures_partner_rep_0310_no_death/'
   if not os.path.exists(figure_path):
     os.makedirs(figure_path)
-  rollout_pairs = ['cp9651', 'AH',]
-  bv_types = ['act+ori+sta', 'act','ori+sta','act_prob+ori+sta', 'act_prob']
+  # rollout_pairs = ['cp9651', 'AH',]
+  rollout_pairs = ['cp9651', 'cp9651_no_death','cp7357', 'cp7357_no_death',]
+  # bv_types = ['act+ori+sta', 'act','ori+sta','act_prob+ori+sta', 'act_prob']
+  bv_types = ['act+ori+sta']
 
   rollout_pairs = [name + '_' + bv_type for name in rollout_pairs for bv_type in bv_types]
   result_dict = {}

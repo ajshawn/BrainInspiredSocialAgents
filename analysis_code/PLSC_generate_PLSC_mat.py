@@ -166,24 +166,42 @@ def get_plsc_from_concat_episodes(trial_directory, title, episodes, timesteps=10
 if __name__ == '__main__':
 
   run_dict = {
-    'open_cp9651':{
-      'video_path': '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles/',
+    # 'open_cp9651':{
+    #   'video_path': '/home/mikan/e/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles/',
+    #   'file_name': 'PLSC_usv_dict.pkl',
+    #   'predator_ids': list(range(3)),
+    #   'prey_ids': list(range(3, 13)),
+    # },
+    # 'open_cp7357':{
+    #   'video_path': '/home/mikan/e/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/',
+    #   'file_name': 'PLSC_usv_dict.pkl',
+    #   'predator_ids': list(range(3)),
+    #   'prey_ids': list(range(3, 13)),
+    # },
+    # 'alley_hunt':{
+    #   'video_path': '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles/',
+    #   'file_name': 'PLSC_usv_dict.pkl',
+    #   'predator_ids': list(range(5)),
+    #   'prey_ids': list(range(5, 13)),
+    # },
+    # 'alley_hunt256':{
+    #   'video_path': '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles/',
+    #   'file_name': 'PLSC_usv_dict.pkl',
+    #   'predator_ids': list(range(5)),
+    #   'prey_ids': list(range(5, 13)),
+    # },
+    # "orchard256": {
+    #   'video_path': '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles/',
+    #   'file_name': 'PLSC_usv_dict.pkl',
+    #   'predator_ids': list(range(5)),
+    #   'prey_ids': list(range(5, 13)),
+    # },
+    "open256":{
+      'video_path': '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles/',
       'file_name': 'PLSC_usv_dict.pkl',
       'predator_ids': list(range(3)),
       'prey_ids': list(range(3, 13)),
-    },
-    'open_cp7357':{
-      'video_path': '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/',
-      'file_name': 'PLSC_usv_dict.pkl',
-      'predator_ids': list(range(3)),
-      'prey_ids': list(range(3, 13)),
-    },
-    'alley_hunt':{
-      'video_path': '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles/',
-      'file_name': 'PLSC_usv_dict.pkl',
-      'predator_ids': list(range(5)),
-      'prey_ids': list(range(5, 13)),
-    },
+    }
   }
   for run_name, run_info in run_dict.items():
     video_path = run_info['video_path']
@@ -201,9 +219,9 @@ if __name__ == '__main__':
       U, s, Vh, title = result
       if title not in result_dict:
         result_dict[title] = {title: [] for title in ['U', 's', 'Vh']}
-      result_dict[title]['U'].append(U)
-      result_dict[title]['s'].append(s)
-      result_dict[title]['Vh'].append(Vh)
+      result_dict[title]['U'] = U
+      result_dict[title]['s'] = s
+      result_dict[title]['Vh'] = Vh
 
 
     with open(f'{video_path}{file_name}', 'wb') as f:

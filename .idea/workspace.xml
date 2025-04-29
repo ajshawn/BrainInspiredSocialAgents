@@ -4,10 +4,86 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a9780d0c-0155-4742-ac54-ecb864b3fe50" name="Changes" comment="Add&#10;1. readout the hidden states and output to a folder called episode_piclke, at the same level of csv_log. &#10;2. specifying which agent to choose. (seemingly working)">
-      <change beforePath="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates/predator_prey__open.py" beforeDir="false" afterPath="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates/predator_prey__open.py" afterDir="false" />
+    <list default="true" id="a9780d0c-0155-4742-ac54-ecb864b3fe50" name="Changes" comment="Create and upload the downstream analysis code.&#10;add requirements_Qin.txt">
+      <change afterPath="$PROJECT_DIR$/analysis_code/PLSC_generate_randPCs_mat.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/PLSC_shared_dim_jax_unsuccessful.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/catalog_generator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer_neural_grids.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/helper.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/matlab_code/AP_PLSC_explained_var_non_redundant_v2.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/matlab_code/plot_matlab_results_variance_exp.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_multi_analysis/summarize_behavior_info_mix.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_multi_analysis/summarize_behavior_netState_df_mix.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/PLSC_generate_PLSC_mat_mix.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/PLSC_shared_dim_mix.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/acorn_collection_bv_classification.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/clustering_agents_based_on_roundwise_data.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/copy_within_training_pair_to_mix_folder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/helper.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_attempt.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_episode_all.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_plsc_all.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_all.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_all_based_on_clustering.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_inter_metric_correlation.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_serial_all.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/summarize_behavior_episode_info_mix.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/summarize_behavior_info_mix.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/mix_pair_analysis/summarize_behavior_netState_df_mix.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/analysis_code/summarize_behavior_episode_info.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eval_mix_match.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eval_mix_match_2v4.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eval_mix_match_2v4.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evaluate_cross_trial.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates/predator_prey__open_debug.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/run_RF.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/run_ah_orc_0314" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__alley_hunt_on_10x10_perturb_randPC.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10_old.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10_perturb_old.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10_perturb_randPC.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10_perturb_randPC_old.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__orchard_on_10x10.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__orchard_on_10x10_perturb.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__orchard_on_10x10_perturb_randPC.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runs/evals/run_open.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/social-agents-JAX.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/social-agents-JAX.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/PLSC_crossRollout.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/PLSC_crossRollout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/PLSC_pretrianed_ppmodel.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/PLSC_shared_dim.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/PLSC_pretrianed_ppmodel_generate_PLSC_mat.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/PLSC_generate_PLSC_mat.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/matlab_code/Figure_6_Main3_PLSC1vsU1.m" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/matlab_code/Figure_6_Main3_PLSC1vsU1.m" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/matlab_code/Figure_6_Main4_PLSC1vs2.m" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/matlab_code/Figure_6_Main4_PLSC1vs2.m" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/matlab_code/plot_matlab_results_partner_rep_0216.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/matlab_code/plot_matlab_results_partner_rep_0216.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/matlab_code/prey_PLSC_explained_var.asv" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/matlab_code/prey_PLSC_explained_var.asv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/matlab_code/prey_PLSC_explained_var.m" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/matlab_code/prey_PLSC_explained_var_non_redundant.m" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/matlab_code/summarize_behavior_netState_df.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/matlab_code/summarize_behavior_netState_df.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/plot_metrics_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/plot_metrics_v2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/plot_metrics_v2_of_select_groups.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/plot_metrics_v2_of_select_groups.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/run_all_py.sh" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/run_all_py.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/summarize_behavior_info.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/summarize_behavior_info.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_code/summarize_behavior_netState_df.py" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_code/summarize_behavior_netState_df.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gits/acme" beforeDir="false" afterPath="$PROJECT_DIR$/gits/acme" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gits/acme/acme/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/gits/acme/acme/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates/predator_prey_position_visible.py" beforeDir="false" afterPath="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates/predator_prey_position_visible.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marl/experiments/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/marl/experiments/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marl/experiments/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/marl/experiments/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marl/experiments/make_distributed_experiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/marl/experiments/make_distributed_experiment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marl/experiments/my_custom_environment_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/marl/experiments/my_custom_environment_loop.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/marl/experiments/run_evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/marl/experiments/run_evaluation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/marl/utils/helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/marl/utils/helpers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_alley_hunt.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_alley_hunt.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_orchard.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_orchard.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runs/evals/eval_predator_prey__alley_hunt_on_10x10.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__alley_hunt_on_10x10.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runs/evals/eval_predator_prey__alley_hunt_on_10x10_perturb.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__alley_hunt_on_10x10_perturb.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10_perturb.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runs/evals/eval_predator_prey__open_on_10x10_perturb.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,7 +100,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="custom_env_configs" />
+        <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -44,6 +120,13 @@
 }</component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/install.sh" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/miniconda3/envs/marl-jax/lib/python3.9/codecs.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/miniconda3/envs/marl-jax/lib/python3.9/site-packages/absl/app.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/miniconda3/envs/marl-jax/lib/python3.9/site-packages/pandas/core/internals/construction.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/miniconda3/envs/marl-jax/lib/python3.9/site-packages/seaborn/categorical.py" root0="SKIP_INSPECTION" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 3
@@ -55,17 +138,77 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Python.AP_PLSC_explained_var_non_redundant_v2.executor": "Debug",
+    "Python.PLSC_crossRollout.executor": "Run",
+    "Python.PLSC_generate_PLSC_mat.executor": "Run",
+    "Python.PLSC_generate_PLSC_mat_mix.executor": "Run",
+    "Python.PLSC_generate_randPCs_mat.executor": "Run",
+    "Python.PLSC_pretrianed_ppmodel.executor": "Run",
+    "Python.PLSC_pretrianed_ppmodel_generate_PLSC_mat.executor": "Run",
+    "Python.PLSC_pretrianed_ppmodel_generate_randPCs_mat.executor": "Debug",
+    "Python.PLSC_shared_dim.executor": "Run",
+    "Python.PLSC_shared_dim_jax.executor": "Debug",
+    "Python.PLSC_shared_dim_mix.executor": "Run",
+    "Python.acorn_catching_moment_bv_classification.executor": "Run",
+    "Python.acorn_catching_moment_collection.executor": "Debug",
+    "Python.acorn_catching_moment_collection_0.executor": "Run",
+    "Python.acorn_catching_moment_verification.executor": "Debug",
+    "Python.acorn_collection_bv_classification.executor": "Run",
+    "Python.acorn_collection_bv_classification_v2.executor": "Debug",
+    "Python.catalog_generator.executor": "Run",
+    "Python.clustering_agents_based_on_roundwise_data.executor": "Run",
+    "Python.copy_within_training_pair_to_mix_folder.executor": "Run",
+    "Python.csv_log_generator.executor": "Debug",
+    "Python.demo_video_producer.executor": "Run",
+    "Python.demo_video_producer_neural_grids.executor": "Debug",
+    "Python.eval_mix_match_2v4.executor": "Run",
     "Python.evaluate.executor": "Debug",
+    "Python.evaluate_cross_trial.executor": "Debug",
+    "Python.linear_reg_acorn_apple_catch.executor": "Run",
+    "Python.plot_all.executor": "Run",
+    "Python.plot_attempt.executor": "Debug",
+    "Python.plot_episode_all.executor": "Run",
+    "Python.plot_matlab_results_PLSC.executor": "Run",
+    "Python.plot_matlab_results_partner_rep_0216.executor": "Run",
+    "Python.plot_matlab_results_variance_exp.executor": "Run",
+    "Python.plot_metrics_v2.executor": "Run",
+    "Python.plot_metrics_v2_of_select_groups.executor": "Debug",
+    "Python.plot_plsc_all.executor": "Debug",
+    "Python.plot_round_all.executor": "Run",
+    "Python.plot_round_all_based_on_clustering.executor": "Run",
+    "Python.plot_round_inter_metric_correlation.executor": "Run",
+    "Python.plot_serial_all.executor": "Debug",
+    "Python.predator_prey__open.executor": "Debug",
+    "Python.run_cross_evaluation.executor": "Debug",
     "Python.run_evaluation.executor": "Debug",
+    "Python.summarize_behavior_episode_info.executor": "Debug",
+    "Python.summarize_behavior_episode_info_mix.executor": "Run",
+    "Python.summarize_behavior_info.executor": "Run",
+    "Python.summarize_behavior_info_mix.executor": "Run",
+    "Python.summarize_behavior_netState_df (1).executor": "Run",
+    "Python.summarize_behavior_netState_df.executor": "Debug",
+    "Python.summarize_behavior_netState_df_mix.executor": "Run",
     "Python.train.executor": "Debug",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "Shell Script.eval.sh.executor": "Run",
+    "Shell Script.eval_mix_match.sh.executor": "Run",
+    "Shell Script.eval_mix_match_2v4.sh.executor": "Run",
+    "Shell Script.eval_predator_prey__alley_hunt_on_10x10.sh.executor": "Run",
+    "Shell Script.eval_predator_prey__alley_hunt_on_10x10_perturb_randPC.sh.executor": "Run",
     "Shell Script.eval_predator_prey__open.sh.executor": "Run",
+    "Shell Script.eval_predator_prey__open_on_10x10.sh.executor": "Debug",
+    "Shell Script.eval_predator_prey__orchard_on_10x10.sh.executor": "Run",
+    "Shell Script.eval_predator_prey__orchard_on_10x10_perturb_randPC.sh.executor": "Run",
     "Shell Script.install.sh.executor": "Run",
+    "Shell Script.mix_copy.sh.executor": "Run",
     "Shell Script.run.sh.executor": "Run",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "/home/mikan/Documents/GitHub/social-agents-JAX/gits/meltingpot/meltingpot/python/configs/substrates",
+    "Shell Script.run_RF.sh.executor": "Run",
+    "Shell Script.run_all_py.sh.executor": "Run",
+    "Shell Script.run_open.sh.executor": "Run",
+    "Shell Script.run_orchard.sh.executor": "Run",
+    "git-widget-placeholder": "Qin-2025-02-10-downstream-analysis",
+    "last_opened_file_path": "/home/mikan/e/GitHub/social-agents-JAX/analysis_code/mix_multi_analysis",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -77,15 +220,20 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates" />
-      <recent name="$PROJECT_DIR$/gits/acme/acme" />
+      <recent name="$PROJECT_DIR$/analysis_code/mix_multi_analysis" />
+      <recent name="$PROJECT_DIR$/analysis_code/demo_video_producer" />
       <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates" />
+      <recent name="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/analysis_code" />
+      <recent name="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/marl/experiments" />
     </key>
   </component>
-  <component name="RunManager" selected="Shell Script.eval_predator_prey__open.sh">
+  <component name="RunManager" selected="Python.demo_video_producer_neural_grids">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="social-agents-JAX" />
       <option name="ENV_FILES" value="" />
@@ -111,32 +259,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="evaluate" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="social-agents-JAX" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-        <env name="LD_LIBRARY_PATH" value="$USER_HOME$/miniconda3/envs/marl-jax/lib/:$LD_LIBRARY_PATH:$USER_HOME$/miniconda3/envs/kilosort/lib/python3.9/site-packages/nvidia/cudnn/lib/" />
-        <env name="XLA_FLAGS" value="--xla_gpu_strict_conv_algorithm_picker=false" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate.py" />
-      <option name="PARAMETERS" value="--async_distributed --available_gpus &quot;0&quot; --num_actors 20 --algo_name PopArtIMPALA --env_name meltingpot --map_name predator_prey__simplified10x10_OneVsOne --experiment_dir $PROJECT_DIR$/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/ --record_video true --selected_agent_idx 2,6" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="run_evaluation" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="social-agents-JAX" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -147,12 +270,12 @@
       </envs>
       <option name="SDK_HOME" value="" />
       <option name="SDK_NAME" value="marl-jax" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/marl/experiments" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/marl/experiments/run_evaluation.py" />
+      <option name="SCRIPT_NAME" value="" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -161,25 +284,157 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="eval_predator_prey__open.sh" type="ShConfigurationType" temporary="true">
-      <option name="SCRIPT_TEXT" value="" />
-      <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
-      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/runs/evals/eval_predator_prey__open.sh" />
-      <option name="SCRIPT_OPTIONS" value="" />
-      <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
-      <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$/runs/evals" />
-      <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
-      <option name="INTERPRETER_PATH" value="/bin/bash" />
+    <configuration name="demo_video_producer" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="social-agents-JAX" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="EXECUTE_IN_TERMINAL" value="true" />
-      <option name="EXECUTE_SCRIPT_FILE" value="true" />
-      <envs />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="$USER_HOME$/miniconda3/envs/marl-jax/lib" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="marl-jax" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/analysis_code/demo_video_producer" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="eval.sh" type="ShConfigurationType" temporary="true">
+    <configuration name="demo_video_producer_neural_grids" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="social-agents-JAX" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="$USER_HOME$/miniconda3/envs/marl-jax/lib" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="marl-jax" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/analysis_code/demo_video_producer" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer_neural_grids.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="eval_mix_match_2v4" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="social-agents-JAX" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="$USER_HOME$/miniconda3/envs/marl-jax/lib" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="marl-jax" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/eval_mix_match_2v4.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="evaluate" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="social-agents-JAX" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="$USER_HOME$/miniconda3/envs/marl-jax/lib:$USER_HOME$/miniconda3/envs/kilosort/lib/python3.9/site-packages/nvidia/cudnn/lib/" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate.py" />
+      <option name="PARAMETERS" value="--run_eval=True --available_gpus &quot;-1&quot; --num_actors 16 --algo_name &quot;PopArtIMPALA&quot; --env_name meltingpot --map_name &quot;predator_prey__simplified10x10_OneVsOne&quot; --record_video true --experiment_dir &quot;results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441&quot; --agent_roles &quot;predator, prey&quot; --agent_param_indices &quot;0, 5&quot; --num_episodes 1 --recurrent_dim 256" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="evaluate_cross_trial" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="social-agents-JAX" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="$USER_HOME$/miniconda3/envs/marl-jax/lib:$USER_HOME$/miniconda3/envs/kilosort/lib/python3.9/site-packages/nvidia/cudnn/lib/" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_cross_trial.py" />
+      <option name="PARAMETERS" value="--async_distributed --available_gpus -1 --num_actors 16 --algo_name PopArtIMPALA --env_name meltingpot --record_video true --cross_checkpoint_paths &quot;results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306,results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092,results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092,results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092,results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651,results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651&quot; --agent_roles &quot;predator, predator, prey, prey, prey, prey&quot; --agent_param_indices &quot;1,0,5,10,5,6&quot; --recurrent_dims &quot;256,256,256,256,128,128&quot; --num_episodes 1 --map_name predator_prey__open --map_layout smaller_13x13" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="train" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="social-agents-JAX" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="LD_LIBRARY_PATH" value="$USER_HOME$/miniconda3/envs/marl-jax/lib:$USER_HOME$/miniconda3/envs/kilosort/lib/python3.9/site-packages/nvidia/cudnn/lib/" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train.py" />
+      <option name="PARAMETERS" value="--async_distributed --available_gpus &quot;1&quot; --num_actors 52 --algo_name PopArtIMPALA --env_name meltingpot --map_name predator_prey__orchard --seed 1 --use_wandb=False --recurrent_dim 256" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="eval_mix_match_2v4.sh" type="ShConfigurationType" temporary="true">
       <option name="SCRIPT_TEXT" value="" />
       <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
-      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/eval.sh" />
+      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/eval_mix_match_2v4.sh" />
       <option name="SCRIPT_OPTIONS" value="" />
       <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
       <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
@@ -191,10 +446,10 @@
       <envs />
       <method v="2" />
     </configuration>
-    <configuration name="install.sh" type="ShConfigurationType" temporary="true">
+    <configuration name="run_RF.sh" type="ShConfigurationType" temporary="true">
       <option name="SCRIPT_TEXT" value="" />
       <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
-      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/install.sh" />
+      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/run_RF.sh" />
       <option name="SCRIPT_OPTIONS" value="" />
       <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
       <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
@@ -207,27 +462,30 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.run_evaluation" />
       <item itemvalue="Python.evaluate" />
-      <item itemvalue="Shell Script.eval_predator_prey__open.sh" />
-      <item itemvalue="Shell Script.eval.sh" />
-      <item itemvalue="Shell Script.install.sh" />
+      <item itemvalue="Python.evaluate_cross_trial" />
+      <item itemvalue="Python.train" />
+      <item itemvalue="Python.demo_video_producer" />
+      <item itemvalue="Python.demo_video_producer_neural_grids" />
+      <item itemvalue="Python.eval_mix_match_2v4" />
+      <item itemvalue="Shell Script.eval_mix_match_2v4.sh" />
+      <item itemvalue="Shell Script.run_RF.sh" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Shell Script.eval_predator_prey__open.sh" />
-        <item itemvalue="Python.evaluate" />
-        <item itemvalue="Python.run_evaluation" />
-        <item itemvalue="Shell Script.install.sh" />
-        <item itemvalue="Shell Script.eval.sh" />
+        <item itemvalue="Python.demo_video_producer_neural_grids" />
+        <item itemvalue="Python.eval_mix_match_2v4" />
+        <item itemvalue="Python.demo_video_producer" />
+        <item itemvalue="Shell Script.run_RF.sh" />
+        <item itemvalue="Shell Script.eval_mix_match_2v4.sh" />
       </list>
     </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-deb605915726-JavaScript-PY-243.22562.180" />
-        <option value="bundled-python-sdk-85c76a3b01b3-9a18a617cbe4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.22562.180" />
+        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PY-251.23774.444" />
+        <option value="bundled-python-sdk-890ed5b35930-d9c5bdb153f4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.23774.444" />
       </set>
     </attachedChunks>
   </component>
@@ -268,6 +526,50 @@
       <workItem from="1736618188898" duration="2220000" />
       <workItem from="1736801874910" duration="5361000" />
       <workItem from="1737439295773" duration="21653000" />
+      <workItem from="1738025872535" duration="689000" />
+      <workItem from="1738026776595" duration="15167000" />
+      <workItem from="1738282252687" duration="335000" />
+      <workItem from="1738781776149" duration="496000" />
+      <workItem from="1738783386426" duration="908000" />
+      <workItem from="1738790212393" duration="23241000" />
+      <workItem from="1739225470211" duration="1366000" />
+      <workItem from="1739226850036" duration="186000" />
+      <workItem from="1739227200100" duration="19877000" />
+      <workItem from="1739383860169" duration="481000" />
+      <workItem from="1739384635866" duration="1235000" />
+      <workItem from="1739390962319" duration="5590000" />
+      <workItem from="1739752745399" duration="32787000" />
+      <workItem from="1740689774883" duration="16842000" />
+      <workItem from="1741130851128" duration="96000" />
+      <workItem from="1741130958777" duration="29764000" />
+      <workItem from="1741568774502" duration="16006000" />
+      <workItem from="1741651720644" duration="27673000" />
+      <workItem from="1741890214108" duration="11285000" />
+      <workItem from="1742234744404" duration="15963000" />
+      <workItem from="1742279633553" duration="73302000" />
+      <workItem from="1743450380995" duration="15228000" />
+      <workItem from="1743493517226" duration="5283000" />
+      <workItem from="1743526632540" duration="1885000" />
+      <workItem from="1743528527679" duration="15017000" />
+      <workItem from="1743551943779" duration="552000" />
+      <workItem from="1743552505771" duration="20125000" />
+      <workItem from="1743639277369" duration="76000" />
+      <workItem from="1743639361406" duration="397000" />
+      <workItem from="1743639765646" duration="320000" />
+      <workItem from="1743640096989" duration="7319000" />
+      <workItem from="1743721672706" duration="57100000" />
+      <workItem from="1744666386787" duration="22450000" />
+      <workItem from="1744823697893" duration="1144000" />
+      <workItem from="1744824855638" duration="627000" />
+      <workItem from="1745280657172" duration="29000" />
+      <workItem from="1745280704627" duration="5382000" />
+      <workItem from="1745286543625" duration="2932000" />
+      <workItem from="1745289485160" duration="207000" />
+      <workItem from="1745290208304" duration="9674000" />
+      <workItem from="1745516005075" duration="3119000" />
+      <workItem from="1745520136619" duration="32404000" />
+      <workItem from="1745957962606" duration="36000" />
+      <workItem from="1745958012463" duration="153000" />
     </task>
     <task id="LOCAL-00001" summary="Add&#10;1. readout the hidden states and output to a folder called episode_piclke, at the same level of csv_log. &#10;2. specifying which agent to choose. (working on)">
       <option name="closed" value="true" />
@@ -285,7 +587,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737503513986</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Create and upload the downstream analysis code.&#10;add requirements_Qin.txt">
+      <option name="closed" value="true" />
+      <created>1740436087306</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1740436087306</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -305,25 +615,16 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Add&#10;1. readout the hidden states and output to a folder called episode_piclke, at the same level of csv_log. &#10;2. specifying which agent to choose. (working on)" />
     <MESSAGE value="Add&#10;1. readout the hidden states and output to a folder called episode_piclke, at the same level of csv_log. &#10;2. specifying which agent to choose. (seemingly working)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add&#10;1. readout the hidden states and output to a folder called episode_piclke, at the same level of csv_log. &#10;2. specifying which agent to choose. (seemingly working)" />
+    <MESSAGE value="Create and upload the downstream analysis code.&#10;add requirements_Qin.txt" />
+    <option name="LAST_COMMIT_MESSAGE" value="Create and upload the downstream analysis code.&#10;add requirements_Qin.txt" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
-          <line>22</line>
+          <line>24</line>
           <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
-          <line>125</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
-          <line>134</line>
-          <option name="timeStamp" value="8" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/acme/acme/environment_loop.py</url>
@@ -346,11 +647,6 @@
           <option name="timeStamp" value="13" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/evaluate.py</url>
-          <line>61</line>
-          <option name="timeStamp" value="16" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/gits/acme/acme/environment_loop.py</url>
           <line>202</line>
           <option name="timeStamp" value="19" />
@@ -362,28 +658,297 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
-          <line>91</line>
-          <option name="timeStamp" value="23" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
-          <line>109</line>
-          <option name="timeStamp" value="24" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
-          <line>76</line>
+          <line>149</line>
           <option name="timeStamp" value="30" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
-          <line>66</line>
-          <option name="timeStamp" value="31" />
+          <url>file://$PROJECT_DIR$/evaluate.py</url>
+          <line>84</line>
+          <option name="timeStamp" value="32" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/evaluate.py</url>
-          <line>47</line>
-          <option name="timeStamp" value="32" />
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>243</line>
+          <option name="timeStamp" value="37" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>250</line>
+          <option name="timeStamp" value="38" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>267</line>
+          <option name="timeStamp" value="40" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>275</line>
+          <option name="timeStamp" value="42" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>323</line>
+          <option name="timeStamp" value="45" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>180</line>
+          <option name="timeStamp" value="46" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/summarize_behavior_netState_df.py</url>
+          <line>160</line>
+          <option name="timeStamp" value="51" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/plot_metrics_v2_of_select_groups.py</url>
+          <line>564</line>
+          <option name="timeStamp" value="54" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/plot_metrics_v2_of_select_groups.py</url>
+          <line>621</line>
+          <option name="timeStamp" value="59" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/PLSC_generate_randPCs_mat.py</url>
+          <line>206</line>
+          <option name="timeStamp" value="66" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/PLSC_shared_dim.py</url>
+          <line>64</line>
+          <option name="timeStamp" value="68" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/matlab_code/AP_PLSC_explained_var_non_redundant_v2.py</url>
+          <line>365</line>
+          <option name="timeStamp" value="69" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/matlab_code/AP_PLSC_explained_var_non_redundant_v2.py</url>
+          <line>299</line>
+          <option name="timeStamp" value="70" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/matlab_code/AP_PLSC_explained_var_non_redundant_v2.py</url>
+          <line>357</line>
+          <option name="timeStamp" value="71" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>116</line>
+          <option name="timeStamp" value="74" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>140</line>
+          <option name="timeStamp" value="76" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/plot_metrics_v2.py</url>
+          <line>399</line>
+          <option name="timeStamp" value="88" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/PLSC_crossRollout.py</url>
+          <line>168</line>
+          <option name="timeStamp" value="90" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>170</line>
+          <option name="timeStamp" value="99" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>39</line>
+          <option name="timeStamp" value="103" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>75</line>
+          <option name="timeStamp" value="105" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>94</line>
+          <option name="timeStamp" value="108" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>164</line>
+          <option name="timeStamp" value="110" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>167</line>
+          <option name="timeStamp" value="111" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_evaluation.py</url>
+          <line>260</line>
+          <option name="timeStamp" value="112" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>52</line>
+          <option name="timeStamp" value="113" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/my_custom_environment_loop.py</url>
+          <line>119</line>
+          <option name="timeStamp" value="117" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/run_cross_evaluation.py</url>
+          <line>211</line>
+          <option name="timeStamp" value="118" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/marl/experiments/my_custom_environment_loop.py</url>
+          <line>140</line>
+          <option name="timeStamp" value="122" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/summarize_behavior_info_mix.py</url>
+          <line>263</line>
+          <option name="timeStamp" value="132" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/summarize_behavior_info.py</url>
+          <line>141</line>
+          <option name="timeStamp" value="138" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_attempt.py</url>
+          <line>186</line>
+          <option name="timeStamp" value="151" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_all.py</url>
+          <line>314</line>
+          <option name="timeStamp" value="153" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_serial_all.py</url>
+          <line>363</line>
+          <option name="timeStamp" value="154" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_serial_all.py</url>
+          <line>339</line>
+          <option name="timeStamp" value="158" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_serial_all.py</url>
+          <line>113</line>
+          <option name="timeStamp" value="164" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_all_based_on_clustering.py</url>
+          <line>463</line>
+          <option name="timeStamp" value="168" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_all_based_on_clustering.py</url>
+          <line>526</line>
+          <option name="timeStamp" value="169" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/summarize_behavior_episode_info_mix.py</url>
+          <option name="timeStamp" value="172" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/summarize_behavior_episode_info.py</url>
+          <line>201</line>
+          <option name="timeStamp" value="186" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_all_based_on_clustering.py</url>
+          <line>444</line>
+          <option name="timeStamp" value="192" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_round_all_based_on_clustering.py</url>
+          <line>256</line>
+          <option name="timeStamp" value="237" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_plsc_all.py</url>
+          <line>159</line>
+          <option name="timeStamp" value="238" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/plot_plsc_all.py</url>
+          <line>175</line>
+          <option name="timeStamp" value="239" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/PLSC_shared_dim_mix.py</url>
+          <line>119</line>
+          <option name="timeStamp" value="249" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/acorn_collection_bv_classification.py</url>
+          <line>405</line>
+          <option name="timeStamp" value="261" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/acorn_collection_bv_classification.py</url>
+          <line>651</line>
+          <option name="timeStamp" value="265" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/copy_within_training_pair_to_mix_folder.py</url>
+          <line>82</line>
+          <option name="timeStamp" value="266" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/mix_pair_analysis/acorn_collection_bv_classification.py</url>
+          <line>310</line>
+          <option name="timeStamp" value="272" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/evaluate_cross_trial.py</url>
+          <line>171</line>
+          <option name="timeStamp" value="275" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/Documents/GitHub/social-agents-JAX/gits/meltingpot/meltingpot/python/configs/substrates/__init__.py</url>
+          <line>63</line>
+          <option name="timeStamp" value="276" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/eval_mix_match_2v4.py</url>
+          <line>16</line>
+          <option name="timeStamp" value="277" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/eval_mix_match_2v4.py</url>
+          <line>81</line>
+          <option name="timeStamp" value="278" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer.py</url>
+          <line>184</line>
+          <option name="timeStamp" value="288" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer_neural_grids.py</url>
+          <line>183</line>
+          <option name="timeStamp" value="292" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer_neural_grids.py</url>
+          <line>217</line>
+          <option name="timeStamp" value="294" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/analysis_code/demo_video_producer/demo_video_producer_neural_grids.py</url>
+          <line>84</line>
+          <option name="timeStamp" value="295" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -396,8 +961,52 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/social_agents_JAX$train.coverage" NAME="train Coverage Results" MODIFIED="1730319984284" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/social_agents_JAX$run_evaluation.coverage" NAME="run_evaluation Coverage Results" MODIFIED="1737503402685" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/marl/experiments" />
-    <SUITE FILE_PATH="coverage/social_agents_JAX$evaluate.coverage" NAME="evaluate Coverage Results" MODIFIED="1737503405629" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$summarize_behavior_episode_info_mix.coverage" NAME="summarize_behavior_episode_info_mix Coverage Results" MODIFIED="1744675957419" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_serial_all.coverage" NAME="plot_serial_all Coverage Results" MODIFIED="1743529501770" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_matlab_results_partner_rep_0216.coverage" NAME="plot_matlab_results_partner_rep_0216 Coverage Results" MODIFIED="1741642901888" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/matlab_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$summarize_behavior_episode_info.coverage" NAME="summarize_behavior_episode_info Coverage Results" MODIFIED="1743555914654" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$demo_video_producer_neural_grids.coverage" NAME="demo_video_producer_neural_grids Coverage Results" MODIFIED="1745897213140" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/demo_video_producer" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$AP_PLSC_explained_var_non_redundant_v2.coverage" NAME="AP_PLSC_explained_var_non_redundant_v2 Coverage Results" MODIFIED="1741646664901" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/matlab_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$evaluate.coverage" NAME="evaluate Coverage Results" MODIFIED="1743052717589" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$acorn_collection_bv_classification_v2.coverage" NAME="acorn_collection_bv_classification Coverage Results" MODIFIED="1744759448685" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$run_cross_evaluation.coverage" NAME="run_cross_evaluation Coverage Results" MODIFIED="1745286628064" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/marl/experiments" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$eval_mix_match_2v4.coverage" NAME="eval_mix_match_2v4 Coverage Results" MODIFIED="1745894722693" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_round_all.coverage" NAME="plot_round_all Coverage Results" MODIFIED="1743724368921" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_pretrianed_ppmodel.coverage" NAME="PLSC_pretrianed_ppmodel Coverage Results" MODIFIED="1741573971854" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$predator_prey__open.coverage" NAME="predator_prey__open Coverage Results" MODIFIED="1745286552477" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/gits/meltingpot/meltingpot/python/configs/substrates" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$summarize_behavior_netState_df__1_.coverage" NAME="summarize_behavior_netState_df (1) Coverage Results" MODIFIED="1738103910431" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/matlab_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$linear_reg_acorn_apple_catch.coverage" NAME="linear_reg_acorn_apple_catch Coverage Results" MODIFIED="1739857785570" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_matlab_results_PLSC.coverage" NAME="plot_matlab_results_PLSC Coverage Results" MODIFIED="1738183338383" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/matlab_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_round_inter_metric_correlation.coverage" NAME="plot_round_inter_metric_correlation Coverage Results" MODIFIED="1743724777246" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_shared_dim_mix.coverage" NAME="PLSC_shared_dim_mix Coverage Results" MODIFIED="1744314496136" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_round_all_based_on_clustering.coverage" NAME="plot_round_all_based_on_clustering Coverage Results" MODIFIED="1744133422630" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_all.coverage" NAME="plot_all Coverage Results" MODIFIED="1743483032228" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_metrics_v2.coverage" NAME="plot_metrics_v2 Coverage Results" MODIFIED="1742498494867" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$evaluate_cross_trial.coverage" NAME="evaluate_cross_trial Coverage Results" MODIFIED="1745344893622" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_crossRollout.coverage" NAME="PLSC_crossRollout Coverage Results" MODIFIED="1742494246408" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_plsc_all.coverage" NAME="plot_plsc_all Coverage Results" MODIFIED="1744233345396" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_shared_dim.coverage" NAME="PLSC_shared_dim Coverage Results" MODIFIED="1742251600124" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$csv_log_generator.coverage" NAME="catalog_generator Coverage Results" MODIFIED="1742252459834" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_generate_PLSC_mat_mix.coverage" NAME="PLSC_generate_PLSC_mat_mix Coverage Results" MODIFIED="1743114239679" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_generate_PLSC_mat.coverage" NAME="PLSC_generate_PLSC_mat Coverage Results" MODIFIED="1741841953110" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$summarize_behavior_info.coverage" NAME="summarize_behavior_info Coverage Results" MODIFIED="1744157209107" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$summarize_behavior_info_mix.coverage" NAME="summarize_behavior_info_mix Coverage Results" MODIFIED="1744675964338" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_episode_all.coverage" NAME="plot_episode_all Coverage Results" MODIFIED="1743723829656" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$run_evaluation.coverage" NAME="run_evaluation Coverage Results" MODIFIED="1737506507889" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/marl/experiments" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$demo_video_producer.coverage" NAME="demo_video_producer Coverage Results" MODIFIED="1745893121145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/demo_video_producer" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_attempt.coverage" NAME="plot_attempt Coverage Results" MODIFIED="1743460313196" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$copy_within_training_pair_to_mix_folder.coverage" NAME="copy_within_training_pair_to_mix_folder Coverage Results" MODIFIED="1744675554253" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_matlab_results_variance_exp.coverage" NAME="plot_matlab_results_variance_exp Coverage Results" MODIFIED="1741134255503" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/matlab_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_pretrianed_ppmodel_generate_PLSC_mat.coverage" NAME="PLSC_pretrianed_ppmodel_generate_PLSC_mat Coverage Results" MODIFIED="1741225710320" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_generate_randPCs_mat.coverage" NAME="PLSC_generate_randPCs_mat Coverage Results" MODIFIED="1741841956840" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$summarize_behavior_netState_df.coverage" NAME="summarize_behavior_netState_df Coverage Results" MODIFIED="1739309855271" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_pretrianed_ppmodel_generate_randPCs_mat.coverage" NAME="PLSC_pretrianed_ppmodel_generate_randPCs_mat Coverage Results" MODIFIED="1741225447223" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$clustering_agents_based_on_roundwise_data.coverage" NAME="clustering_agents_based_on_roundwise_data Coverage Results" MODIFIED="1744133330732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$acorn_catching_moment_collection.coverage" NAME="acorn_catching_moment_collection Coverage Results" MODIFIED="1744398799941" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$summarize_behavior_netState_df_mix.coverage" NAME="summarize_behavior_netState_df_mix Coverage Results" MODIFIED="1744738058755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$plot_metrics_v2_of_select_groups.coverage" NAME="plot_metrics_v2_of_select_groups Coverage Results" MODIFIED="1739845092820" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$train.coverage" NAME="train Coverage Results" MODIFIED="1741207160391" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$PLSC_shared_dim_jax.coverage" NAME="PLSC_shared_dim_jax Coverage Results" MODIFIED="1741650776945" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code" />
+    <SUITE FILE_PATH="coverage/social_agents_JAX$acorn_catching_moment_verification.coverage" NAME="acorn_catching_moment_bv_classification Coverage Results" MODIFIED="1744407793602" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis_code/mix_pair_analysis" />
   </component>
 </project>

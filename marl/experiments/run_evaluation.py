@@ -67,9 +67,14 @@ def build_plsc_perturb_matrices(
     )
 
   plsc_USV = decomposition_dict[agent_idx_str]
-  U = plsc_USV['U'][0][:, :dim]  # shape [hidden_dim, dim]
+  U = plsc_USV['U'][:, :dim]  # shape [hidden_dim, dim]
   # s = plsc_USV['s'][0][:dim]   # only needed if you explicitly use 's'
-  V = plsc_USV['Vh'][0].T[:, :dim]
+  if 'Vh' in plsc_USV:
+    V = plsc_USV['Vh'].T[:, :dim]
+  elif 'V' in plsc_USV:
+    V = plsc_USV['V'][:, :dim]
+  else:
+    raise ValueError("PLSC decomposition must contain 'V' or 'Vh'.")
 
   UUT = jnp.dot(U, U.T)  # shape [hidden_dim, hidden_dim]
   ImUUT = jnp.eye(UUT.shape[0]) - UUT
@@ -129,6 +134,9 @@ def run_evaluation(
     logger_fn=experiment.logger_factory,
     environment_spec=environment_specs,
   )
+
+  # learner2 = experiment.builder.make_learner(
+  # )
 
   s0 = learner._combined_states.params.copy()
   checkpointer = tf_savers.Checkpointer(

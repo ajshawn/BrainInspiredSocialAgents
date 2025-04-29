@@ -1309,7 +1309,7 @@ def _create_avatar_object(player_idx: int, is_predator: bool,
         {
             "component": "AvatarRespawn",
             "kwargs": {
-                "framesTillRespawn": 20,
+                "framesTillRespawn": 100, #TODO: this value can be altered to adjust the respawn time for prey
             }
         },
         ])

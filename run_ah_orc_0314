@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+cd /home/mikan/e/Documents/GitHub/social-agents-JAX
+bash /home/mikan/e/Documents/GitHub/social-agents-JAX/runs/evals/eval_predator_prey__alley_hunt_on_10x10_perturb_randPC.sh
+bash /home/mikan/e/Documents/GitHub/social-agents-JAX/runs/evals/eval_predator_prey__orchard_on_10x10_perturb_randPC.sh
+
+cd /home/mikan/e/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/
+bash ../copy.sh
+cd /home/mikan/e/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/
+bash ../copy.sh
+cd /home/mikan/e/Documents/GitHub/social-agents-JAX/analysis_code
+bash run_all_py.sh

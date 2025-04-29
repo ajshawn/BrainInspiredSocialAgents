@@ -17,11 +17,8 @@ import launchpad as lp
 
 from marl import experiments
 from marl import specs as ma_specs
-from marl.agents import impala
-from marl.agents import opre
-from marl.agents.networks import ArrayFE
-from marl.agents.networks import ImageFE
-from marl.agents.networks import MeltingpotFE
+from marl.agents import impala, opre
+from marl.agents.networks import ArrayFE, ImageFE, MeltingpotFE
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
 from marl.utils import helpers
@@ -244,7 +241,7 @@ def build_experiment_config():
     builder = opre.PopArtOPREBuilder(config, core_state_spec=core_spec)
   else:
     raise ValueError(f"Unknown algo_name {FLAGS.algo_name}")
-  
+
   # Add frozen agents
   builder._config.frozen_agents = frozen_agents
 
@@ -274,7 +271,7 @@ def main(_):
   assert not FLAGS.record_video, "Video recording is not supported during training"
   config, experiment_dir = build_experiment_config()
   ckpt_config = ma_config.CheckpointingConfig(
-      max_to_keep=3, directory=experiment_dir, add_uid=False)
+      max_to_keep=10000, directory=experiment_dir, add_uid=False, keep_checkpoint_every_n_hours=1)
   if FLAGS.async_distributed:
 
     nodes_on_gpu = helpers.node_allocation(

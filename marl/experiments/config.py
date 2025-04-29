@@ -162,3 +162,4 @@ class CheckpointingConfig:
   add_uid: bool = False
   model_time_delta_minutes: int = 60
   replay_checkpointing_time_delta_minutes: Optional[int] = None
+  keep_checkpoint_every_n_hours: Optional[int] = None

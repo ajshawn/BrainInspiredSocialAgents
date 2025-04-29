@@ -440,6 +440,7 @@ def main():
     cp9651_perturb_both_path  = '/path/to/cp9651/pickles_perturb_both/'
     AH_perturb_both_path      = '/path/to/AH/pickles_perturb_both/'
 
+
     output_csv_path = './results/behavior_metrics.csv'
     output_plot_dir = os.path.dirname(output_csv_path)
     os.makedirs(output_plot_dir, exist_ok=True)

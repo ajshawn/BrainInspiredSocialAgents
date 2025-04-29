@@ -101,6 +101,7 @@ def make_distributed_experiment(
           time_delta_minutes=checkpointing_config.model_time_delta_minutes,
           add_uid=checkpointing_config.add_uid,
           max_to_keep=checkpointing_config.max_to_keep,
+          keep_checkpoint_every_n_hours=checkpointing_config.keep_checkpoint_every_n_hours,
       )
       checkpointer.restore()
     return savers.CheckpointingRunner(
@@ -111,6 +112,7 @@ def make_distributed_experiment(
         directory=checkpointing_config.directory,
         add_uid=checkpointing_config.add_uid,
         max_to_keep=checkpointing_config.max_to_keep,
+        keep_checkpoint_every_n_hours=checkpointing_config.keep_checkpoint_every_n_hours,
     )
 
   def build_learner(
@@ -154,6 +156,7 @@ def make_distributed_experiment(
             time_delta_minutes=checkpointing_config.model_time_delta_minutes,
             add_uid=checkpointing_config.add_uid,
             max_to_keep=checkpointing_config.max_to_keep,
+            keep_checkpoint_every_n_hours=checkpointing_config.keep_checkpoint_every_n_hours,
         )
         checkpointer.restore()
       learner = savers.CheckpointingRunner(
@@ -164,6 +167,7 @@ def make_distributed_experiment(
           directory=checkpointing_config.directory,
           add_uid=checkpointing_config.add_uid,
           max_to_keep=checkpointing_config.max_to_keep,
+          keep_checkpoint_every_n_hours=checkpointing_config.keep_checkpoint_every_n_hours,
       )
     else:
       learner.restore(primary_learner.save())

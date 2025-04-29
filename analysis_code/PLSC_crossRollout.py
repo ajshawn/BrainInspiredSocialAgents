@@ -16,6 +16,11 @@ from sklearn.preprocessing import StandardScaler
 from joblib import Parallel, delayed
 import random
 from tqdm import tqdm
+import pandas as pd
+from PLSC_shared_dim import mark_death_periods
+# Ignore warnings
+import warnings
+warnings.filterwarnings("ignore")
 
 @jit(nopython=True)  # Use Numba decorator to compile this function to machine code
 def PLSC(h1, h2):
@@ -69,7 +74,7 @@ def isExceedingConfidence_linear_percentile(shuffle, pt, confidence=0.95):
 
 scaler = StandardScaler()
 def process_cross_episode(trial_directory, title, eId, timesteps=1000, num_perm=10, permutations=None, scaler=scaler,
-                          **kwargs):
+                          removing_death_period=None, **kwargs):
   """Function to process a single episode."""
 
   title_one = title.split(' ')[0]
@@ -79,11 +84,27 @@ def process_cross_episode(trial_directory, title, eId, timesteps=1000, num_perm=
   with open(os.path.join(trial_directory, f'{title_one}_{eId}.pkl'), 'rb') as f:
     data = pickle.load(f)
   h1 = [tmp['hidden'][0] for tmp in data]
+  if removing_death_period:
+    stamina = [tmp['STAMINA'][1] for tmp in data]
+    stamina = np.array(stamina)[:timesteps]
+    living_period = mark_death_periods(stamina).astype(bool)
+    h1 = np.array(h1)[living_period]
   with open(os.path.join(trial_directory, f'{title_two}_{eId}.pkl'), 'rb') as f:
     data = pickle.load(f)
   h2 = [tmp['hidden'][1] for tmp in data]
+  if removing_death_period:
+    stamina = [tmp['STAMINA'][1] for tmp in data]
+    stamina = np.array(stamina)[:timesteps]
+    living_period = mark_death_periods(stamina).astype(bool)
+    h2 = np.array(h2)[living_period]
+
   h1 = np.array(h1)[:timesteps]
   h2 = np.array(h2)[:timesteps]
+  if h1.shape[0] != h2.shape[0]: # Align the shorter one
+    print(f'Episode {eId} has different lengths for {title_one} and {title_two}')
+    min_len = min(h1.shape[0], h2.shape[0])
+    h1 = h1[:min_len]
+    h2 = h2[:min_len]
   # data_path = f'{trial_directory}out_files/behavior_output_{checkpoint}iters_test_{eId + 1}{file_suffix}'
   # data = sio.loadmat(data_path)
   # h1 = data['h1'][:timesteps]
@@ -144,22 +165,15 @@ def processing_cross_episode_wrapper(**kwargs):
 
 
 if __name__ == '__main__':
-  video_paths = [
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_predator/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_predator/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_predator/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_prey/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_prey/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_prey/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_both/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_both/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_both/',
-  ]
-  for video_path in video_paths:
-    if 'open' in video_path:
+  log_df = pd.read_csv('catalog.csv', index_col=0)
+  paths = log_df['path'].values
+  paths = [path for path in paths if 'pickles/' in path] # Those paths are non-perturbed
+
+  removing_death_period = True
+  # for removing_death_period in [True, False]:
+  remove_death_str = '_remove_death' if removing_death_period else ''
+  for path in paths:
+    if 'open' in path:
       predator_ids = [0, 1, 2]
       prey_ids = list(range(3, 13))
     else:
@@ -179,10 +193,18 @@ if __name__ == '__main__':
         cross_titles.append(f'{title}_predator {second_title}_prey')
 
     results = Parallel(n_jobs=50)(delayed(processing_cross_episode_wrapper)(
-      trial_directory=video_path, video_path=video_path, title=cross_title,
-      eId=eId, timesteps=1000, num_perm=200, permutations=None, scaler=scaler
+      trial_directory=path, path=path, title=cross_title,
+      eId=eId, timesteps=1000, num_perm=200, permutations=None, scaler=scaler, removing_death_period=removing_death_period
     ) for eId in tqdm(range(1,101)) for cross_title in cross_titles)
 
+    # results = []
+    # for eId in tqdm(range(1,101)):
+    #   for cross_title in cross_titles:
+    #     result = processing_cross_episode_wrapper(
+    #       trial_directory=path, path=path, title=cross_title,
+    #       eId=eId, timesteps=1000, num_perm=200, permutations=None, scaler=scaler, removing_death_period=removing_death_period
+    #     )
+    #     results.append(result)
     result_dict = {}
     for result in results:
       rank, cov_diag, cor_diag, cov_perm_array, cor_perm_array, cov_sig, cor_sig, title, eId = result
@@ -197,5 +219,5 @@ if __name__ == '__main__':
       result_dict[title]['cor'].append(cor_diag)
       result_dict[title]['cov_sig'].append(cov_sig)
       result_dict[title]['cor_sig'].append(cor_sig)
-    with open(f'{video_path}PLSC_results_cross_rollout_dict_NP.pkl', 'wb') as f:
+    with open(f'{path}PLSC_results_cross_rollout_dict_NP{remove_death_str}.pkl', 'wb') as f:
       pickle.dump(result_dict, f)

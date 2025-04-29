@@ -4,11 +4,13 @@ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/home/mikan/miniconda3/envs/kilosort/li
 export CUDA_VISIBLE_DEVICES=-1
 export JAX_PLATFORM_NAME=cpu
 
-EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962"
+#EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962"
+EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026"
 EVN_NAME="predator_prey__simplified10x10_OneVsOne"
 MAP_NAME=""
 ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2025-01-07_12:11:32.926962"
+#TIME_STAMP="2025-01-07_12:11:32.926962"
+TIME_STAMP="2025-02-10_21:44:27.355026"
 GPUS=""
 
 # Maximum number of parallel jobs.
@@ -47,6 +49,7 @@ do
           --experiment_dir "${EXP_DIR_PREFIX}${ckp}" \
           --agent_roles "predator, prey" \
           --agent_param_indices "${predator_param_index}, ${prey_param_index}" \
+		      --recurrent_dim 256 \
           --num_episodes 100 &
 
         # Post-processing: rename or move recording directories

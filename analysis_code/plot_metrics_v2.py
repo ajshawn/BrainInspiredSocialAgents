@@ -12,24 +12,31 @@ def load_scenario_pickle_files(base_path):
   """Helper function to load pickle files for a single scenario."""
   serial_path = os.path.join(base_path, 'serial_results_dict.pkl')
   plsc_path = os.path.join(base_path, 'PLSC_results_dict.pkl')
+  plsc_remove_death_path = os.path.join(base_path, 'PLSC_results_dict_remove_death.pkl')
   cross_path = os.path.join(base_path, 'PLSC_results_cross_rollout_dict_NP.pkl')
+  cross_remove_death_path = os.path.join(base_path, 'PLSC_results_cross_rollout_dict_NP_remove_death.pkl')
 
   return {
     'serial': load_pickle(serial_path),
     'plsc': load_pickle(plsc_path),
-    'cross': load_pickle(cross_path)
+    'plsc_remove_death': load_pickle(plsc_remove_death_path),
+    'cross': load_pickle(cross_path),
+    'cross_remove_death': load_pickle(cross_remove_death_path),
   }
 
 def load_pickle(file_path: str):
   """Load a pickle file and return its contents."""
-  with open(file_path, 'rb') as f:
-    return pickle.load(f)
-
+  try:
+    with open(file_path, 'rb') as f:
+      return pickle.load(f)
+  except:
+    print(f"Error loading {file_path}")
+    return None
 
 def compute_rewards(
-        results_dict: dict,
-        predator_ids: list,
-        prey_ids: list
+    results_dict: dict,
+    predator_ids: list,
+    prey_ids: list
 ):
   """
   Compute mean apple, acorn, and catch rewards for given predator/prey ID pairs
@@ -80,9 +87,9 @@ def compute_rewards(
 
 
 def compute_plsc_data(
-        plsc_dict: dict,
-        predator_ids: list,
-        prey_ids: list
+    plsc_dict: dict,
+    predator_ids: list,
+    prey_ids: list
 ):
   """
   Compute the mean of 'rank' (shared dimension), 'cor' (correlation),
@@ -112,9 +119,9 @@ def compute_plsc_data(
 
 
 def compute_cross_plsc_data(
-        cross_results_dict: dict,
-        predator_ids: list,
-        prey_ids: list
+    cross_results_dict: dict,
+    predator_ids: list,
+    prey_ids: list
 ):
   """
   Compute cross-rollout PLSC data (rank, cor, cor_perm_median)
@@ -174,10 +181,10 @@ def compute_cross_plsc_data(
 
 
 def plot_box_swarm(
-        df: pd.DataFrame,
-        part_key: str,
-        output_dir: str,
-        title_prefix: str = "comparison between naive and trained"
+    df: pd.DataFrame,
+    part_key: str,
+    output_dir: str,
+    title_prefix: str = "comparison between naive and trained"
 ):
   """
   Creates and saves a box + swarm plot for the columns in df that contain part_key.
@@ -220,12 +227,12 @@ def plot_box_swarm(
 
 
 def plot_heatmaps(
-        df: pd.DataFrame,
-        part_keys: list,
-        group_keys: list,
-        ids_shape=(5, 5),
-        output_dir=".",
-        file_prefix="heatmap"
+    df: pd.DataFrame,
+    part_keys: list,
+    group_keys: list,
+    ids_shape=(5, 5),
+    output_dir=".",
+    file_prefix="heatmap"
 ):
   """
   Create and save heatmaps for the given part_keys and group_keys. The data is
@@ -279,7 +286,7 @@ import os
 
 def plot_heatmaps_all_scenarios(
     df,
-    scenario_configs,
+    scenario_df,
     part_keys,
     output_dir=".",
     file_prefix="heatmap"
@@ -291,13 +298,7 @@ def plot_heatmaps_all_scenarios(
   ----------
   df : pd.DataFrame
       DataFrame containing columns named like '{part_key} {scenario_name}'.
-  scenario_configs : dict
-      A dict where each entry has the structure:
-          scenario_name: {
-              'path': <some_path>,
-              'predator_ids': [...],
-              'prey_ids': [...]
-          }
+  scenario_df : a pd.DataFrame
   part_keys : list of str
       e.g. ['apple', 'acorn', 'catch'] or ['# PLSC shared dim', 'delta PLSC1'].
   output_dir : str
@@ -306,7 +307,7 @@ def plot_heatmaps_all_scenarios(
       Prefix for the saved figure file name.
   """
   # 1) Prepare subplots: rows = part_keys, cols = scenarios
-  scenario_names = list(scenario_configs.keys())
+  scenario_names = scenario_df.to_dict(orient='index')
   n_rows = len(part_keys)
   n_cols = len(scenario_names)
 
@@ -330,8 +331,8 @@ def plot_heatmaps_all_scenarios(
       ax = axs[i, j]
 
       # 3) Grab relevant predator/prey info
-      predator_ids = scenario_configs[scenario_name]['predator_ids']
-      prey_ids = scenario_configs[scenario_name]['prey_ids']
+      predator_ids = scenario_df.loc[scenario_name, 'predator_ids']
+      prey_ids = scenario_df.loc[scenario_name, 'prey_ids']
       expected_size = len(predator_ids) * len(prey_ids)
 
       # 4) Build column name for the DataFrame
@@ -388,223 +389,213 @@ def main():
   export to CSV, and generate visualizations.
   """
 
-  # =============== 1) Define constants and paths ===============
-  trained_predator_ids = list(range(3))
-  trained_prey_ids = list(range(3, 13))
+  loaded_data_cache = {}  # Cache dict to store loaded data
 
-  # Paths
-  cp7357_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/'
-  cp9651_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles/'
-  AH_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles/'
-  cp7357_perturb_pred_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_predator/'
-  cp9651_perturb_pred_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_predator/'
-  AH_perturb_pred_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_predator/'
-  cp7357_perturb_prey_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_prey/'
-  cp9651_perturb_prey_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_prey/'
-  AH_perturb_prey_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_prey/'
-  cp7357_perturb_both_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_both/'
-  cp9651_perturb_both_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_both/'
-  AH_perturb_both_path = f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_both/'
+  # load catalog csv
+  catalog_csv_path = './catalog.csv'
+  all_scenario_df = pd.read_csv(catalog_csv_path, index_col=0)
+  all_scenario_df['prey_ids'] = all_scenario_df['prey_ids'].apply(eval)
+  all_scenario_df['predator_ids'] = all_scenario_df['predator_ids'].apply(eval)
 
-  # Output CSV path
-  output_csv_path = (
-    './results/behavior_metrics.csv'
-  )
-  output_plot_dir = os.path.dirname(output_csv_path)
-  os.makedirs(output_plot_dir, exist_ok=True)
-
-  # =============== 2) Define scenario configurations ===============
-  # Each scenario will have a path, predator IDs, and prey IDs
-  scenario_configs = {
-    'cp7357': {
-      'path': cp7357_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
+  plot_group_dict = {
+    # 'Orchard256_results': {
+    #   'df_index': all_scenario_df.index.str.contains('Orchard256'),
+    #   'plsc_keyword': 'plsc',
+    #   'output_csv_path': './results_Orchard256_plsc_vs_randPC/behavior_metrics.csv',
+    # },
+    # 'Orchard_results': {
+    #   'df_index': all_scenario_df.index.str.contains('Orchard') & ~all_scenario_df.index.str.contains('Orchard256'),
+    #   'plsc_keyword': 'plsc',
+    #   'output_csv_path': './results_Orchard_plsc_vs_randPC/behavior_metrics.csv',
+    # },
+    # 'Orchard256_no_death_results': {
+    #   'df_index': all_scenario_df.index.str.contains('Orchard256'),
+    #   'plsc_keyword': 'plsc_remove_death',
+    #   'output_csv_path': './results_Orchard256_plsc_vs_randPC_remove_death/behavior_metrics.csv',
+    # },
+    # 'Orchard_no_death_results': {
+    #   'df_index': all_scenario_df.index.str.contains('Orchard') & ~all_scenario_df.index.str.contains('Orchard256'),
+    #   'plsc_keyword': 'plsc_remove_death',
+    #   'output_csv_path': './results_Orchard_plsc_vs_randPC_remove_death/behavior_metrics.csv',
+    # },
+    # 'open256_results': {
+    #   'df_index': all_scenario_df.index.str.contains('open256'),
+    #   'plsc_keyword': 'plsc',
+    #   'output_csv_path': './results_open_plsc_vs_randPC/behavior_metrics.csv',
+    # },
+    # 'open_results': {
+    #   'df_index': all_scenario_df.index.str.contains('open') & ~all_scenario_df.index.str.contains('open256'),
+    #   'plsc_keyword': 'plsc',
+    #   'output_csv_path': './results_open_plsc_vs_randPC/behavior_metrics.csv',
+    # },
+    # 'open256_no_death_results': {
+    #   'df_index': all_scenario_df.index.str.contains('open256'),
+    #   'plsc_keyword': 'plsc_remove_death',
+    #   'output_csv_path': './results_open256_plsc_vs_randPC_remove_death/behavior_metrics.csv',
+    # },
+    # 'open_no_death_results': {
+    #   'df_index': all_scenario_df.index.str.contains('open') & ~all_scenario_df.index.str.contains('open256'),
+    #   'plsc_keyword': 'plsc_remove_death',
+    #   'output_csv_path': './results_open_plsc_vs_randPC_remove_death/behavior_metrics.csv',
+    # },
+    # 'raw_no_death_results': { # Get all without perturbation
+    #   'df_index': ~all_scenario_df.index.str.contains('perturb'),
+    #   'plsc_keyword': 'plsc_remove_death',
+    #   'plsc_cross_keyword': 'cross_remove_death',
+    #   'output_csv_path': './results_raw_plsc_vs_randPC_remove_death/behavior_metrics.csv',
+    # },
+    'raw_results': { # Get all without perturbation
+      'df_index': ~all_scenario_df.index.str.contains('perturb'),
+      'plsc_keyword': 'plsc',
+      'output_csv_path': './results_raw_plsc_vs_randPC/behavior_metrics.csv',
     },
-    'cp9651': {
-      'path': cp9651_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
-    },
-    'AH': {
-      'path': AH_path,
-      'predator_ids': list(range(5)),
-      'prey_ids': list(range(5, 13)),
-    },
-    'cp7357_perturb_pred': {
-      'path': cp7357_perturb_pred_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
-    },
-    'cp9651_perturb_pred': {
-      'path': cp9651_perturb_pred_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
-    },
-    'AH_perturb_pred': {
-      'path': AH_perturb_pred_path,
-      'predator_ids': list(range(5)),
-      'prey_ids': list(range(5, 13)),
-    },
-    'cp7357_perturb_prey': {
-      'path': cp7357_perturb_prey_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
-    },
-    'cp9651_perturb_prey': {
-      'path': cp9651_perturb_prey_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
-    },
-    'AH_perturb_prey': {
-      'path': AH_perturb_prey_path,
-      'predator_ids': list(range(5)),
-      'prey_ids': list(range(5, 13)),
-    },
-    'cp7357_perturb_both': {
-      'path': cp7357_perturb_both_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
-    },
-    'cp9651_perturb_both': {
-      'path': cp9651_perturb_both_path,
-      'predator_ids': trained_predator_ids,
-      'prey_ids': trained_prey_ids
-    },
-    'AH_perturb_both': {
-      'path': AH_perturb_both_path,
-      'predator_ids': list(range(5)),
-      'prey_ids': list(range(5, 13)),
-    }
-
+    #
+    # 'AH256_no_death_results': {
+    #   'df_index': all_scenario_df.index.str.contains('AH256'),
+    #   'plsc_keyword': 'plsc_remove_death',
+    #   'output_csv_path': './results_AH256_plsc_vs_randPC_remove_death/behavior_metrics.csv',
+    # },
+    # 'AH_no_death_results': {
+    #   'df_index': all_scenario_df.index.str.contains('AH') & ~all_scenario_df.index.str.contains('AH256'),
+    #   'plsc_keyword': 'plsc_remove_death',
+    #   'output_csv_path': './results_AH_plsc_vs_randPC_remove_death/behavior_metrics.csv',
+    # },
+    # 'AH256_results': {
+    #   'df_index': all_scenario_df.index.str.contains('AH256'),
+    #   'plsc_keyword': 'plsc',
+    #   'output_csv_path': './results_AH256_plsc_vs_randPC/behavior_metrics.csv',
+    # },
+    # 'AH_results': {
+    #   'df_index': all_scenario_df.index.str.contains('AH') & ~all_scenario_df.index.str.contains('AH256'),
+    #   'plsc_keyword': 'plsc',
+    #   'output_csv_path': './results_AH_plsc_vs_randPC/behavior_metrics.csv',
+    # },
   }
 
-  # =============== 3) Load all data for each scenario ===============
-  scenario_data = {}
 
-  # # Use a ProcessPoolExecutor for parallel CPU-bound tasks
-  # # or ThreadPoolExecutor for I/O-bound tasks
-  # with concurrent.futures.ProcessPoolExecutor() as executor:
-  #   # Submit jobs for each scenario
-  #   future_to_scenario = {
-  #     executor.submit(load_scenario_pickle_files, cfg['path']): scenario_name
-  #     for scenario_name, cfg in scenario_configs.items()
-  #   }
-  #
-  #   # Collect results as they complete
-  #   for future in concurrent.futures.as_completed(future_to_scenario):
-  #     scenario_name = future_to_scenario[future]
-  #     try:
-  #       scenario_data[scenario_name] = future.result()
-  #     except Exception as exc:
-  #       print(f'{scenario_name} generated an exception: {exc}')
-
-  for scenario_name, cfg in scenario_configs.items():
-    scenario_data[scenario_name] = load_scenario_pickle_files(cfg['path'])
+  for group_name, group_info in plot_group_dict.items():
+    names = all_scenario_df[group_info['df_index']].index
+    scenario_df = all_scenario_df.loc[names]
+    print(f"Processing {group_name}...")
+    print(f'contains {len(scenario_df)} scenarios, {scenario_df.index}')
 
 
-  # =============== 4) Compute metrics for each scenario ===============
-  for scenario_name, cfg in scenario_configs.items():
-    results_serial = scenario_data[scenario_name]['serial']
-    results_plsc = scenario_data[scenario_name]['plsc']
-    results_cross = scenario_data[scenario_name]['cross']
+    if len(scenario_df) == 0:
+      print(f"Skipping {group_name} due to empty scenario list.")
+      continue
+    cnt_missing_files = 0
+    required_files = ['serial_results_dict.pkl', 'PLSC_results_dict.pkl', 'PLSC_results_dict_remove_death.pkl',
+                      'PLSC_results_cross_rollout_dict_NP.pkl']
+    for scenario_name, cfg in scenario_df.iterrows():
+      for file in required_files:
+        if not os.path.exists(os.path.join(cfg['path'], file)):
+          print(f"Missing file: {file} for scenario {scenario_name}")
+          cnt_missing_files += 1
+    if cnt_missing_files > 0:
+      print(f"Skipping {group_name} due to missing files.")
+      continue
 
-    predator_ids = cfg['predator_ids']
-    prey_ids = cfg['prey_ids']
-
-    # -- Compute Reward metrics
-    apple, acorn, catch = compute_rewards(
-      results_serial, predator_ids, prey_ids
-    )
-
-    # -- Compute normal PLSC
-    plsc_rank, plsc_cor, plsc_cor_perm = compute_plsc_data(
-      results_plsc, predator_ids, prey_ids
-    )
-    plsc_delta = plsc_cor - plsc_cor_perm
-
-    # -- Compute cross-rollout PLSC
-    (plsc_cross_rank, plsc_cross_cor, plsc_cross_cor_perm,
-     plsc_cross_rank_mean, plsc_cross_cor_mean, plsc_cross_cor_perm_mean
-     ) = compute_cross_plsc_data(
-      results_cross, predator_ids, prey_ids
-    )
-    plsc_cross_delta = plsc_cross_cor - plsc_cross_cor_perm
-
-    # -- Store them in scenario_data
-    scenario_data[scenario_name].update({
-      'apple': apple,
-      'acorn': acorn,
-      'catch': catch,
-      'plsc_rank': plsc_rank,
-      'plsc_delta': plsc_delta,
-      'plsc_cross_rank': plsc_cross_rank,
-      'plsc_cross_delta': plsc_cross_delta
-    })
-
-  # =============== 5) Build a consolidated DataFrame ===============
-  # We'll create a dictionary of lists/arrays, then transpose at the end
-  data_dict = {}
-  for scenario_name in scenario_configs:
-    # scenario_data[scenario_name]['apple'] is your array of apples, etc.
-    data_dict[f'apple {scenario_name}'] = scenario_data[scenario_name]['apple']
-    data_dict[f'acorn {scenario_name}'] = scenario_data[scenario_name]['acorn']
-    data_dict[f'catch {scenario_name}'] = scenario_data[scenario_name]['catch']
-    data_dict[f'# PLSC shared dim {scenario_name}'] = scenario_data[scenario_name]['plsc_rank']
-    data_dict[f'delta PLSC1 {scenario_name}'] = scenario_data[scenario_name]['plsc_delta']
-    data_dict[f'# PLSC shared dim cross {scenario_name}'] = scenario_data[scenario_name]['plsc_cross_rank']
-    data_dict[f'delta PLSC1 cross {scenario_name}'] = scenario_data[scenario_name]['plsc_cross_delta']
-
-  df = pd.DataFrame.from_dict(data_dict, orient='index').T
-
-  # =============== 6) Save to CSV ===============
-  df.to_csv(output_csv_path, index=False)
-  print(f"Data saved to {output_csv_path}.")
-
-  # =============== 7) Plotting ===============
-  # 7a) Box & swarm plots
-  for part_key in ['apple', 'acorn', 'catch', '# PLSC', 'delta PLSC1']:
-    if part_key in ['apple', 'acorn', 'catch']:
-      # Multiply by 1000 if needed, as in your original code
-      plot_box_swarm(df * 1000, part_key, output_plot_dir)
+    plsc_keyword = group_info['plsc_keyword']
+    if 'plsc_cross_keyword' in group_info:
+      plsc_cross_keyword = group_info['plsc_cross_keyword']
     else:
-      plot_box_swarm(df, part_key, output_plot_dir)
+      print(f"using default plsc_cross_keyword: 'cross'")
+      plsc_cross_keyword = 'cross'
+    output_csv_path = group_info['output_csv_path']
+    output_plot_dir = os.path.dirname(output_csv_path)
+    os.makedirs(output_plot_dir, exist_ok=True)
 
-  # # 7b) Heatmaps for rewards
-  # plot_heatmaps(
-  #   df * 1000,
-  #   part_keys=['apple', 'acorn', 'catch'],
-  #   group_keys=list(scenario_configs.keys()),  # e.g. ['npnp', 'tptp', ...]
-  #   ids_shape=(3, 10),  # Adjust if needed
-  #   output_dir=output_plot_dir,
-  #   file_prefix='reward per 1k step (mean)'
-  # )
-  #
-  # # 7c) Heatmaps for # PLSC and delta PLSC1
-  # plot_heatmaps(
-  #   df,
-  #   part_keys=['# PLSC shared dim', 'delta PLSC1'],
-  #   group_keys=list(scenario_configs.keys()),
-  #   ids_shape=(3, 10),
-  #   output_dir=output_plot_dir,
-  #   file_prefix='plsc'
-  # )
-  part_keys = ['apple', 'acorn', 'catch']
-  plot_heatmaps_all_scenarios(
+    scenario_data = {}
+
+    for scenario_name, cfg in scenario_df.iterrows():
+
+      scenario_path = cfg['path']
+      scenario_data[scenario_name] = load_scenario_pickle_files(scenario_path)
+      # if scenario_path in loaded_data_cache:
+      #   scenario_data[scenario_name] = loaded_data_cache[scenario_path].copy()
+      #   print(f"Using cached data for {scenario_name}")
+      # else:
+      #   scenario_data[scenario_name] = load_scenario_pickle_files(scenario_path)
+      #   loaded_data_cache[scenario_path] = scenario_data[scenario_name]
+      #   print(f"Loaded and cached data for {scenario_name}")
+
+
+    # =============== 4) Compute metrics for each scenario ===============
+    for scenario_name, cfg in scenario_df.iterrows():
+      results_serial = scenario_data[scenario_name]['serial']
+      results_plsc = scenario_data[scenario_name][plsc_keyword]
+      results_cross = scenario_data[scenario_name][plsc_cross_keyword]
+
+      predator_ids = cfg['predator_ids']
+      prey_ids = cfg['prey_ids']
+
+      # -- Compute Reward metrics
+      apple, acorn, catch = compute_rewards(
+        results_serial, predator_ids, prey_ids
+      )
+
+      # -- Compute normal PLSC
+      plsc_rank, plsc_cor, plsc_cor_perm = compute_plsc_data(
+        results_plsc, predator_ids, prey_ids
+      )
+      plsc_delta = plsc_cor - plsc_cor_perm
+
+      # -- Compute cross-rollout PLSC
+      plsc_cross_rank, plsc_cross_cor, plsc_cross_cor_perm, *_ = compute_cross_plsc_data(
+        results_cross, predator_ids, prey_ids
+      )
+      plsc_cross_delta = plsc_cross_cor - plsc_cross_cor_perm
+
+      # -- Store them in scenario_data
+      scenario_data[scenario_name].update({
+        'apple': apple,
+        'acorn': acorn,
+        'catch': catch,
+        'plsc_rank': plsc_rank,
+        'plsc_delta': plsc_delta,
+        'plsc_cross_rank': plsc_cross_rank,
+        'plsc_cross_delta': plsc_cross_delta
+      })
+
+    # =============== 5) Build a consolidated DataFrame ===============
+    # We'll create a dictionary of lists/arrays, then transpose at the end
+    data_dict = {}
+    for scenario_name in scenario_df.index:
+      # scenario_data[scenario_name]['apple'] is your array of apples, etc.
+      data_dict[f'apple {scenario_name}'] = scenario_data[scenario_name]['apple']
+      data_dict[f'acorn {scenario_name}'] = scenario_data[scenario_name]['acorn']
+      data_dict[f'catch {scenario_name}'] = scenario_data[scenario_name]['catch']
+      data_dict[f'# PLSC shared dim {scenario_name}'] = scenario_data[scenario_name]['plsc_rank']
+      data_dict[f'delta PLSC1 {scenario_name}'] = scenario_data[scenario_name]['plsc_delta']
+      data_dict[f'# PLSC shared dim cross {scenario_name}'] = scenario_data[scenario_name]['plsc_cross_rank']
+      data_dict[f'delta PLSC1 cross {scenario_name}'] = scenario_data[scenario_name]['plsc_cross_delta']
+
+    df = pd.DataFrame.from_dict(data_dict, orient='index').T
+
+    # =============== 6) Save to CSV ===============
+    df.to_csv(output_csv_path, index=False)
+    print(f"Data saved to {output_csv_path}.")
+
+    # Plotting
+    for part_key in ['apple', 'acorn', 'catch', '# PLSC', 'delta PLSC1']:
+      scaled_df = df * 1000 if part_key in ['apple', 'acorn', 'catch'] else df
+      plot_box_swarm(scaled_df, part_key, output_plot_dir)
+
+    plot_heatmaps_all_scenarios(
       df=df * 1000,
-      scenario_configs=scenario_configs,
-      part_keys=part_keys,
+      scenario_df=scenario_df,
+      part_keys=['apple', 'acorn', 'catch'],
       output_dir=output_plot_dir,
-      file_prefix="all_scenarios_rewards"
-  )
-  part_keys = ['# PLSC shared dim', 'delta PLSC1']
-  plot_heatmaps_all_scenarios(
+      file_prefix=f"{group_name}_rewards"
+    )
+
+    plot_heatmaps_all_scenarios(
       df=df,
-      scenario_configs=scenario_configs,
-      part_keys=part_keys,
+      scenario_df=scenario_df,
+      part_keys=['# PLSC shared dim', 'delta PLSC1'],
       output_dir=output_plot_dir,
-      file_prefix="all_scenarios_plsc"
-  )
+      file_prefix=f"{group_name}_plsc"
+    )
 
 if __name__ == "__main__":
   main()

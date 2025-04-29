@@ -33,7 +33,7 @@ flags.DEFINE_string("agent_param_indices", None, "Comma separated list of agent 
 flags.DEFINE_integer("num_episodes", 5, "Number of episodes to run evaluation for.")
 # experiment.plsc_dim_to_perturb = 10
 # experiment.agent_to_perturb = 'predator, prey'
-# experiment.plsc_decomposition_dict_path = '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/PLSC_usv_dict.pkl'
+# experiment.plsc_decomposition_dict_path = '/home/mikan/e/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/PLSC_usv_dict.pkl'
 flags.DEFINE_integer("plsc_dim_to_perturb", None, "Number of dimensions to perturb.")
 flags.DEFINE_string("agent_to_perturb", None, "Agent to perturb.")
 flags.DEFINE_string("plsc_decomposition_dict_path", None, "Path to PLSC decomposition dict.")
@@ -53,13 +53,21 @@ def main(_):
   log_dir_append = ""
   if FLAGS.agent_param_indices is not None:
     log_dir_append = FLAGS.get_flag_value("map_name", "") + "_agent_" + "_".join(map(str, FLAGS.agent_param_indices))
-  if FLAGS.agent_to_perturb is not None:
+  if (FLAGS.agent_to_perturb is not None) and ('PLSC_usv_dict' in FLAGS.plsc_decomposition_dict_path):
     if ('predator' in FLAGS.agent_to_perturb) and ('prey' in FLAGS.agent_to_perturb):
       log_dir_append += "_perturb_both"
     elif 'predator' in FLAGS.agent_to_perturb:
       log_dir_append += "_perturb_predator"
     elif 'prey' in FLAGS.agent_to_perturb:
       log_dir_append += "_perturb_prey"
+  elif (FLAGS.agent_to_perturb is not None) and ('randPC' in FLAGS.plsc_decomposition_dict_path):
+    tag = str(FLAGS.plsc_dim_to_perturb) + FLAGS.plsc_decomposition_dict_path.split('/')[-1].split('.pkl')[0]
+    if ('predator' in FLAGS.agent_to_perturb) and ('prey' in FLAGS.agent_to_perturb):
+      log_dir_append += f"_perturb_both_{tag}"
+    elif 'predator' in FLAGS.agent_to_perturb:
+      log_dir_append += f"_perturb_predator_{tag}"
+    elif 'prey' in FLAGS.agent_to_perturb:
+      log_dir_append += f"_perturb_prey_{tag}"
 
   config.logger_factory = functools.partial(
     make_experiment_logger, log_dir=os.path.join(experiment_dir, "logs", log_dir_append), use_tb=False)

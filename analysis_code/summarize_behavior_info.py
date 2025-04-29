@@ -4,21 +4,47 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from helper import compute_stuck_rate
 
 if __name__ == '__main__':
   video_paths = [
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles/',
+    f'/home/mikan/e/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles/',
+    f'/home/mikan/e/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles/',
     f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_predator/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_predator/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_predator/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_prey/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_prey/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_prey/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_both/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_both/',
-    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_both/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_predator/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_predator/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_predator/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_prey/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_prey/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_prey/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357/pickles_perturb_both/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651/pickles_perturb_both/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_both/',
+    '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles_perturb_prey/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles_perturb_predator/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles_perturb_both/',
+    '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles_perturb_prey/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles_perturb_predator/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles_perturb_both/',
+  #   f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_predator_25randPC_remTop10PLSCs/',
+  #   f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_prey_25randPC_remTop10PLSCs/',
+  #   f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962/pickles_perturb_both_25randPC_remTop10PLSCs/',
+    f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles/',
+  #   f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles_perturb_predator/',
+  #   f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles_perturb_prey/',
+  #   f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles_perturb_both/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles_perturb_predator_30randPC_remTop10PLSCs/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles_perturb_prey_30randPC_remTop10PLSCs/',
+    # f'/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441/pickles_perturb_both_30randPC_remTop10PLSCs/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles_perturb_prey_30randPC_remTop10PLSCs/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles_perturb_predator_30randPC_remTop10PLSCs/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026/pickles_perturb_both_30randPC_remTop10PLSCs/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles_perturb_prey_30randPC_remTop10PLSCs/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles_perturb_predator_30randPC_remTop10PLSCs/',
+    # '/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/pickles_perturb_both_30randPC_remTop10PLSCs/',
+
   ]
   for video_path in video_paths:
     if 'open' in video_path:
@@ -40,8 +66,9 @@ if __name__ == '__main__':
             print(f'Error loading {video_path}{title}_{eId}.pkl')
             continue
           if title not in serial_data_dict:
-            serial_data_dict[title] = {title: [] for title in ['STAMINA', 'POSITION', 'ORIENTATION', 'rewards', 'actions',
-                                                                'distances']}
+            serial_data_dict[title] = {title: [] for title in [
+              'INVENTORY', 'READY_TO_SHOOT', 'STAMINA', 'POSITION', 'ORIENTATION', 'rewards', 'actions','distances',
+              'stuck_indicator']}
           serial_data_dict[title]['STAMINA'].append([info['STAMINA'] for info in results])
           serial_data_dict[title]['POSITION'].append([info['POSITION'] for info in results])
           serial_data_dict[title]['ORIENTATION'].append([info['ORIENTATION'] for info in results])
@@ -59,6 +86,13 @@ if __name__ == '__main__':
             distances.append(distance)
           serial_data_dict[title]['distances'].append(distances)
 
+          # Compute stuck rates for each agent over the entire episode.
+          pred_pos = positions[:, 0, :]
+          prey_pos = positions[:, 1, :]
+          pred_stuck, pred_stuck_ind = compute_stuck_rate(pred_pos, min_duration=20)
+          prey_stuck, prey_stuck_ind = compute_stuck_rate(prey_pos, min_duration=20)
+          serial_data_dict[title]['stuck_indicator'].append(
+            [pred_stuck_ind.astype(bool), prey_stuck_ind.astype(bool)])
 
           # Now, calculate the time till catch
           rewards = np.array([info['rewards'] for info in results])
@@ -81,7 +115,8 @@ if __name__ == '__main__':
                               'time_on_grass_per_round', 'time_off_grass_per_round',
                               'frac_off_grass_per_round',
                               'frac_moving_away_per_round', 'percent_time_in_3_steps',
-                              'percent_time_in_5_steps']
+                              'percent_time_in_5_steps',
+                              'pred_stuck_rate', 'prey_stuck_rate',]
             cumulative_dict[title] = {title: [] for title in summary_titles}
 
           for round, t_start in enumerate(t_respawn[:-1]):
@@ -102,6 +137,12 @@ if __name__ == '__main__':
             t_acorn_i = t_acorn[(t_leave_safe <= t_acorn) & (t_acorn < t_end)]
             num_apple = len(t_apple_i)
             num_acorn = len(t_acorn_i)
+
+            # Compute stuck rates for each agent over the current round.
+            pred_stuck, pred_stuck_ind = compute_stuck_rate(pred_pos[t_start:t_end], min_duration=20)
+            prey_stuck, prey_stuck_ind = compute_stuck_rate(prey_pos[t_start:t_end], min_duration=20)
+            cumulative_dict[title]['pred_stuck_rate'].append(pred_stuck)
+            cumulative_dict[title]['prey_stuck_rate'].append(prey_stuck)
 
             cumulative_dict[title]['round'].append(f'{eId}_round{round}')
             cumulative_dict[title]['time_per_round'].append(time_per_round)
@@ -165,5 +206,6 @@ if __name__ == '__main__':
 
     with open(f'{video_path}serial_results_dict.pkl', 'wb') as f:
       pickle.dump(serial_data_dict, f)
-    with open(f'{video_path}cumulative_results_dict.pkl', 'wb') as f:
-      pickle.dump(cumulative_dict, f)
+    # TODO: uncomment this line to save the cumulative results
+    # with open(f'{video_path}cumulative_results_dict.pkl', 'wb') as f:
+    #   pickle.dump(cumulative_dict, f)

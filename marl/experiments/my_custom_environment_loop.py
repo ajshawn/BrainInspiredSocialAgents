@@ -120,7 +120,7 @@ class MyCustomEnvironmentLoop(core.Worker):
       timestep = self._environment.step(action)
       env_step_durations.append(time.time() - env_step_start)
 
-      episode_data.append({
+      time_step_dict = {
         "step": len(episode_data),
         "INVENTORY": timestep.observation['observation']['INVENTORY'],
         "READY_TO_SHOOT": timestep.observation['observation']['READY_TO_SHOOT'],
@@ -134,9 +134,16 @@ class MyCustomEnvironmentLoop(core.Worker):
 
         # 'hidden': np.asarray(self._actor._states.hidden),
         # 'cell': np.asarray(self._actor._states.cell),
-        'hidden': self._actor._states.hidden,
-        'cell': self._actor._states.cell,
-      })
+        # 'hidden': self._actor._states.hidden,
+        # 'cell': self._actor._states.cell,
+      }
+      if isinstance(self._actor._states, list):
+        time_step_dict['hidden'] = [np.asarray(s.hidden) for s in self._actor._states]
+        time_step_dict['cell'] = [np.asarray(s.cell) for s in self._actor._states]
+      else:
+        time_step_dict['hidden'] = np.asarray(self._actor._states.hidden)
+        time_step_dict['cell'] = np.asarray(self._actor._states.cell)
+      episode_data.append(time_step_dict)
 
       # Have the agent and observers observe the timestep.
       self._actor.observe(action, next_timestep=timestep)

@@ -60,9 +60,18 @@ def make_meltingpot_environment(seed: int,
                                 agent_roles: List[str] = None,
                                 **kwargs) -> dmlab2d.Environment:
   """Returns a MeltingPot environment."""
+  video_path = None
+  if 'video_path' in kwargs:
+    video_path = kwargs['video_path']
+    kwargs.pop('video_path')
   env_config = substrate.get_config(substrate_name)
   roles = agent_roles or env_config.default_player_roles
   env = substrate.build(substrate_name, roles=roles, **kwargs)
+  if record and video_path is not None:
+    vid_rec = partial(
+      my_render_func_efficient,
+      recorder=MeltingPotRecorder(video_path))
+    env.observables().timestep.subscribe(vid_rec)
   if record:
     vid_rec = partial(
         my_render_func_efficient,
