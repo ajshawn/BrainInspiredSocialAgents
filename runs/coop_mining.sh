@@ -1,4 +1,4 @@
-GPUS="0"
+GPUS="1"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 #exp_dir='results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-28_19:45:56.562736'

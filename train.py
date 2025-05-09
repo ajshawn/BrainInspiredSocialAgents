@@ -67,7 +67,7 @@ flags.DEFINE_bool(
     "prosocial", False, "Whether to use shared reward for prosocial training."
 )
 flags.DEFINE_integer("seed", 0, "Random seed.")
-flags.DEFINE_integer("num_steps", 200_000_000, "Number of env steps to run.")
+flags.DEFINE_integer("num_steps", 2000, "Number of env steps to run.")
 flags.DEFINE_string(
     "exp_log_dir", "./results/", "Directory to store experiment logs in."
 )
@@ -305,7 +305,7 @@ def build_experiment_config():
             environment_spec=environment_specs,
             evaluator_env_factories=None,
             seed=FLAGS.seed,
-            max_num_actor_steps=None,
+            max_num_actor_steps=FLAGS.num_steps,
             resume_training=True if FLAGS.experiment_dir else False,
         ),
         experiment_dir,
@@ -316,7 +316,7 @@ def main(_):
     assert not FLAGS.record_video, "Video recording is not supported during training"
     config, experiment_dir = build_experiment_config()
     ckpt_config = ma_config.CheckpointingConfig(
-        max_to_keep=3, directory=experiment_dir, add_uid=False
+        max_to_keep=500, directory=experiment_dir, add_uid=False
     )
     if FLAGS.async_distributed:
 

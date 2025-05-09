@@ -8,7 +8,7 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in {4,40,70,100,135}  ;do # {2..195} #{4,20,73,99,120} 
+for ckp in {2,3}  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
