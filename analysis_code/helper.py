@@ -25,7 +25,7 @@ def compute_stuck_rate(pos, min_duration=50):
   return np.mean(stuck_indicator), stuck_indicator
 
 
-def mark_death_periods(data):
+def mark_death_periods(data, duration=20):
   """
   Mark each element with 0 if it is part of a 'death period'
   (20 consecutive zeros followed immediately by a 1.0), otherwise 1.
@@ -47,15 +47,15 @@ def mark_death_periods(data):
 
   # Convolve this boolean mask with a window of length 20
   # conv[i] -> number of zeros in data[i : i+20]
-  conv = np.convolve(zero_mask, np.ones(20, dtype=int), mode='valid')
+  conv = np.convolve(zero_mask, np.ones(duration, dtype=int), mode='valid')
 
   # Indices i for which data[i : i+20] are all zeros => conv[i] == 20
-  potential_starts = np.where(conv == 20)[0]
+  potential_starts = np.where(conv == duration)[0]
 
   # Check if the element right after those 20 zeros is 1.0
   for start_idx in potential_starts:
     # The index of the element that should be 1.0 after 20 zeros
-    check_idx = start_idx + 20
+    check_idx = start_idx + duration
     if check_idx < n and data[check_idx] == 1.0:
       # Mark the entire 20-element region as death (0)
       labels[start_idx: check_idx] = 0

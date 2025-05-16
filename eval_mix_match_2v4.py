@@ -3,8 +3,19 @@ import re
 import itertools
 import subprocess
 import argparse
+import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+'''
+All checkpoints that I have
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp7357
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092
+/home/mikan/Documents/GitHub/social-agents-JAX/results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274'''
 # Parse command-line arguments for parallelism
 parser = argparse.ArgumentParser(description="Run predator-prey evaluations with limited parallel jobs.")
 parser.add_argument("--n_jobs", type=int, default=40,
@@ -97,10 +108,27 @@ def main(scenarios, predator_combinations, prey_combinations):
         all_combos = [list(pred) + list(prey)
                       for pred in itertools.combinations(predator_combinations, p)
                       for prey in itertools.combinations(prey_combinations, q)]
+        # Same bunch combos
+        same_source_combos = []
+        for combo in all_combos:
+            sources = set([c[0] for c in combo])
+            if len(sources) == 1:
+                same_source_combos.append(combo)
+        print(f"Same source combos: {len(same_source_combos)}")
+
         # sample up to 10 most diverse
-        sampled = sample_diverse(all_combos, 20)
-        # commands = build_commands_for_combos(sampled, map_name='predator_prey__open_debug', map_layout='smaller_13x13')
-        commands = build_commands_for_combos(sampled, map_name='predator_prey__simplified10x10_OneVsOne', map_layout=None)
+        sampled = sample_diverse(all_combos, 100)
+        # Add one combo from the every same source if available
+        sampled_same_source = []
+        used_source = set()
+        for combo in same_source_combos:
+            sources = combo[0][0]
+            if sources not in used_source:
+                sampled_same_source.append(combo)
+                used_source.add(sources)
+        sampled += sampled_same_source
+        commands = build_commands_for_combos(sampled, map_name='predator_prey__open_debug', map_layout='smaller_13x13')
+        # commands = build_commands_for_combos(sampled, map_name='predator_prey__simplified10x10_OneVsOne', map_layout=None)
         run_commands(commands, N_JOBS)
 
 if __name__ == '__main__':
@@ -109,11 +137,12 @@ if __name__ == '__main__':
         '1vs1': (1, 1),
         '1vs2': (1, 2),
         # '2vs3': (2, 3),
-        # '2vs4': (2, 4)
+        '2vs4': (2, 4)
     }
+    result_folder = "/home/mikan/e/GitHub/social-agents-JAX/results"
     #
-    # # first_combo
-    # # Define predator and prey checkpoint pools with explicit indices
+    # first_combo
+    # Define predator and prey checkpoint pools with explicit indices
     # predator_checkpoints = {
     #     "./results/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306/": [0, 1, 2],
     #     "./results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/": [0],
@@ -130,7 +159,7 @@ if __name__ == '__main__':
     # predator_combinations = build_combinations(predator_checkpoints, 'predator')
     # prey_combinations = build_combinations(prey_checkpoints, 'prey')
     # main(scenarios, predator_combinations, prey_combinations)
-    #
+
     # # second_combo
     # # Define predator and prey checkpoint pools with explicit indices
     # predator_checkpoints = {
@@ -167,18 +196,136 @@ if __name__ == '__main__':
     # prey_combinations = build_combinations(prey_checkpoints, 'prey')
     # main(scenarios, predator_combinations, prey_combinations)
 
-    # fourth_combo
-    # Define predator and prey checkpoint pools with explicit indices
+    # # fourth_combo
+    # # Define predator and prey checkpoint pools with explicit indices
+    # predator_checkpoints = {
+    #     "./results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274/": [0,2,3]
+    # }
+    # prey_checkpoints = {
+    #     # Apple collector
+    #         "./results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/": [0],
+    #         "./results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274/": [0]
+    # }
+    #
+    # # Build predator and prey combinations
+    # predator_combinations = build_combinations(predator_checkpoints, 'predator')
+    # prey_combinations = build_combinations(prey_checkpoints, 'prey')
+    # main(scenarios, predator_combinations, prey_combinations)
+
+    # # # fifth_combo
+    #
+    # predator_checkpoints = {
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": [0, 1, 2,],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306": [0, 1, 2],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274": [0, 1, 2, 3, 4],
+    # }
+    # prey_checkpoints = {
+    #     # Mixed acorn adn apple environment
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": np.arange(3,13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306": np.arange(3,13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495": np.arange(5,13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": np.arange(5,13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274": np.arange(5,13).astype(int).tolist(),
+    # }
+    #
+    # # Build predator and prey combinations
+    # predator_combinations = build_combinations(predator_checkpoints, 'predator')
+    # prey_combinations = build_combinations(prey_checkpoints, 'prey')
+    # main(scenarios, predator_combinations, prey_combinations)
+    #
+    # ## sixth_combo
+    #
+    # predator_checkpoints = {
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": [0, 1, 2,],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306": [0, 1, 2],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274": [0, 1, 2, 3, 4],
+    # }
+    # prey_checkpoints = {
+    #     # Mixed acorn adn apple environment
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962": np.arange(3,13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026": np.arange(3,13).astype(int).tolist(),
+    # }
+    #
+    # # Build predator and prey combinations
+    # predator_combinations = build_combinations(predator_checkpoints, 'predator')
+    # prey_combinations = build_combinations(prey_checkpoints, 'prey')
+    # main(scenarios, predator_combinations, prey_combinations)
+    #
+    # # # seventh_combo
+    #
+    # predator_checkpoints = {
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": [0, 1, 2,],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306": [0, 1, 2],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274": [0, 1, 2, 3, 4],
+    # }
+    # prey_checkpoints = {
+    #     # Mixed acorn adn apple environment
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962": np.arange(3,13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026": np.arange(3,13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": np.arange(
+    #         5, 13).astype(int).tolist(),
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274": np.arange(
+    #         5, 13).astype(int).tolist(),
+    #
+    # }
+
+    #
+    # # eighth_combo above average agents
+    #
+    # predator_checkpoints = {
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962": [0, 1, 2,],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026": [0, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": [0, 1, 2,],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306": [0, 2],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495": [0, 1, 2, 3, 4],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": [1, 3, 4],
+    # }
+    #
+    # prey_checkpoints = {
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-01-07_12:11:32.926962": [
+    #         8,11,12,9], # [ 4,8,9,11,12],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__alley_hunt_2025-02-10_21:44:27.355026": [
+    #         11,10,6,5], # [5,6,7,10,11],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": [
+    #         6,5,4,7,8], # [3,4,5,6,7,8,10,11],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2025-02-24_16:09:49.096441_ckp6306": [
+    #         8,9,11,5,3], # [3,4,5,7,8,9,10,11,12],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495": [
+    #         5,7,8,10,12], # [5,7,8,10,12],
+    #     f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": [
+    #         10,8,12,7,], # [5,7,8,10,12],
+    # }
+    # predator_combinations = build_combinations(predator_checkpoints, 'predator')
+    # prey_combinations = build_combinations(prey_checkpoints, 'prey')
+    # main(scenarios, predator_combinations, prey_combinations)
+
+    # ninth_combo: We add the newly trained random forest agents
     predator_checkpoints = {
-        "./results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274/": [0,2,3]
+        f'{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__random_forest_2025-04-24_17:23:56.924098': [0, 1, 2, 3, 4],
+        f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": [0, 1,],
+        f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092": [1, 3],
     }
     prey_checkpoints = {
-        # Apple collector
-            "./results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-02-10_21:45:28.296092/": [0],
-            "./results/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-03-05_18:04:37.638274/": [0]
+        f'{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__random_forest_2025-04-24_17:23:56.924098':
+            np.arange(5, 13).astype(int).tolist(),
+        f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17_36_18.023323_ckp9651": [
+            6,5,4], # [3,4,5,6,7,8,10,11],
+        f"{result_folder}/PopArtIMPALA_1_meltingpot_predator_prey__orchard_2025-01-11_11:10:52.115495": [
+            5,7,8], # [5,7,8,10,12],
     }
 
-    # Build predator and prey combinations
     predator_combinations = build_combinations(predator_checkpoints, 'predator')
     prey_combinations = build_combinations(prey_checkpoints, 'prey')
     main(scenarios, predator_combinations, prey_combinations)
