@@ -165,7 +165,6 @@ class MeltingpotFE(hk.Module):
 
     return combined_op
 
-
 class VisualFeatures(hk.Module):
   """Simple convolutional stack from MeltingPot paper."""
 
@@ -198,6 +197,53 @@ class VisualFeatures(hk.Module):
       outputs = jnp.reshape(outputs, [-1])  # [D]
 
     outputs = self._ff(outputs)
+    return outputs
+
+class AttentionCNN_FE(hk.Module):
+
+  def __init__(self, num_actions):
+    super().__init__("meltingpot_features")
+    self.num_actions = num_actions
+    self._visual_torso = VisualFeatures_attention()
+
+  def __call__(self, inputs):
+    # extract environment observation from the full observation object
+    obs = inputs["observation"]
+
+    # extract visual features form RGB observation
+    ip_img = obs["RGB"].astype(jnp.float32) / 255
+    vis_op = self._visual_torso(ip_img)
+
+    return vis_op
+
+class VisualFeatures_attention(hk.Module):
+  """Simple convolutional stack from MeltingPot paper."""
+
+  def __init__(self):
+    super().__init__(name="meltingpot_visual_features")
+    self._cnn = hk.Sequential([
+        hk.Conv2D(64, [8, 8], 8, padding="VALID"),
+        jax.nn.relu,
+        # hk.Conv2D(64, [4, 4], 1, padding="VALID"),
+        # jax.nn.relu,
+    ])
+
+  def __call__(self, inputs: Images) -> jnp.ndarray:
+    inputs_rank = jnp.ndim(inputs)
+    batched_inputs = inputs_rank == 4
+    if inputs_rank < 3 or inputs_rank > 4:
+        raise ValueError("Expected input BHWC or HWC. Got rank %d" % inputs_rank)
+
+    # Process through CNN layers
+    outputs = self._cnn(inputs)  # Shape: [B, 11, 11, 64]
+    
+    if batched_inputs:
+        # Reshape to [B, 121, 64] for attention
+        outputs = jnp.reshape(outputs, [outputs.shape[0], -1, outputs.shape[-1]])
+    else:
+        # Handle unbatched case
+        outputs = jnp.reshape(outputs, [-1, outputs.shape[-1]])  # [121, 64]
+
     return outputs
 
 

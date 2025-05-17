@@ -23,6 +23,7 @@ from marl.agents import opre
 from marl.agents.networks import ArrayFE
 from marl.agents.networks import ImageFE
 from marl.agents.networks import MeltingpotFE
+from marl.agents.networks import AttentionCNN_FE
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
 from marl.utils import helpers
@@ -212,7 +213,8 @@ def build_experiment_config():
             agent_roles=agent_roles,
             **custom_env_configs,
         )
-        feature_extractor = MeltingpotFE
+        #feature_extractor = MeltingpotFE
+        feature_extractor = AttentionCNN_FE
         num_options = 16
     else:
         raise ValueError(f"Unknown env_name {FLAGS.env_name}")
