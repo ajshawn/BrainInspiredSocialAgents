@@ -1,14 +1,14 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572" 
+EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-05-17_01:34:37.047917" 
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2025-03-17_14:26:51.204572"
+TIME_STAMP="2025-05-17_01:34:37.047917"
 GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in {2,3}  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in {2,36}  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -26,9 +26,10 @@ for ckp in {2,3}  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --gold_reward 6 \
         --mining_reward -0.1 \
         --ckp ${ckp} \
-        --n_episodes 10 \
-        --log_timesteps True \
+        --n_episodes 1 \
         --record_video True \
+        #--log_timesteps True \
+        
 
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"

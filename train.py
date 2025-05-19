@@ -68,7 +68,7 @@ flags.DEFINE_bool(
     "prosocial", False, "Whether to use shared reward for prosocial training."
 )
 flags.DEFINE_integer("seed", 0, "Random seed.")
-flags.DEFINE_integer("num_steps", 2000, "Number of env steps to run.")
+flags.DEFINE_integer("num_steps", None, "Number of env steps to run.")
 flags.DEFINE_string(
     "exp_log_dir", "./results/", "Directory to store experiment logs in."
 )
