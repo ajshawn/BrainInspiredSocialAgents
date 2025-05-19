@@ -17,7 +17,7 @@ def compute_good_gathering_segmented(
     positions: np.ndarray,
     predators: Sequence[int],
     preys: Sequence[int],
-    active_segments: List[Tuple[int, int]],
+    active_segments: List[Tuple[int, int]]=[(0, 1000)], # Default segment
     radius: float = 3.0,
     death_labels: Optional[Dict[int, np.ndarray]] = None,
 ) -> Dict[str, float]:
@@ -96,7 +96,7 @@ def compute_successful_fencing_and_helpers_segmented(
     predators: Sequence[int],
     preys: Sequence[int],
     death_labels: Dict[int, np.ndarray],
-    active_segments: List[Tuple[int, int]],
+    active_segments: List[Tuple[int, int]]=[(0, 1000)],  # Default segment
     radius: float = 3.0,
 ) -> List[Dict[str, object]]:
   """
@@ -154,9 +154,9 @@ def compute_successful_fencing_and_helpers_segmented(
                   'time': t,
                   'segment_time': t - t0,
                   'predator': p,
-                  'prey': q,
-                  'helpers': helper_list,
-                  'helpers_distance': helper_dist,
+                  'beneficiary': q,
+                  'helper': helper_list,
+                  'helper_distance': helper_dist,
                 })
   return events
 
@@ -169,7 +169,7 @@ def compute_invalid_interactions_segmented(
     stamina: np.ndarray,
     predators: Sequence[int],
     preys: Sequence[int],
-    active_segments: List[Tuple[int, int]],
+    active_segments: List[Tuple[int, int]] = [(0, 1000)],  # Default segment
     cooldown: int = 5,
     radius2: float = 2.0,
     radius3: float = 3.0,
