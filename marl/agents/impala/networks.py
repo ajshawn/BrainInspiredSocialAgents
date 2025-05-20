@@ -194,6 +194,7 @@ class IMPALANetwork_attention(hk.RNNCore):
     self._recurrent = hk.LSTM(recurrent_dim)
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
+    
   def __call__(self, inputs, state: hk.LSTMState):
     embedding = self._embed(inputs) # [B, 121, F]
     # Apply attention between CNN features and LSTM hidden state

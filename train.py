@@ -57,7 +57,7 @@ flags.DEFINE_string(
 flags.DEFINE_enum(
     "algo_name",
     "IMPALA",
-    ["IMPALA", "PopArtIMPALA", "OPRE", "PopArtOPRE"],
+    ["IMPALA", "PopArtIMPALA", "OPRE", "PopArtOPRE", "PopArtIMPALA_attention"],
     "Algorithm to train",
 )
 flags.DEFINE_bool(
@@ -106,7 +106,7 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
 flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
-flags.DEFINE_bool("positional_embedding", True, "Whether to use positional embedding for attention")
+flags.DEFINE_bool("positional_embedding", False, "Whether to use positional embedding for attention")
 
 def _get_custom_env_configs():
     result = {}
