@@ -106,7 +106,7 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
 flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
-
+flags.DEFINE_bool("positional_embedding", True, "Whether to use positional embedding for attention")
 
 def _get_custom_env_configs():
     result = {}
@@ -213,8 +213,8 @@ def build_experiment_config():
             agent_roles=agent_roles,
             **custom_env_configs,
         )
-        #feature_extractor = MeltingpotFE
-        feature_extractor = AttentionCNN_FE
+        feature_extractor = MeltingpotFE
+        #feature_extractor = AttentionCNN_FE
         num_options = 16
     else:
         raise ValueError(f"Unknown env_name {FLAGS.env_name}")
@@ -239,6 +239,21 @@ def build_experiment_config():
         # Create network
         network_factory = functools.partial(
             impala.make_network_2, feature_extractor=feature_extractor
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+    
+    elif FLAGS.algo_name == "PopArtIMPALA_attention":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=FLAGS.positional_embedding
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()

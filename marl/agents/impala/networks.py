@@ -45,37 +45,86 @@ def make_network(environment_spec: EnvironmentSpec,
       unroll_fn=unroll_fn,
   )
 
-
 def make_network_2(environment_spec: EnvironmentSpec,
                    feature_extractor: hk.Module,
-                   recurrent_dim: int = 128):
+                   recurrent_dim: int = 128,
+                   ):
 
   def forward_fn(inputs, state: hk.LSTMState):
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor)
+        feature_extractor=feature_extractor,
+        )
     return model(inputs, state)
 
   def initial_state_fn(batch_size=None) -> hk.LSTMState:
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor)
+        feature_extractor=feature_extractor,
+        )
     return model.initial_state(batch_size)
 
   def unroll_fn(inputs, state: hk.LSTMState):
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor)
+        feature_extractor=feature_extractor,
+        )
     return model.unroll(inputs, state)
 
   def critic_fn(inputs):
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor)
+        feature_extractor=feature_extractor,
+        )
+    return model.critic(inputs)
+
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+
+def make_network_attention(environment_spec: EnvironmentSpec,
+                   feature_extractor: hk.Module,
+                   recurrent_dim: int = 128,
+                   positional_embedding: bool = True):
+
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
+    return model(inputs, state)
+
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_attention(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
+    return model.initial_state(batch_size)
+
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
+    return model.unroll(inputs, state)
+
+  def critic_fn(inputs):
+    model = IMPALANetwork_attention(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
     return model.critic(inputs)
 
   return make_haiku_networks_2(
@@ -88,9 +137,10 @@ def make_network_2(environment_spec: EnvironmentSpec,
 
 class AttentionLayer(hk.Module):
   """Attention layer between CNN and LSTM."""
-  def __init__(self, key_size: int):
+  def __init__(self, key_size: int, positional_embedding: bool = True):
     super().__init__(name="attention_layer")
     self.key_size = key_size
+    self.positional_embedding = positional_embedding
       
   def __call__(self, query, key, value):
     # query: LSTM hidden state [B, H] H for hidden state dimension 
@@ -102,7 +152,19 @@ class AttentionLayer(hk.Module):
       # Add sequence dimension to key/value
       key = jnp.expand_dims(key, axis=0)
       value = jnp.expand_dims(value, axis=0)
-    
+    if self.positional_embedding:
+      # Add fixed CoordConv positional embedding [H, W, 2]
+      B, N, _ = key.shape
+      H = 11
+      y = jnp.linspace(-1.0, 1.0, H)
+      x = jnp.linspace(-1.0, 1.0, H) # assuming square grid, H = W
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")  # shape [H, W]
+      coords = jnp.stack([yy, xx], axis=-1)       # [H, W, 2]
+      coords = jnp.reshape(coords, [N, 2])         # [121, 2]
+      coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])  # [B, 121, 2]
+      key = jnp.concatenate([key, coords], axis=-1)    # [B, 121, C+2]
+      value = jnp.concatenate([value, coords], axis=-1)  # [B, 121, C+2] 
+
     ## Project query, key, value to same dimension
     query = hk.Linear(self.key_size)(query)          # [B, K]
     key = hk.Linear(self.key_size)(key)              # [B, 121, K]
@@ -119,16 +181,16 @@ class AttentionLayer(hk.Module):
     # Apply attention
     output = jnp.einsum('bi,bik->bk', weights, value)  # [B, K]
     return output
+  
 
-
-class IMPALANetwork(hk.RNNCore):
+class IMPALANetwork_attention(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
-  def __init__(self, num_actions, recurrent_dim, feature_extractor):
+  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=True):
     super().__init__(name="impala_network")
     self.num_actions = num_actions
     self._embed = feature_extractor(num_actions)
-    self._attention = AttentionLayer(key_size=64)
+    self._attention = AttentionLayer(key_size=64, positional_embedding=positional_embedding)
     self._recurrent = hk.LSTM(recurrent_dim)
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
@@ -186,6 +248,45 @@ class IMPALANetwork(hk.RNNCore):
         combined, 
         state
     )
+
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, op), new_states
+
+  def critic(self, inputs):
+    return jnp.squeeze(self._value_layer(inputs), axis=-1)
+
+class IMPALANetwork(hk.RNNCore):
+  """Network architecture as described in MeltingPot paper"""
+
+  def __init__(self, num_actions, recurrent_dim, feature_extractor):
+    super().__init__(name="impala_network")
+    self.num_actions = num_actions
+    self._embed = feature_extractor(num_actions)
+    self._recurrent = hk.LSTM(recurrent_dim)
+    self._policy_layer = hk.Linear(num_actions, name="policy")
+    self._value_layer = hk.Linear(1, name="value_layer")
+
+  def __call__(self, inputs, state: hk.LSTMState):
+    op = self._embed(inputs)
+    op, new_state = self._recurrent(op, state)
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value), new_state
+
+  def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
+    return self._recurrent.initial_state(batch_size)
+
+  def unroll(self, inputs, state: hk.LSTMState):
+    """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
+    op = self._embed(inputs)
+
+    # fix for dynamic_unroll with reverb sampled data
+    # state = hk.LSTMState(state.hidden, state.cell)
+
+    # unrolling the time dimension
+    op, new_states = hk.static_unroll(self._recurrent, op,
+                                      state)  # , return_all_states=True)
 
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
