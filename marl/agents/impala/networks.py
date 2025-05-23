@@ -180,7 +180,7 @@ class AttentionLayer(hk.Module):
     
     # Apply attention
     output = jnp.einsum('bi,bik->bk', weights, value)  # [B, K]
-    return output
+    return output, weights
   
 
 class IMPALANetwork_attention(hk.RNNCore):
@@ -198,7 +198,7 @@ class IMPALANetwork_attention(hk.RNNCore):
   def __call__(self, inputs, state: hk.LSTMState):
     embedding = self._embed(inputs) # [B, 121, F]
     # Apply attention between CNN features and LSTM hidden state
-    attended = self._attention(state.hidden, embedding, embedding)
+    attended, attn_weights = self._attention(state.hidden, embedding, embedding)
 
     # extract other observations
     obs = inputs["observation"]
@@ -216,7 +216,7 @@ class IMPALANetwork_attention(hk.RNNCore):
     op, new_state = self._recurrent(combined, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, embedding), new_state
+    return (logits, value, attn_weights), new_state
 
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
     return self._recurrent.initial_state(batch_size)
@@ -224,7 +224,7 @@ class IMPALANetwork_attention(hk.RNNCore):
   def unroll(self, inputs, state: hk.LSTMState):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     op = self._embed(inputs)
-    attended = self._attention(state.hidden, op, op)
+    attended, attn_weights = self._attention(state.hidden, op, op)
     # extract other observations
     obs = inputs["observation"]
     inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
@@ -252,7 +252,7 @@ class IMPALANetwork_attention(hk.RNNCore):
 
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, op), new_states
+    return (logits, value, attn_weights), new_states
 
   def critic(self, inputs):
     return jnp.squeeze(self._value_layer(inputs), axis=-1)

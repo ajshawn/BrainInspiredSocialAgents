@@ -173,8 +173,8 @@ class EnvironmentLoopEvents(core.Worker):
                 "extract_gold":extract_gold,
                 "reward":list(map(float, rewards)),
                 "timestep":int(episode_steps),
-                "position": timestep.observation['observation'].get('POSITION', []).tolist(),
-                "orientation": timestep.observation['observation'].get('ORIENTATION', []).tolist(),
+                "position": timestep.observation['observation'].get('POSITION', []),
+                "orientation": timestep.observation['observation'].get('ORIENTATION', []),
                 "hidden": self._actor._states.hidden.tolist(),
                 "embedding": self._actor._embedding.tolist(),
                 })
