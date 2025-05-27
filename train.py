@@ -73,8 +73,8 @@ flags.DEFINE_string(
     "exp_log_dir", "./results/", "Directory to store experiment logs in."
 )
 flags.DEFINE_bool("use_tb", False, "Flag to enable tensorboard logging.")
-flags.DEFINE_bool("use_wandb", False, "Flag to enable wandb.ai logging.")
-flags.DEFINE_string("wandb_entity", "ajshawn723", "Entity name for wandb account.")
+flags.DEFINE_bool("use_wandb", True, "Flag to enable wandb.ai logging.")
+flags.DEFINE_string("wandb_entity", "linfangu", "Entity name for wandb account.")
 flags.DEFINE_string("wandb_project", "marl-jax", "Project name for wandb logging.")
 flags.DEFINE_string("wandb_tags", "", "Comma separated list of tags for wandb.")
 flags.DEFINE_string("available_gpus", "0", "Comma separated list of GPU ids.")
@@ -106,7 +106,7 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
 flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
-flags.DEFINE_bool("positional_embedding", False, "Whether to use positional embedding for attention")
+flags.DEFINE_string("positional_embedding", None, "Whether to use positional embedding for attention")
 
 def _get_custom_env_configs():
     result = {}

@@ -49,7 +49,7 @@ def main(_):
     config.logger_factory = functools.partial(
         make_experiment_logger, log_dir=experiment_dir, use_tb=False
     )
-
+    print(FLAGS.positional_embedding)
     if FLAGS.env_name == "meltingpot":
 
         if FLAGS.run_eval_on_scenarios:
