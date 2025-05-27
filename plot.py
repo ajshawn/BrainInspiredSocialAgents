@@ -1,13 +1,16 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import argparse
 
 N_TOTAL_AGENTS = 13
 window_size = 20  # Choose a window size that suits your data
 
-prefix='results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp8202/csv_logs'
+parser = argparse.ArgumentParser(description='Plot agent rewards with moving average smoothing.')
+parser.add_argument('--prefix', '-p', type=str, required=True, help='Prefix for the results directory')
+args = parser.parse_args()
 
-csv_file = f'{prefix}/actor.csv'
+csv_file = f'{args.prefix}/csv_logs/actor.csv'
 
 df = pd.read_csv(csv_file)
 
@@ -38,7 +41,7 @@ for agent_idx in range(N_TOTAL_AGENTS):
     plt.legend()
 
     # Save the plot
-    plt.savefig(f'{prefix}/agent_{agent_idx}_reward_smoothed.png')
+    plt.savefig(f'{args.prefix}/agent_{agent_idx}_reward_smoothed.png')
 
     # Clear the plot
     plt.clf()
