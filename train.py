@@ -57,7 +57,14 @@ flags.DEFINE_string(
 flags.DEFINE_enum(
     "algo_name",
     "IMPALA",
-    ["IMPALA", "PopArtIMPALA", "OPRE", "PopArtOPRE", "PopArtIMPALA_attention"],
+    [
+        "IMPALA", 
+        "PopArtIMPALA", 
+        "OPRE", 
+        "PopArtOPRE", 
+        "PopArtIMPALA_attention",
+        "PopArtIMPALA_attention_tanh"
+    ],
     "Algorithm to train",
 )
 flags.DEFINE_bool(
@@ -107,6 +114,14 @@ flags.DEFINE_bool(
 flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
 flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
 flags.DEFINE_bool("positional_embedding", False, "Whether to use positional embedding for attention")
+
+# Observation logging flags
+flags.DEFINE_bool("log_obs", False, "Whether to log observations.")
+flags.DEFINE_string("log_filename", "observations.jsonl", "Filename to log observations.")
+flags.DEFINE_string(
+    "log_img_dir", "agent_view_images", "Directory to save agent view images."
+)
+flags.DEFINE_integer("log_interval", 1, "Interval to log observations.")
 
 def _get_custom_env_configs():
     result = {}
@@ -211,6 +226,10 @@ def build_experiment_config():
             shared_obs=False,
             record=record,
             agent_roles=agent_roles,
+            log_obs=FLAGS.log_obs,
+            log_filename=FLAGS.log_filename,
+            log_img_dir=FLAGS.log_img_dir,
+            log_interval=FLAGS.log_interval,            
             **custom_env_configs,
         )
         feature_extractor = MeltingpotFE
@@ -254,6 +273,21 @@ def build_experiment_config():
         # Create network
         network_factory = functools.partial(
             impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=FLAGS.positional_embedding
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_tanh":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_tanh, feature_extractor=AttentionCNN_FE, positional_embedding=FLAGS.positional_embedding
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()

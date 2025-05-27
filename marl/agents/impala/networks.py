@@ -135,13 +135,58 @@ def make_network_attention(environment_spec: EnvironmentSpec,
       critic_fn=critic_fn,
   )
 
+def make_network_attention_tanh(environment_spec: EnvironmentSpec,
+                   feature_extractor: hk.Module,
+                   recurrent_dim: int = 128,
+                   positional_embedding: bool = True):
+
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention_tanh(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
+    return model(inputs, state)
+
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_attention_tanh(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
+    return model.initial_state(batch_size)
+
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention_tanh(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
+    return model.unroll(inputs, state)
+
+  def critic_fn(inputs):
+    model = IMPALANetwork_attention_tanh(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding)
+    return model.critic(inputs)
+
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+
 class AttentionLayer(hk.Module):
   """Attention layer between CNN and LSTM."""
   def __init__(self, key_size: int, positional_embedding: bool = True):
     super().__init__(name="attention_layer")
     self.key_size = key_size
     self.positional_embedding = positional_embedding
-      
+    
   def __call__(self, query, key, value):
     # query: LSTM hidden state [B, H] H for hidden state dimension 
     # key, value: CNN features [B, 121, K] K for key/value dimension
@@ -166,9 +211,9 @@ class AttentionLayer(hk.Module):
       value = jnp.concatenate([value, coords], axis=-1)  # [B, 121, C+2] 
 
     ## Project query, key, value to same dimension
-    query = hk.Linear(self.key_size)(query)          # [B, K]
-    key = hk.Linear(self.key_size)(key)              # [B, 121, K]
-    value = hk.Linear(self.key_size)(value)          # [B, 121, K]
+    query = hk.Linear(self.key_size)(query)  # [B, K]
+    key = hk.Linear(self.key_size)(key)      # [B, 121, K]
+    value = hk.Linear(self.key_size)(value)  # [B, 121, K]
     
     # Expand query dims for broadcasting
     query = jnp.expand_dims(query, axis=1)       # [B, 1, K]
@@ -181,7 +226,51 @@ class AttentionLayer(hk.Module):
     # Apply attention
     output = jnp.einsum('bi,bik->bk', weights, value)  # [B, K]
     return output, weights
-  
+
+class AttentionLayerTanh(hk.Module): 
+  """Attention layer between CNN and LSTM from https://github.com/AaronCCWong/Show-Attend-and-Tell/blob/master/attention.py"""
+  def __init__(self, key_size: int, positional_embedding: bool = True):
+    super().__init__(name="attention_tanh_layer")
+    self.key_size = key_size
+    self.positional_embedding = positional_embedding
+    self.to_u = hk.Linear(key_size, name="to_u")
+    self.to_w = hk.Linear(key_size, name="to_w")
+    self.to_v = hk.Linear(1, name="to_v")
+    self.tanh = jax.nn.tanh
+    self.softmax = jax.nn.softmax
+
+  def __call__(self, query, key, value):
+    # query: LSTM hidden state [B, H] H for hidden state dimension 
+    # key, value: CNN features [B, 121, K] K for key/value dimension
+    if jnp.ndim(query) == 1:
+      # Add batch dimension to query
+      query = jnp.expand_dims(query, axis=0)
+    if jnp.ndim(key) == 2:
+      # Add sequence dimension to key/value
+      key = jnp.expand_dims(key, axis=0)
+      value = jnp.expand_dims(value, axis=0)
+    if self.positional_embedding:
+      # Add fixed CoordConv positional embedding [H, W, 2]
+      B, N, _ = key.shape
+      H = 11
+      y = jnp.linspace(-1.0, 1.0, H)
+      x = jnp.linspace(-1.0, 1.0, H) # assuming square grid, H = W
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")  # shape [H, W]
+      coords = jnp.stack([yy, xx], axis=-1)       # [H, W, 2]
+      coords = jnp.reshape(coords, [N, 2])         # [121, 2]
+      coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])  # [B, 121, 2]
+      key = jnp.concatenate([key, coords], axis=-1)    # [B, 121, C+2]
+      value = jnp.concatenate([value, coords], axis=-1)  # [B, 121, C+2] 
+
+    u_hidden = self.to_u(query)          # [B, K]
+    u_hidden = jnp.expand_dims(u_hidden, axis=1)       # [B, 1, K]
+    w_key = self.to_w(key)                # [B, 121, K]
+    attn = self.tanh(w_key + u_hidden)  # [B, 121, K]
+    scores = self.to_v(attn)             # [B, 121, 1]
+    scores = jnp.squeeze(scores, axis=-1)  # [B, 121]
+    weights = self.softmax(scores, axis=-1)        # [B, 121]
+    output = jnp.einsum('bi,bik->bk', weights, value)  # [B, K]
+    return output, weights
 
 class IMPALANetwork_attention(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
@@ -256,6 +345,16 @@ class IMPALANetwork_attention(hk.RNNCore):
 
   def critic(self, inputs):
     return jnp.squeeze(self._value_layer(inputs), axis=-1)
+
+class IMPALANetwork_attention_tanh(IMPALANetwork_attention):
+  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=True):
+    super().__init__(num_actions, recurrent_dim, feature_extractor, positional_embedding)
+    self.num_actions = num_actions
+    self._embed = feature_extractor(num_actions)
+    self._attention = AttentionLayerTanh(key_size=64, positional_embedding=positional_embedding)
+    self._recurrent = hk.LSTM(recurrent_dim)
+    self._policy_layer = hk.Linear(num_actions, name="policy")
+    self._value_layer = hk.Linear(1, name="value_layer")
 
 class IMPALANetwork(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""

@@ -10,3 +10,4 @@ from marl.agents.impala.learning import PopArtIMPALALearnerME
 from marl.agents.impala.networks import make_network
 from marl.agents.impala.networks import make_network_2
 from marl.agents.impala.networks import make_network_attention
+from marl.agents.impala.networks import make_network_attention_tanh
