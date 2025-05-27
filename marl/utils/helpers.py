@@ -58,6 +58,10 @@ def make_meltingpot_environment(seed: int,
                                 diversity_dim: int = None,
                                 record: bool = False,
                                 agent_roles: List[str] = None,
+                                log_obs: bool = False,
+                                log_filename: str = "observations.jsonl",
+                                log_img_dir: str = "agent_view_images",
+                                log_interval: int = 1,
                                 **kwargs) -> dmlab2d.Environment:
   """Returns a MeltingPot environment."""
   env_config = substrate.get_config(substrate_name)
@@ -79,7 +83,14 @@ def make_meltingpot_environment(seed: int,
         share_actions=True,
         share_rewards=True)
   env = MeltingPotWrapper(
-      env, shared_reward=shared_reward, reward_scale=reward_scale)
+      env, 
+      shared_reward=shared_reward, 
+      reward_scale=reward_scale,
+      log_obs=log_obs,
+      log_filename=log_filename,
+      log_img_dir=log_img_dir,
+      log_interval=log_interval,            
+    )
   env = SinglePrecisionWrapper(env)
   env = ObservationActionRewardWrapper(env)
   if diversity_dim is not None:
@@ -154,6 +165,10 @@ def env_factory(seed: int,
                 diversity_dim: int = None,
                 record: bool = False,
                 agent_roles: List[str] = None,
+                log_obs: bool = False,
+                log_filename: str = "observations.jsonl",
+                log_img_dir: str = "agent_view_images",
+                log_interval: int = 1,
                 **kwargs):
   if env_name[-1].isdigit():
     final_env = make_meltingpot_scenario(
@@ -175,6 +190,10 @@ def env_factory(seed: int,
         diversity_dim=diversity_dim,
         record=record,
         agent_roles=agent_roles,
+        log_obs=log_obs,
+        log_filename=log_filename,
+        log_img_dir=log_img_dir,
+        log_interval=log_interval,
         **kwargs)
   return final_env
 

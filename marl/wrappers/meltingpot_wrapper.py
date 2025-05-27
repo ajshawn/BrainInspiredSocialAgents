@@ -40,7 +40,7 @@ class MeltingPotWrapper(dmlab2d.Environment):
                environment: Union[Substrate, Scenario],
                shared_reward: bool = False,
                reward_scale: float = 1.0,
-               log_obs: bool = True,
+               log_obs: bool = False,
                log_filename: str = "observations.jsonl",
                log_img_dir: str = "agent_view_images",
                log_interval: int = 1):

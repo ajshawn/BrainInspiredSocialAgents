@@ -10,6 +10,7 @@ import matplotlib.cm as cm
 from PIL import Image
 from tqdm import tqdm
 import imageio.v2 as imageio
+import argparse
 
 ATTEN_WEIGHTS_KEY = "embedding"
 TIME_STEP_KEY = "timestep"
@@ -139,8 +140,16 @@ def visualize_attn(csv_path, image_dir, n_agents, save_dir=None):
             
         
 if __name__ == '__main__':
-    csv_path = 'results/PopArtIMPALA_attention_1_meltingpot_predator_prey__open_2025-05-19_22:10:17.746228/csv_logs/predator_prey__openNone-timesteps.csv'
-    image_dir = "agent_view_images"
-    n_agents = 13
-    save_dir = "attn_visualizations"
-    visualize_attn(csv_path, image_dir, n_agents, save_dir=save_dir)
+    parser = argparse.ArgumentParser(description="Visualize attention weights from CSV logs.")
+    parser.add_argument('--csv_path', type=str, required=True, help='Path to the CSV file containing attention weights.')
+    parser.add_argument('--image_dir', type=str, required=True, help='Directory containing observation images.')
+    parser.add_argument('--n_agents', type=int, required=True, help='Number of agents.')
+    parser.add_argument('--save_dir', type=str, default=None, help='Directory to save visualizations. If not provided, displays them.')
+    args = parser.parse_args()
+
+    visualize_attn(
+        csv_path=args.csv_path,
+        image_dir=args.image_dir,
+        n_agents=args.n_agents,
+        save_dir=args.save_dir
+    )
