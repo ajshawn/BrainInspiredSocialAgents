@@ -102,6 +102,7 @@ class WandbLogger(base.Logger):
     self._label = label
     self._iter = 0
     self._steps_key = steps_key
+    wandb.login()
     if wandb.run is None:
       self._run = wandb.init(
           project=project,

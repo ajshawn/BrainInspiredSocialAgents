@@ -81,7 +81,7 @@ flags.DEFINE_string(
 )
 flags.DEFINE_bool("use_tb", False, "Flag to enable tensorboard logging.")
 flags.DEFINE_bool("use_wandb", True, "Flag to enable wandb.ai logging.")
-flags.DEFINE_string("wandb_entity", "linfangu", "Entity name for wandb account.")
+flags.DEFINE_string("wandb_entity", "linfangu-ucla", "Entity name for wandb account.")
 flags.DEFINE_string("wandb_project", "marl-jax", "Project name for wandb logging.")
 flags.DEFINE_string("wandb_tags", "", "Comma separated list of tags for wandb.")
 flags.DEFINE_string("available_gpus", "0", "Comma separated list of GPU ids.")
@@ -151,6 +151,12 @@ def build_experiment_config():
     prosocial = FLAGS.prosocial
     record = FLAGS.record_video
     memory_efficient = not FLAGS.all_parallel
+    log_obs = FLAGS.log_obs
+    log_filename = FLAGS.log_filename
+    log_img_dir = FLAGS.log_img_dir
+    log_interval = FLAGS.log_interval
+    positional_embedding = FLAGS.positional_embedding
+
     frozen_agents = set(
         [int(agent) for agent in FLAGS.frozen_agents.split(",")]
         if FLAGS.frozen_agents
@@ -226,10 +232,10 @@ def build_experiment_config():
             shared_obs=False,
             record=record,
             agent_roles=agent_roles,
-            log_obs=FLAGS.log_obs,
-            log_filename=FLAGS.log_filename,
-            log_img_dir=FLAGS.log_img_dir,
-            log_interval=FLAGS.log_interval,            
+            log_obs=log_obs,
+            log_filename=log_filename,
+            log_img_dir=log_img_dir,
+            log_interval=log_interval,            
             **custom_env_configs,
         )
         feature_extractor = MeltingpotFE
@@ -272,7 +278,7 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=FLAGS.positional_embedding
+            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
@@ -287,7 +293,7 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention_tanh":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention_tanh, feature_extractor=AttentionCNN_FE, positional_embedding=FLAGS.positional_embedding
+            impala.make_network_attention_tanh, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
