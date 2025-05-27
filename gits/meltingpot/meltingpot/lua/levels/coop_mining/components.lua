@@ -77,6 +77,7 @@ function Ore:__init__(kwargs)
   self._config.partialState = kwargs.partialState
   self._config.minNumMiners = kwargs.minNumMiners
   self._config.miningWindow = kwargs.miningWindow
+  self._locked = false
 end
 
 function Ore:currentMiners()
@@ -91,6 +92,7 @@ function Ore:reset()
   -- Table tracking which players have attempted mining this resource.
   self._miners = {}
   self._miningCountdown = 0
+  self._locked = false
   if self.gameObject:getState() ~= self._config.waitState then
     self.gameObject:setState(self._config.rawState)
   end
@@ -112,6 +114,11 @@ end
 
 function Ore:onHit(hitterGameObject, hitName)
   --print(self:currentMiners())
+  if self._locked then
+    -- If the Ore is locked, it cannot be mined.
+    return true
+  end
+
   if hitName == 'mine' and
       (self.gameObject:getState() == self._config.rawState or
        self.gameObject:getState() == self._config.partialState) then
@@ -123,6 +130,7 @@ function Ore:onHit(hitterGameObject, hitName)
     
     -- If the Ore has enough miners, process rewards.
     if self:currentMiners() == self._config.minNumMiners then
+      self._locked = true
       --print(self:currentMiners())
       for id, _ in pairs(self._miners) do
         local avatarGO = self.gameObject.simulation:getAvatarFromIndex(id)
