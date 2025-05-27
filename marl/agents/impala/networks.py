@@ -6,6 +6,8 @@ import jax
 from marl.agents.networks import make_haiku_networks
 from marl.agents.networks import make_haiku_networks_2
 
+from typing import Optional
+
 # Useful type aliases
 Images = jnp.ndarray
 
@@ -93,7 +95,7 @@ def make_network_2(environment_spec: EnvironmentSpec,
 def make_network_attention(environment_spec: EnvironmentSpec,
                    feature_extractor: hk.Module,
                    recurrent_dim: int = 128,
-                   positional_embedding: bool = True):
+                   positional_embedding: Optional[str] = None):
 
   def forward_fn(inputs, state: hk.LSTMState):
     model = IMPALANetwork_attention(
@@ -182,7 +184,7 @@ def make_network_attention_tanh(environment_spec: EnvironmentSpec,
 
 class AttentionLayer(hk.Module):
   """Attention layer between CNN and LSTM."""
-  def __init__(self, key_size: int, positional_embedding: bool = True):
+  def __init__(self, key_size: int, positional_embedding = None):
     super().__init__(name="attention_layer")
     self.key_size = key_size
     self.positional_embedding = positional_embedding
@@ -197,8 +199,8 @@ class AttentionLayer(hk.Module):
       # Add sequence dimension to key/value
       key = jnp.expand_dims(key, axis=0)
       value = jnp.expand_dims(value, axis=0)
-    if self.positional_embedding:
-      # Add fixed CoordConv positional embedding [H, W, 2]
+    if self.positional_embedding == 'fixed':
+      # # Add fixed CoordConv positional embedding [H, W, 2]
       B, N, _ = key.shape
       H = 11
       y = jnp.linspace(-1.0, 1.0, H)
@@ -209,6 +211,16 @@ class AttentionLayer(hk.Module):
       coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])  # [B, 121, 2]
       key = jnp.concatenate([key, coords], axis=-1)    # [B, 121, C+2]
       value = jnp.concatenate([value, coords], axis=-1)  # [B, 121, C+2] 
+    elif self.positional_embedding == 'learnable':
+      # learnable positional embedding [121, 64]
+      #jax.debug.print('learnable positional embedding')
+      pos_emb = hk.get_parameter("pos_embedding", shape=[key.shape[1], self.key_size], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      # Broadcast to batch size
+      key += pos_emb[None, :, :]
+      value += pos_emb[None, :, :]
+    # else:
+    #   jax.debug.print('no positional embedding')
+    #   jax.debug.print(self.positional_embedding)
 
     ## Project query, key, value to same dimension
     query = hk.Linear(self.key_size)(query)  # [B, K]
@@ -275,7 +287,7 @@ class AttentionLayerTanh(hk.Module):
 class IMPALANetwork_attention(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
-  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=True):
+  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=None):
     super().__init__(name="impala_network")
     self.num_actions = num_actions
     self._embed = feature_extractor(num_actions)

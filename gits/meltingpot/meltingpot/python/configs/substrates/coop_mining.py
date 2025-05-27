@@ -77,6 +77,25 @@ WOOOOOOOOOOOOOOOOOOOOOOOOOW
 WWWWWWWWWWWWWWWWWWWWWWWWWWW
 """
 
+SMALL_MAP = """
+WWWWWWWWWWWWWWWW
+WOOOOOOOOOOOOOOW
+WOPOOPOOOOOPOOOW
+WOOOWOOOOOOOOOOW
+WOOOWOOOOOOOOOOW
+WOOOOOOOOOOOWWWW
+WOPWWWOOOOWOOOOW
+WOOOOOOOOOWOOPOW
+WOOOOOOOOOOOOOOW
+WOPOOWWOOOOWWOOW
+WOOOWWOOOOOOOOOW
+WOPOOOOOOOOOOOOW
+WOOOOOWOOOPOOOOW
+WOOOOOOOOWOOOOOW
+WOPOOPOOOPOOOPOW
+WWWWWWWWWWWWWWWW
+"""
+
 # `prefab` determines which prefab game object to use for each `char` in the
 # ascii map.
 CHAR_PREFAB_MAP = {
@@ -485,7 +504,10 @@ def get_config(**kwargs):
     config = config_dict.ConfigDict()
 
     config.custom_args = kwargs
-
+    if kwargs.get("small_map"):
+        config.ascii_map = SMALL_MAP
+    else:  
+        config.ascii_map = ASCII_MAP
     # Action set configuration.
     config.action_set = ACTION_SET
     # Observation format configuration.
@@ -593,7 +615,7 @@ def build(
         spriteSize=8,
         topology="BOUNDED",  # Choose from ["BOUNDED", "TORUS"],
         simulation={
-            "map": ASCII_MAP,
+            "map": config.ascii_map,
             "gameObjects": gameObjects,
             "scene": SCENE,
             "prefabs": prefabs,
