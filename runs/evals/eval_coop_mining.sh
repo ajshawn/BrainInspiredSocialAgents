@@ -4,7 +4,7 @@ ALGORITHM_NAME="PopArtIMPALA_attention"
 TIME_STAMP="2025-05-22_16:22:39.109747"
 GPUS="1"
 
-export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
+# export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 

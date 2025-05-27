@@ -105,7 +105,11 @@ def visualize_attn(csv_path, image_dir, n_agents, save_dir=None):
 
     for image_path in tqdm(all_image_paths):
         step, agent_idx = parse_step_and_agent(image_path)
-        attn = attn_weights[agent_idx, step]  # shape (121,)
+        try:
+            attn = attn_weights[agent_idx, step]  # shape (121,)
+        except IndexError:
+            print(f"Skipping image {image_path} for agent {agent_idx} at step {step}: out of bounds in attention weights.")
+            continue    
 
         # Load and normalize the image
         img = Image.open(image_path).convert("RGB")
