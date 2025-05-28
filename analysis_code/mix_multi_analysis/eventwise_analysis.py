@@ -10,6 +10,9 @@ analysis_pipeline.py
 6) (Optionally) processes all sessions in parallel into a DataFrame
 """
 
+import warnings
+warnings.filterwarnings("ignore")
+
 import json
 import logging
 import glob
@@ -24,13 +27,22 @@ from sklearn.decomposition import PCA
 from joblib import Parallel, delayed
 
 from group_analysis_utils.helper import parse_agent_roles
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
+
 
 # ─── configure logging ───────────────────────────────────────────────────────
 
 logging.basicConfig(
-  level=logging.INFO,
-  format="%(asctime)s %(levelname)s %(message)s",
+    filename="analysis.log",    # <— log file
+    filemode="w",               # overwrite each run
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
 )
+
 log = logging.getLogger(__name__)
 
 
@@ -39,11 +51,15 @@ log = logging.getLogger(__name__)
 def load_data(session: str,
               event_dir: Path,
               ts_dir: Path,
-              net_dir: Path
-              ) -> Tuple[Dict[int,str], pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+              net_dir: Path,
+              agent_roles: Dict[int, str] = None
+              ) -> Tuple[Dict[int,str], Dict[int,str], pd.DataFrame, pd.DataFrame, pd.DataFrame]:
   """Return (roles, ev_df, ts_df, ns_df) for one session."""
-  roles, sources = parse_agent_roles(session)
-
+  if agent_roles is None:
+    roles, sources = parse_agent_roles(session)
+  else:
+    roles = agent_roles
+    sources = {i: f"{session}_agent_{i}" for i in roles}
   ev_path = event_dir / f"{session}_merged.pkl"
   ts_path = next(ts_dir.glob(f"{session}*_info.csv"), None)
   ns_path = next(net_dir.glob(f"{session}*_network_states.pkl"), None)
@@ -64,7 +80,7 @@ def load_data(session: str,
 
   log.info(f"Loaded session {session}: "
            f"{ev_path.name}, {ts_path.name}, {ns_path.name}")
-  return roles, ev_df, ts_df, ns_df
+  return roles, sources, ev_df, ts_df, ns_df
 
 
 # ─── II) EVENT MASKS & DISTANCES ─────────────────────────────────────────────
@@ -247,84 +263,187 @@ def plot_distance_stats(dist_dict: Dict[Tuple[int,int], np.ndarray],
   return fig
 
 
-def plot_lifespan_stats(masks: Dict[str, np.ndarray],
+def plot_lifespan_stats(ev_df: pd.DataFrame,
                         death_mask: np.ndarray,
-                        roles: Dict[int,str]
-                        ) -> plt.Figure:
-  """Stacked bar of prey lifespans split by event participation."""
-  prey_ids = [i for i,r in roles.items() if r=='prey']
-  T = death_mask.shape[0]
-  spans = []
-  for a in prey_ids:
-    alive = (death_mask[:,a]==0)  # 0==alive, 1==dead?
-    starts = np.where(np.diff(alive.astype(int), prepend=0)==1)[0]
-    ends   = np.where(np.diff(alive.astype(int), prepend=0)==-1)[0]
-    if len(ends)<len(starts): ends = np.append(ends,T)
-    for k,(s,e) in enumerate(zip(starts,ends)):
-      label = 'none'
-      for ev,mask in masks.items():
-        if mask[s:e,a].any():
-          label = ev; break
-      spans.append((a,k,label,e-s))
+                        roles: Dict[int,str],
+                        events: List[str],
+                        episode_length: int = 1000
+                        ) -> Tuple[plt.Figure, pd.DataFrame]:
+    """
+    Compute & plot total alive‐duration (lifespan) per agent × event variant,
+    where variants are:
+      - 'apple_cooperation_events'
+      - 'distraction_events_helper', 'distraction_events_beneficiary'
+      - 'fence_events_helper', 'fence_events_beneficiary'
+      - 'none' (no event)
+    Returns:
+      fig     – bar‐plot Figure
+      span_df – DataFrame with columns [agent, event, length]
+    """
+    prey_ids = [i for i,r in roles.items() if r=='prey']
+    T = death_mask.shape[0]
+    variants = [
+        'apple_cooperation_events',
+        'distraction_events_helper','distraction_events_beneficiary',
+        'fence_events_helper','fence_events_beneficiary',
+        'none'
+    ]
 
-  df = pd.DataFrame(spans, columns=['agent','span','event','length'])
-  pivot = df.groupby(['agent','event'])['length'].sum().unstack('event').fillna(0)
-  # add gray for none if missing
-  if 'none' not in pivot: pivot['none'] = 0
-  colors = {**{ev:c for ev,c in zip(masks, ['limegreen','orange','purple'])},
-            'none':'lightgray'}
-  fig, ax = plt.subplots(figsize=(8,3))
-  pivot.plot(kind='bar', stacked=True, ax=ax,
-             color=[colors[c] for c in pivot.columns])
-  ax.set_ylabel("Timestep count")
-  ax.set_title("Prey lifespan by participation")
-  ax.legend(title="")
-  plt.tight_layout()
-  return fig
+    # first, build a per‐agent/event boolean mask
+    masks = {agent: {var: np.zeros(T, bool) for var in variants}
+             for agent in prey_ids}
+
+    for ev in events:
+        for ep, entries in enumerate(ev_df[ev].values):
+            offset = ep*episode_length
+            for d in entries:
+                t0 = d.get('time_start', d.get('time'))
+                t1 = d.get('time_end',   t0+1)
+                idx = slice(offset+t0, offset+t1)
+                # apple
+                if ev=='apple_cooperation_events':
+                    for a in d['participants']:
+                        masks[a][ev][idx] = True
+                else:
+                    # distraction/fence: helper vs beneficiary
+                    for role_key in ('helper','beneficiary'):
+                        inds = d.get(role_key, [])
+                        if isinstance(inds,int):
+                            inds = [inds]
+                        for a in inds:
+                            masks[a][f"{ev}_{role_key}"][idx] = True
+
+    records = []
+    for a in prey_ids:
+        alive = death_mask[:,a] == 1
+        any_mask = np.zeros(T,bool)
+        # accumulate any event
+        for var in variants:
+            if var!='none':
+                any_mask |= masks[a][var]
+
+        for var in variants:
+            if var=='none':
+                m = (~any_mask) & alive
+            else:
+                m = masks[a][var] & alive
+            total_len = int(m.sum())
+            records.append({'agent':a, 'event':var, 'length': total_len})
+
+    span_df = pd.DataFrame(records)
+
+    # pivot & plot
+    pivot = span_df.pivot(index='agent', columns='event', values='length').fillna(0)
+    fig, ax = plt.subplots(figsize=(10,4))
+    pivot.plot(kind='bar', ax=ax)
+    ax.set_ylabel("Total timesteps alive")
+    ax.set_title("Prey lifespan by event variant")
+    ax.legend(title="", bbox_to_anchor=(1.05,1), loc='upper left')
+    plt.tight_layout()
+
+    return fig, span_df
 
 
 def plot_reward_stats(ts_df: pd.DataFrame,
                       death_mask: np.ndarray,
-                      spans_df: pd.DataFrame,
-                      roles: Dict[int,str]
-                      ) -> plt.Figure:
-  """Mean reward per step for each prey span & event."""
-  # assume ts_df has columns reward_{id}
-  prey_ids = spans_df['agent'].unique()
-  records = []
-  for a in prey_ids:
-    rewards = ts_df[f"reward_{a}"].values
-    alive   = (death_mask[:,a]==0)
-    df_a    = spans_df[spans_df['agent']==a]
-    for _,r in df_a.iterrows():
-      s = r['span']  # not perfect but illustrative
-      length = r['length']
-      # find segment in alive; naive mapping:
-      idx = np.where(alive)[0][s:s+length]
-      records.append({
-        'agent': a,
-        'event': r['event'],
-        'reward': rewards[idx].sum()/length
-      })
-  df = pd.DataFrame(records).dropna()
-  pivot = df.groupby(['agent','event'])['reward'].mean().unstack('event').fillna(0)
-  fig, ax = plt.subplots(figsize=(8,3))
-  pivot.plot(kind='bar', ax=ax,
-             color=[ 'limegreen','orange','purple','lightgray'])
-  ax.set_ylabel("Mean reward / step")
-  ax.set_title("Prey rewards by participation")
-  ax.legend(title="")
-  plt.tight_layout()
-  return fig
+                      ev_df: pd.DataFrame,
+                      roles: Dict[int,str],
+                      events: List[str],
+                      reward_prefix: str = 'reward_',
+                      episode_length: int = 1000
+                      ) -> Tuple[plt.Figure, pd.DataFrame]:
+    """
+    For each agent and each event variant, compute mean reward per alive step:
+      • apple_cooperation_events
+      • distraction_events_helper / _beneficiary
+      • fence_events_helper / _beneficiary
+      • plus 'none' (no event)
+    Returns the bar‐plot Figure and a long‐form DataFrame [agent,event,reward].
+    """
+    T, n_agents = death_mask.shape
+
+    # precompute global any‐event mask (1D per agent)
+    any_event = {agent: np.zeros(T, bool) for agent in roles}
+    for ev in events:
+        for ep, entries in enumerate(ev_df[ev].values):
+            offset = ep * episode_length
+            for d in entries:
+                t0 = d.get('time_start', d.get('time'))
+                t1 = d.get('time_end',   t0+1)
+                for a in d['participants']:
+                    idx = slice(offset+t0, offset+t1)
+                    any_event[a][idx] = True
+
+    records = []
+    for agent in sorted(roles):
+        alive = (death_mask[:, agent] == 1)
+        col   = f"{reward_prefix}{agent}"
+        if col not in ts_df.columns:
+            continue
+        rewards = ts_df[col].values
+
+        # 1) apple_coop base
+        ev = 'apple_cooperation_events'
+        mask = np.zeros(T, bool)
+        for ep, entries in enumerate(ev_df[ev].values):
+            offset = ep * episode_length
+            for d in entries:
+                if agent not in d['participants']:
+                    continue
+                t0 = d.get('time_start', d.get('time'))
+                t1 = d.get('time_end',   t0+1)
+                mask[offset+t0 : offset+t1] = True
+        mask &= alive
+        records.append({'agent':agent, 'event':ev, 'reward': np.nanmean(rewards[mask]) if mask.any() else np.nan})
+
+        # 2) distraction & fence, helper/beneficiary
+        for ev in ['distraction_events','fence_events']:
+            for role_key in ['helper','beneficiary']:
+                mask = np.zeros(T, bool)
+                for ep, entries in enumerate(ev_df[ev].values):
+                    offset = ep * episode_length
+                    for d in entries:
+                        inds = d.get(role_key, [])
+                        if isinstance(inds, int):
+                            inds = [inds]
+                        if agent not in inds:
+                            continue
+                        t0 = d.get('time_start', d.get('time'))
+                        t1 = d.get('time_end',   t0+1)
+                        mask[offset+t0 : offset+t1] = True
+                mask &= alive
+                records.append({
+                    'agent': agent,
+                    'event': f"{ev}_{role_key}",
+                    'reward': np.nanmean(rewards[mask]) if mask.any() else np.nan
+                })
+
+        # 3) none
+        none_mask = (~any_event[agent]) & alive
+        records.append({'agent':agent, 'event':'none',
+                        'reward': np.nanmean(rewards[none_mask]) if none_mask.any() else np.nan})
+
+    reward_df = pd.DataFrame(records)
+
+    # pivot & plot
+    pivot = reward_df.pivot(index='agent', columns='event', values='reward').fillna(0)
+    fig, ax = plt.subplots(figsize=(10,4))
+    pivot.plot(kind='bar', ax=ax)
+    ax.set_ylabel("Mean reward / step")
+    ax.set_title("Reward per agent by event variant")
+    ax.legend(title="", bbox_to_anchor=(1.05,1), loc='upper left')
+    plt.tight_layout()
+
+    return fig, reward_df
 
 
 def plot_pca_rasters(ns_df: pd.DataFrame,
-                               death_mask: np.ndarray,
-                               masks: Dict[str, np.ndarray],
-                               roles: Dict[int, str],
-                               n_components: int = 3,
-                               x_lim: Tuple[int, int] = (0, 1000),
-                               ) -> plt.Figure:
+                     death_mask: np.ndarray,
+                     masks: Dict[str, np.ndarray],
+                     roles: Dict[int, str],
+                     n_components: int = 3,
+                     x_lim: Tuple[int, int] = (0, 1000),
+                     ) -> plt.Figure:
   """
   For each agent i:
     - Pull columns "hidden_i_*"
@@ -392,61 +511,386 @@ def plot_pca_rasters(ns_df: pd.DataFrame,
   plt.tight_layout()
   return fig
 
+def classify_multiple_events_per_agent(
+    ns_df: pd.DataFrame,
+    death_mask: np.ndarray,
+    ev_df: pd.DataFrame,
+    events: List[str],
+    roles: Dict[int, str],
+    mode: str = 'event_vs_rest',
+    episode_length: int = 1000,
+    n_components: int = 3
+) -> pd.DataFrame:
+  """
+  For each agent and each event in `events`, do:
+    - build y[t] = 1 at event onset (time_start or time)
+    - negatives:
+       * mode='event_vs_none': times when no event is happening for that agent
+       * mode='event_vs_rest': times when neither *other* events or none happen (i.e. ¬this_event)
+       * mode='event_vs_event': times when other events happen (¬this_event)
+    - leave-one-episode-out: for each fold leave one ep out for test
+    - within each fold:
+        • fit PCA(n_components) on TRAINING *alive* data
+        • project both train/test into PC space
+        • train logistic regression on train & score ROC AUC on test
+    - return mean ROC AUC for each (agent, event)
+  """
+  T = len(ns_df)
+  n_eps = len(ev_df[events[0]])
+  # 1D group labels for LOGO
+  groups = np.repeat(np.arange(n_eps), episode_length)[:T]
 
-# ─── IV) SESSION PROCESSOR ─────────────────────────────────────────────────
+  # precompute event‐onset masks & any‐event mask
+  onset_masks = {}
+  any_event = np.zeros(T, dtype=bool)
+  for ev in events:
+    m = np.zeros(T, dtype=bool)
+    for ep, entries in enumerate(ev_df[ev].values):
+      for d in entries:
+        t0 = d.get('time_start', d.get('time'))
+        idx = ep * episode_length + t0
+        if idx < T:
+          m[idx] = True
+    onset_masks[ev] = m
+    any_event |= m
+
+  logo = LeaveOneGroupOut()
+  records = []
+
+  for agent in sorted(roles):
+    # grab this agent's neural data
+    cols = sorted([c for c in ns_df.columns if c.startswith(f"hidden_{agent}_")],
+                  key=lambda c: int(c.split('_')[2]))
+    X_full = ns_df[cols].values  # (T, F_i)
+    alive = death_mask[:, agent] == 1  # True = alive
+
+    for ev in events:
+      y = onset_masks[ev].astype(int)
+      # define negative mask
+      if mode == 'event_vs_none':
+        neg_mask = (~any_event) & alive
+      elif mode == 'event_vs_rest':
+        neg_mask = (~onset_masks[ev]) & alive
+      elif mode == 'event_vs_event':
+        # only onset times of other events
+        others = any_event & (~onset_masks[ev])
+        neg_mask = others & alive
+      else:
+        raise ValueError("mode must be 'event_vs_none', 'event_vs_rest' or 'event_vs_event'")
+
+      aucs = []
+      # LOGO folds
+      for train_idx, test_idx in logo.split(X_full, y, groups):
+        # pick only alive+labelled timepoints
+        tr_sel = train_idx[(y[train_idx] == 1) | (neg_mask[train_idx])]
+        te_sel = test_idx[(y[test_idx] == 1) | (neg_mask[test_idx])]
+
+        # need at least one positive and one negative in train & test
+        if y[te_sel].sum() == 0 or len(np.unique(y[tr_sel])) < 2:
+          continue
+
+        # fit PCA on train-alive
+        pca = PCA(n_components=min(n_components, X_full.shape[1]))
+        pca.fit(X_full[tr_sel])
+
+        scores = pca.transform(X_full)  # (T, n_comp)
+        X_tr, X_te = scores[tr_sel], scores[te_sel]
+        y_tr, y_te = y[tr_sel], y[te_sel]
+
+        clf = LogisticRegression(solver='liblinear')
+        clf.fit(X_tr, y_tr)
+        probs = clf.predict_proba(X_te)[:, 1]
+        aucs.append(roc_auc_score(y_te, probs))
+
+      records.append({
+        'agent': agent,
+        'event': ev,
+        'mode': mode,
+        'roc_auc': float(np.nanmean(aucs)) if aucs else np.nan
+      })
+
+  return pd.DataFrame(records).pivot_table(
+    index='agent', columns=['event', 'mode'], values='roc_auc'
+  )
+
+
+def classify_event_onset(scores: np.ndarray,
+                         ev_df: pd.DataFrame,
+                         event: str,
+                         episode_length: int = 1000
+                         ) -> float:
+  """
+  Leave-one-episode-out ROC AUC for predicting the *onset* of `event`
+  from PCA scores.
+
+  scores: (T, n_components) array for one agent.
+  ev_df[event]: list-of-lists of event dicts, one entry per episode.
+  """
+  T, n_comp = scores.shape
+  # build y (1 at each time_start, else 0)
+  y = np.zeros(T, dtype=int)
+  n_eps = len(ev_df[event])
+  for ep, entries in enumerate(ev_df[event].values):
+    for d in entries:
+      t = d.get('time_start', d.get('time'))
+      y[ep * episode_length + t] = 1
+
+  # group labels for leave-one-out
+  groups = np.repeat(np.arange(n_eps), episode_length)
+
+  logo = LeaveOneGroupOut()
+  aucs = []
+  for train, test in logo.split(scores, y, groups):
+    # skip folds with no positives in test
+    if y[test].sum() == 0:
+      continue
+    clf = LogisticRegression(solver='liblinear')
+    clf.fit(scores[train], y[train])
+    probs = clf.predict_proba(scores[test])[:, 1]
+    aucs.append(roc_auc_score(y[test], probs))
+
+  return float(np.mean(aucs)) if aucs else np.nan
+
+
+def find_distance_responsive_neurons(ns_df: pd.DataFrame,
+                                     positions: np.ndarray,
+                                     death_mask: np.ndarray,
+                                     roles: Dict[int, str]
+                                     ) -> pd.DataFrame:
+  """
+  For each agent, compute:
+    - distance to nearest predator (d_pred[t])
+    - distance to nearest other prey    (d_prey[t])
+  Then for each hidden_{agent}_{neuron} time series,
+  correlate (alive periods only) with d_pred and with d_prey.
+  Returns a df with, per agent:
+    best_neuron_pred, corr_pred, best_neuron_prey, corr_prey
+  """
+  results = {}
+  T = positions.shape[1]
+  agents = sorted(roles.keys())
+  scaler = StandardScaler()
+
+  for agent in agents:
+    # build distance time-series
+    pos_a = positions[agent]  # (T,2)
+    # all predators / other preys
+    preds = [j for j, r in roles.items() if r == 'predator' and j != agent]
+    other_preys = [j for j, r in roles.items() if r == 'prey' and j != agent]
+
+    # stack distances: shape (len(preds),T)
+
+    if preds:
+      d_pred_mat = np.stack([np.linalg.norm(pos_a - positions[p], axis=1)
+                             for p in preds], axis=0)
+      d_pred = d_pred_mat.min(axis=0)
+    else:
+      d_pred = np.full(T, np.nan)
+
+    if other_preys:
+      d_prey_mat = np.stack([np.linalg.norm(pos_a - positions[p], axis=1)
+                             for p in other_preys], axis=0)
+      d_prey = d_prey_mat.min(axis=0)
+    else:
+      d_prey = np.full(T, np.nan)
+
+    # get this agent's neural data
+    cols = sorted([c for c in ns_df if c.startswith(f"hidden_{agent}_")],
+                  key=lambda c: int(c.split('_')[2]))
+    X = ns_df[cols].values  # (T, F_i)
+    alive = death_mask[:, agent] == 1  # assume 0=alive,1=dead
+
+    # correlate
+    corrs_pred = []
+    corrs_prey = []
+    for i in range(X.shape[1]):
+      xi = X[:, i]
+      # only where alive & finite
+      mask = alive & np.isfinite(d_pred) & np.isfinite(xi)
+
+      if mask.sum() > 2:
+        xi_zscore = scaler.fit_transform(xi[mask].reshape(-1, 1)).flatten()
+        d_pred_zscore = scaler.transform(d_pred[mask].reshape(-1, 1)).flatten()
+        corrs_pred.append(np.corrcoef(xi_zscore, d_pred_zscore)[0, 1])
+      else:
+        corrs_pred.append(0)
+      mask2 = alive & np.isfinite(d_prey) & np.isfinite(xi)
+      if mask2.sum() > 2:
+        xi_zscore = scaler.fit_transform(xi[mask2].reshape(-1, 1)).flatten()
+        d_prey_zscore = scaler.transform(d_prey[mask2].reshape(-1, 1)).flatten()
+        # compute correlation
+        corrs_prey.append(np.corrcoef(xi_zscore, d_prey_zscore)[0, 1])
+        # corrs_prey.append(np.corrcoef(xi[mask2], d_prey[mask2])[0, 1])
+      else:
+        corrs_prey.append(0)
+
+    # pick best by absolute corr
+    best_i_pred = int(np.nanargmax(np.abs(corrs_pred)))
+    best_i_prey = int(np.nanargmax(np.abs(corrs_prey)))
+
+    results[agent] = {
+      'best_neuron_pred': cols[best_i_pred],
+      'corr_pred': corrs_pred[best_i_pred],
+      'best_neuron_prey': cols[best_i_prey],
+      'corr_prey': corrs_prey[best_i_prey]
+    }
+
+  return pd.DataFrame.from_dict(results, orient='index')
 
 def process_one(session: str,
                 event_dir: Path,
                 ts_dir: Path,
                 net_dir: Path,
-                output_dir: Path
+                figure_dir: Path,
+                output_dir: Path,
+                ignore_existing: bool = False
                 ) -> None:
-  """Load data, compute & save all figures for a single session."""
-  roles, ev_df, ts_df, ns_df = load_data(session, event_dir, ts_dir, net_dir)
-  positions, death_mask = compute_agent_positions(ts_df, roles)
-  T, n_agents = death_mask.shape
-  # events = [c for c in ev_df if 'event' in c]
-  events = ['apple_cooperation_events', 'distraction_events', 'fence_events']
+  """Load data, compute & save all figures and a per-agent summary for one session."""
+  # ─── I) LOAD & PREPARE ───────────────────────────────────────────
+  roles, sources, ev_df, ts_df, ns_df = load_data(session,
+                                                  event_dir,
+                                                  ts_dir,
+                                                  net_dir)
 
-  masks = build_event_masks(ev_df, T, n_agents, events)
+  summary_out = output_dir / f"{session}_event_stats_and_decode.pkl"
+  if ignore_existing and summary_out.exists():
+    log.info(f"Skipping {session}, summary already exists: {summary_out}")
+    return
+  try:
+    positions, death_mask = compute_agent_positions(ts_df, roles)
+    T, n_agents = death_mask.shape
+    episode_length = 1000
+    events = ['apple_cooperation_events',
+              'distraction_events',
+              'fence_events']
 
-  # distances + rasters
-  dist_dict = compute_pairwise_distances(positions, death_mask)
-  figs = []
-  figs.append(plot_distance_rasters(dist_dict, masks, roles, x_lim=(1000,2000)))
-  figs.append(plot_distance_stats(dist_dict, ev_df, masks, roles))
-  # lifespans & rewards
-  # note: plot_lifespan_stats returns a fig but also relies on internal df
-  lifespan_fig = plot_lifespan_stats(masks, death_mask, roles)
-  figs.append(lifespan_fig)
-  # you could extract spans_df from inside or recompute to pass to plot_reward_stats
-  # figs.append(plot_reward_stats(ts_df, death_mask, spans_df, roles))
+    # boolean masks & distances
+    ev_masks = build_event_masks(ev_df, T, n_agents, events, episode_length)
+    dist_dict = compute_pairwise_distances(positions, death_mask)
 
-  # PCA
-  figs.append(plot_pca_rasters(ns_df, death_mask, masks, roles, n_components=5,
-                               x_lim=(1000,2000)))
+    # ─── II) GENERATE & SAVE FIGURES ────────────────────────────────
+    figs = []
+    figs.append(plot_distance_rasters(dist_dict, ev_masks, roles,
+                                      x_lim=(1000, 2000)))
+    figs.append(plot_distance_stats(dist_dict, ev_df, ev_masks, roles))
 
+    life_fig, span_df = plot_lifespan_stats(
+      ev_df=ev_df,
+      death_mask=death_mask,
+      roles=roles,
+      events=events,
+      episode_length=episode_length
+    )
+    figs.append(life_fig)
 
-  for i, fig in enumerate(figs):
-    out = output_dir / f"{session}_fig{i}.png"
-    fig.savefig(out, dpi=150)
-    plt.show()
-    plt.close(fig)
-    log.info(f"Wrote {out}")
+    reward_fig, reward_df = plot_reward_stats(
+      ts_df=ts_df,
+      death_mask=death_mask,
+      ev_df=ev_df,
+      roles=roles,
+      events=events,
+      reward_prefix='rewards_',
+      episode_length=episode_length
+    )
+    figs.append(reward_fig)
+
+    pca_fig = plot_pca_rasters(ns_df, death_mask, ev_masks, roles,
+                               n_components=5,
+                               x_lim=(1000, 2000))
+    figs.append(pca_fig)
+
+    for idx, fig in enumerate(figs):
+      outpath = figure_dir / f"{session}_fig{idx}.png"
+      fig.savefig(outpath, dpi=150)
+      plt.close(fig)
+
+    # ─── III) CLASSIFIERS & CORRELATIONS ────────────────────────────
+    auc_vs_rest = classify_multiple_events_per_agent(
+      ns_df, death_mask, ev_df, events, roles,
+      mode='event_vs_rest',
+      episode_length=episode_length,
+      n_components=3
+    )
+    auc_vs_event = classify_multiple_events_per_agent(
+      ns_df, death_mask, ev_df, events, roles,
+      mode='event_vs_event',
+      episode_length=episode_length,
+      n_components=3
+    )
+    auc_vs_none = classify_multiple_events_per_agent(
+      ns_df, death_mask, ev_df, events, roles,
+      mode='event_vs_none',
+      episode_length=episode_length,
+      n_components=3
+    )
+    corr_df = find_distance_responsive_neurons(ns_df,
+                                               positions,
+                                               death_mask,
+                                               roles)
+
+    # ─── IV) BUILD & SAVE SUMMARY ────────────────────────────────────
+    rows = []
+    # total life (alive timesteps)
+    total_life = {a: int((death_mask[:, a] == 1).sum()) for a in roles}
+
+    # Determine all variants present in span_df / reward_df
+    variants = sorted(span_df['event'].unique())
+
+    for a in sorted(roles):
+      row = {
+        'trial_name': session,
+        'agent': a,
+        'role': roles[a],
+        'source': sources[a],
+        'lifespan_total': total_life[a],
+        'top_neu_cor_pred_dist': corr_df.loc[a, 'best_neuron_pred'],
+        'top_neu_cor_prey_dist': corr_df.loc[a, 'best_neuron_prey'],
+        'top_neu_cor_pred_score': corr_df.loc[a, 'corr_pred'],
+        'top_neu_cor_prey_score': corr_df.loc[a, 'corr_prey']
+      }
+
+      # ROC AUCs
+      for ev in events:
+        short = ev.split('_')[0]
+        row[f"{short}_vs_rest"] = auc_vs_rest.loc[a, (ev, 'event_vs_rest')]
+        row[f"{short}_vs_event"] = auc_vs_event.loc[a, (ev, 'event_vs_event')]
+        row[f"{short}_vs_none"] = auc_vs_none.loc[a, (ev, 'event_vs_none')]
+
+      # per-variant lifespan (from span_df)
+      df_sp = span_df[span_df['agent'] == a]
+      for var in variants:
+        length = int(df_sp.loc[df_sp['event'] == var, 'length'].sum())
+        row[f"{var}_lifespan"] = length
+
+      # per-variant reward (from reward_df)
+      df_rw = reward_df[reward_df['agent'] == a]
+      for var in variants:
+        # reward_df may use NaN for missing
+        val = df_rw.loc[df_rw['event'] == var, 'reward']
+        row[f"{var}_reward"] = float(val.values[0]) if not val.empty else np.nan
+
+      rows.append(row)
+
+    summary_df = pd.DataFrame(rows)
+    summary_df.to_pickle(summary_out)
+    print(f"Wrote summary to {summary_out}")
+  except Exception as e:
+    log.error(f"Error processing session {session}: {e}")
+    return
 
 
 # ─── V) MAIN & PARALLEL ENTRY ────────────────────────────────────────────────
 
 def main():
-  # adjust these paths:
-  # event_metric_dir = '/home/mikan/e/GitHub/social-agents-JAX/results/mix_2_4/analysis_results_merged/'
-  # timesteps_dir = '/home/mikan/e/GitHub/social-agents-JAX/results/mix_2_4/analysis_results/'
-  # network_dir = '/home/mikan/e/GitHub/social-agents-JAX/results/mix_2_4/analysis_results/'
-
-  event_dir = Path("/home/mikan/e/GitHub/social-agents-JAX/results/mix_2_4/analysis_results_merged/")
-  ts_dir    = Path("/home/mikan/e/GitHub/social-agents-JAX/results/mix_2_4/analysis_results/")
+  # Result_paths
+  top_dir = '/home/mikan/e/GitHub/social-agents-JAX/results/mix_RF2/'
+  # top_dir = '/home/mikan/e/GitHub/social-agents-JAX/results/mix_2_4/'
+  event_dir = Path(f"{top_dir}analysis_results_merged/")
+  ts_dir    = Path(f"{top_dir}analysis_results/")
   net_dir   = ts_dir
-  output_dir= Path("./figures")
+  figure_dir= Path("./figures")
+  figure_dir.mkdir(exist_ok=True)
+  output_dir= Path(f"{top_dir}analysis_results_event_stats/")
   output_dir.mkdir(exist_ok=True)
 
   sessions = [p.name.replace("_merged.pkl","")
@@ -454,15 +898,15 @@ def main():
 
   sessions = sorted(sessions)
   # run in parallel or sequentially:
-  use_parallel = False
+  use_parallel = True
   if use_parallel:
-    Parallel(n_jobs=8)(
-      delayed(process_one)(sess, event_dir, ts_dir, net_dir, output_dir)
-      for sess in sessions
+    Parallel(n_jobs=60)(
+      delayed(process_one)(sess, event_dir, ts_dir, net_dir, figure_dir, output_dir)
+      for sess in tqdm(sessions)
     )
   else:
     for sess in sessions:
-      process_one(sess, event_dir, ts_dir, net_dir, output_dir)
+      process_one(sess, event_dir, ts_dir, net_dir, figure_dir, output_dir)
 
 
 if __name__ == "__main__":
