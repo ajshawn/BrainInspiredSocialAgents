@@ -384,7 +384,7 @@ class IMPALANetwork(hk.RNNCore):
     op, new_state = self._recurrent(op, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value), new_state
+    return (logits, value, op), new_state
 
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
     return self._recurrent.initial_state(batch_size)
