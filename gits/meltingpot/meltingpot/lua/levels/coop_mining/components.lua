@@ -92,13 +92,18 @@ function Ore:reset()
   -- Table tracking which players have attempted mining this resource.
   self._miners = {}
   self._miningCountdown = 0
-  self._locked = false
   if self.gameObject:getState() ~= self._config.waitState then
     self.gameObject:setState(self._config.rawState)
   end
 end
 
 function Ore:update()
+  if self._locked then
+    self._locked = false
+    self.gameObject:setState(self._config.waitState)
+    return
+  end
+
   self._miningCountdown = self._miningCountdown - 1
   if self._miningCountdown == 0 then
     -- Clean miners
@@ -110,13 +115,14 @@ function Ore:addMiner(minerId)
   self._miningCountdown = self._config.miningWindow
   self._miners[minerId] = 1
   self.gameObject:setState(self._config.partialState)
+  local n_miners = self:currentMiners()
 end
 
 function Ore:onHit(hitterGameObject, hitName)
   --print(self:currentMiners())
   if self._locked then
-    -- If the Ore is locked, it cannot be mined.
-    return true
+    -- If the Ore is locked, do not allow any more miners.
+    return false
   end
 
   if hitName == 'mine' and
@@ -129,10 +135,12 @@ function Ore:onHit(hitterGameObject, hitName)
     hitterMineBeam:processRoleMineEvent(self._config.minNumMiners)
     
     -- If the Ore has enough miners, process rewards.
+    
     if self:currentMiners() == self._config.minNumMiners then
+      -- print("===")
       self._locked = true
-      --print(self:currentMiners())
       for id, _ in pairs(self._miners) do
+        -- print("id: " .. id)
         local avatarGO = self.gameObject.simulation:getAvatarFromIndex(id)
         avatarGO:getComponent('MineBeam'):processRoleExtractEvent(
             self._config.minNumMiners)
@@ -143,8 +151,10 @@ function Ore:onHit(hitterGameObject, hitName)
           end
         end
       end
-      self:reset()
       self.gameObject:setState(self._config.waitState)
+      self._miners = {}
+      self._miningCountdown = 0
+      -- print("===")
       
     -- elseif self:currentMiners() > self._config.minNumMiners then
     -- -- If the Ore has too many miners, add a negative reward 
