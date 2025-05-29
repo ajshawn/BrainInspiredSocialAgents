@@ -64,9 +64,11 @@ class MeltingPotWrapper(dmlab2d.Environment):
     self._log_filename = log_filename
     self.log_img_dir = log_img_dir
     if self.log_obs:
-      self.log_file = open(self._log_filename, "w", encoding="utf-8")
+      if not os.path.exists(os.path.dirname(self._log_filename)):
+        os.makedirs(os.path.dirname(self._log_filename))
       if not os.path.exists(self.log_img_dir):
         os.makedirs(self.log_img_dir)
+      self.log_file = open(self._log_filename, "w", encoding="utf-8")
       
   def _show_rgb_image(self, obs_dict, step, output_dir):
     for agent_id, agent_obs in obs_dict.items():

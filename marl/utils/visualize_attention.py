@@ -127,10 +127,27 @@ def visualize_attn(csv_path, image_dir, n_agents, save_dir=None):
         ax.imshow(alpha, alpha=0.5, cmap=cm.jet)
         ax.axis("off")
 
+        
+
         if save_dir:
-            save_path = os.path.join(save_dir, f"agent_{agent_idx}", f"atten_step_{step}_agent_{agent_idx}.png")
-            plt.savefig(save_path, bbox_inches="tight", pad_inches=0)
+            attn_path = os.path.join(save_dir, f"agent_{agent_idx}", f"atten_step_{step}_agent_{agent_idx}_attn.png")
+            concat_path = os.path.join(save_dir, f"agent_{agent_idx}", f"atten_step_{step}_agent_{agent_idx}.png")
+
+            # Save attention-only image
+            plt.savefig(attn_path, bbox_inches="tight", pad_inches=0)
             plt.close(fig)
+
+            # Load the saved attention image
+            attn_img = Image.open(attn_path).resize((88, 88), Image.BICUBIC)
+
+            # Concatenate: original on left, attention on right
+            concat_img = Image.new('RGB', (88 * 2, 88))
+            concat_img.paste(img, (0, 0))
+            concat_img.paste(attn_img, (88, 0))
+
+            # Save combined image and optionally remove the temporary attention image
+            concat_img.save(concat_path)
+            os.remove(attn_path)
         else:
             plt.show()
 
