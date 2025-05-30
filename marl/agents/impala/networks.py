@@ -467,7 +467,7 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
   def __init__(self, num_actions, recurrent_dim, feature_extractor):
     super().__init__(num_actions, recurrent_dim, feature_extractor, positional_embedding=None)
     self.num_actions = num_actions
-    self._embed = feature_extractor(num_actions, flatten_output=False)
+    self._embed = feature_extractor(num_actions)
     self._attention = AttentionLayerSpatial(key_size=64)
     self._post_attn_cnn = PostAttnCNN()
     self._recurrent = hk.LSTM(recurrent_dim)
@@ -497,6 +497,38 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
     return (logits, value, attn_weights), new_state
+  
+  def unroll(self, inputs, state: hk.LSTMState):
+    """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
+    op = self._embed(inputs)
+    attended, attn_weights = self._attention(state.hidden, op, op)
+    attended = self._post_attn_cnn(attended)  # [B, 64]
+    # extract other observations
+    obs = inputs["observation"]
+    inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+    # Do a one-hot embedding of the actions.
+    action = jax.nn.one_hot(
+        inputs["action"], num_classes=self.num_actions)  # [B, A]
+    # Add dummy trailing dimensions to rewards if necessary.
+    while ready_to_shoot.ndim < inventory.ndim:
+      ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+    if ready_to_shoot.ndim < attended.ndim:
+      attended = jnp.squeeze(attended, axis=0)
+    # fix for dynamic_unroll with reverb sampled data
+    # state = hk.LSTMState(state.hidden, state.cell)
+    combined = jnp.concatenate(
+        [attended, ready_to_shoot, inventory, action], 
+        axis=-1
+    )
+    # Unroll through time
+    op, new_states = hk.static_unroll(
+        self._recurrent,
+        combined, 
+        state
+    )
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, attn_weights), new_states
 
 class IMPALANetwork_attention_tanh(IMPALANetwork_attention):
   def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=True):

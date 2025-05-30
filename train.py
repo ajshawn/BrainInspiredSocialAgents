@@ -63,7 +63,8 @@ flags.DEFINE_enum(
         "OPRE", 
         "PopArtOPRE", 
         "PopArtIMPALA_attention",
-        "PopArtIMPALA_attention_tanh"
+        "PopArtIMPALA_attention_tanh",
+        "PopArtIMPALA_attention_spatial"
     ],
     "Algorithm to train",
 )
