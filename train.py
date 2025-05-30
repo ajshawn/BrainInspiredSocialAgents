@@ -289,11 +289,26 @@ def build_experiment_config():
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+        
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_spatial":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention, feature_extractor=AttentionCNN_FE,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
 
     elif FLAGS.algo_name == "PopArtIMPALA_attention_tanh":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention_tanh, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
+            impala.make_network_attention_spatial, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()

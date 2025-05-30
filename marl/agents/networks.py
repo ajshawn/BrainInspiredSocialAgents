@@ -201,10 +201,10 @@ class VisualFeatures(hk.Module):
 
 class AttentionCNN_FE(hk.Module):
 
-  def __init__(self, num_actions):
+  def __init__(self, num_actions, flatten_output=True):
     super().__init__("meltingpot_features")
     self.num_actions = num_actions
-    self._visual_torso = VisualFeatures_attention()
+    self._visual_torso = VisualFeatures_attention(flatten_output=flatten_output)
 
   def __call__(self, inputs):
     # extract environment observation from the full observation object
@@ -219,13 +219,12 @@ class AttentionCNN_FE(hk.Module):
 class VisualFeatures_attention(hk.Module):
   """Simple convolutional stack from MeltingPot paper."""
 
-  def __init__(self):
+  def __init__(self, flatten_output=True):
     super().__init__(name="meltingpot_visual_features")
+    self.flatten_output = flatten_output
     self._cnn = hk.Sequential([
         hk.Conv2D(64, [8, 8], 8, padding="VALID"),
         jax.nn.relu,
-        # hk.Conv2D(64, [4, 4], 1, padding="VALID"),
-        # jax.nn.relu,
     ])
 
   def __call__(self, inputs: Images) -> jnp.ndarray:
@@ -237,12 +236,13 @@ class VisualFeatures_attention(hk.Module):
     # Process through CNN layers
     outputs = self._cnn(inputs)  # Shape: [B, 11, 11, 64]
     
-    if batched_inputs:
-        # Reshape to [B, 121, 64] for attention
-        outputs = jnp.reshape(outputs, [outputs.shape[0], -1, outputs.shape[-1]])
-    else:
-        # Handle unbatched case
-        outputs = jnp.reshape(outputs, [-1, outputs.shape[-1]])  # [121, 64]
+    if self.flatten_output:
+      if batched_inputs:
+          # Reshape to [B, 121, 64] for attention
+          outputs = jnp.reshape(outputs, [outputs.shape[0], -1, outputs.shape[-1]])
+      else:
+          # Handle unbatched case
+          outputs = jnp.reshape(outputs, [-1, outputs.shape[-1]])  # [121, 64]
 
     return outputs
 
