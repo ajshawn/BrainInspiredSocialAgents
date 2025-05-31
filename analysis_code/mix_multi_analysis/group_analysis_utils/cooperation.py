@@ -5,7 +5,7 @@ The acorn collection behavior is not yet implemented.
 
 import numpy as np
 from typing import List, Dict, Tuple, Optional, Sequence
-from map_utils import get_safe_tiles, get_apple_tiles, get_acorn_tiles
+from analysis_code.mix_multi_analysis.group_analysis_utils.map_utils import get_safe_tiles, get_apple_tiles, get_acorn_tiles
 # TODO: replicate apple_periods but:
 #    • take only events whose centre lies within `acorn_tiles`
 #    • stop the period once ANY participant reaches safe grass carrying acorn
@@ -249,7 +249,7 @@ def apple_periods_with_apple_maps_segmented(pos: np.ndarray, rew: np.ndarray,
     return events
 
 
-def analyze_collective_apple_behavior_segmented(pos: np.ndarray, rew: np.ndarray,
+def analyze_collective_apple_behavior_segmentedanalyze_collective_apple_behavior_segmented(pos: np.ndarray, rew: np.ndarray,
                                                  death: Dict[int, np.ndarray], prey: Sequence[int],
                                                  safe_grass_locs: set, apple_tiles: set,
                                                  active_segments: List[Tuple[int, int]],

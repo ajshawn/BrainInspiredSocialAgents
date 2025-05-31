@@ -1,16 +1,9 @@
 import numpy as np
 from typing import List, Dict, Tuple, Sequence, Optional
-from position import ori_position
+from analysis_code.mix_multi_analysis.group_analysis_utils.position import ori_position
+from analysis_code.mix_multi_analysis.group_analysis_utils.segmentation import mark_death_periods
 
-# Assuming 'ori_position' and 'mark_death_periods' are defined elsewhere
-# For example:
-# def ori_position(pos_pred, ori_pred, pos_prey):
-#   # ... implementation ...
-#   return (0, 1)
-#
-# def mark_death_periods(stamina):
-#   # ... implementation ...
-#   return np.array([1] * len(stamina))
+
 
 
 def compute_good_gathering_segmented(
@@ -20,7 +13,7 @@ def compute_good_gathering_segmented(
     active_segments: List[Tuple[int, int]]=[(0, 1000)], # Default segment
     radius: float = 3.0,
     death_labels: Optional[Dict[int, np.ndarray]] = None,
-) -> Dict[str, float]:
+) -> List[Dict[str, object]]:
   """
   Computes a metric indicating whether prey are gathered around a predator
   with more nearby prey than predators, considering active segments.
@@ -45,12 +38,13 @@ def compute_good_gathering_segmented(
       segments. NaN values indicate the prey was not within the predator's
       radius at that timestep within the segment.
   """
-  flags: Dict[str, List[Optional[float]]] = {
-    f"in_gather_{q}_to_{p}": [] for p in predators for q in preys
-  }
+  flags = []
   T = positions.shape[0]
 
   for t0, t1 in active_segments:
+    seg_flags: Dict[str, List[Optional[float]]] = {
+        f"in_gather_{q}_to_{p}": [] for p in predators for q in preys
+    }
     for t in range(t0, t1):
       for p in predators:
         is_predator_alive = True
@@ -79,16 +73,19 @@ def compute_good_gathering_segmented(
 
           for q in preys:
             if q in nearby_prey:
-              flags[f"in_gather_{q}_to_{p}"].append(float(is_good_gathering))
+              seg_flags[f"in_gather_{q}_to_{p}"].append(float(is_good_gathering))
             else:
-              flags[f"in_gather_{q}_to_{p}"].append(np.nan)
+              seg_flags[f"in_gather_{q}_to_{p}"].append(np.nan)
         else:
           for q in preys:
-            flags[f"in_gather_{q}_to_{p}"].append(np.nan)  # Predator is dead, no gathering
-  return {k: float(np.nanmean(v)) for k, v in flags.items()}
+            seg_flags[f"in_gather_{q}_to_{p}"].append(np.nan)  # Predator is dead, no gathering
+    seg_flags = {k: np.nanmean(v) for k, v in seg_flags.items()}
+  flags.append(seg_flags)
+  # return {k: float(np.nanmean(v)) for k, v in flags.items()}
+  return flags
 
 
-def compute_successful_fencing_and_helpers_segmented(
+def mark_events_successful_fencing_and_helpers_segmented(
     positions: np.ndarray,
     orientations: np.ndarray,
     actions: np.ndarray,
@@ -161,7 +158,7 @@ def compute_successful_fencing_and_helpers_segmented(
   return events
 
 
-def compute_invalid_interactions_segmented(
+def mark_events_compute_invalid_interactions_segmented(
     actions: np.ndarray,
     rewards: np.ndarray,
     positions: np.ndarray,
@@ -336,9 +333,9 @@ if __name__ == '__main__':
       good_gathering = compute_good_gathering_segmented(
         pos_ep, predator_ids, prey_ids, active_segments=[(start, end)], death_labels=death_labels_ep
       )
-      all_good_gathering.append(good_gathering)
+      all_good_gathering.extend(good_gathering)
       # compute_successful_fencing_and_helpers
-      fencing_events = compute_successful_fencing_and_helpers_segmented(
+      fencing_events = mark_events_successful_fencing_and_helpers_segmented(
         pos_ep,
         ori_ep,
         act_ep,
@@ -352,7 +349,7 @@ if __name__ == '__main__':
       all_fencing_events.extend(fencing_events)
 
       # compute_invalid_interactions
-      invalid_interactions = compute_invalid_interactions_segmented(
+      invalid_interactions = mark_events_compute_invalid_interactions_segmented(
         act_ep,
         rew_ep,
         pos_ep,

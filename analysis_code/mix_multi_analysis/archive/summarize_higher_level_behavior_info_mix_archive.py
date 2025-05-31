@@ -11,14 +11,12 @@ import pickle
 import numpy as np
 import pandas as pd
 import importlib
-from joblib import Parallel, delayed
-from collections import defaultdict
 
 # Attempt to import from the user's existing script
 # If this script is in the same directory, this should work.
-# Otherwise, ensure summarize_behavior_info_mix.py is in your PYTHONPATH.
+# Otherwise, ensure basic_behavioral_metrics.py is in your PYTHONPATH.
 try:
-  from summarize_behavior_info_mix import (
+  from analysis_code.mix_multi_analysis.group_analysis_utils.basic_behavioral_metrics import (
     parse_agent_roles,
     mark_death_periods,
     compute_agent_move_distance,
@@ -35,7 +33,7 @@ try:
     compute_invalid_interactions
   )
 except ImportError:
-  print("ERROR: Could not import from summarize_behavior_info_mix.py.")
+  print("ERROR: Could not import from basic_behavioral_metrics.py.")
   print("Please ensure it's in the same directory or your PYTHONPATH.")
   # Define stubs or raise error if critical functions are missing
   # For this example, I'll assume the import will succeed.
@@ -1391,7 +1389,7 @@ def process_and_save(folder_path, out_dir):
 
 
 def main():
-  base_dir = "/home/mikan/e/GitHub/social-agents-JAX/results/mix_2_4/"
+  base_dir = "/results/mix_2_4/"
   # base_dir = "path/to/your/experiment_folders_parent_directory/"
   out_dir = os.path.join(base_dir, "analysis_results_extended")
   os.makedirs(out_dir, exist_ok=True)

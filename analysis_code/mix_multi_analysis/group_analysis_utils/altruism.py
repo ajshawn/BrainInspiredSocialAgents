@@ -101,7 +101,7 @@ def analyse_altruism_events(
     Returns
     -------
     event_metrics   : same list size as *events*, with extra fields:
-                        • helper_cost
+                        • helper_stamina_cost
                         • helper_caught
                         • beneficiary_gain
                         • altruistic (bool)
@@ -147,7 +147,7 @@ def analyse_altruism_events(
             continue
         helpers = ev["helpers"]
         gain    = 1.0 if ev["beneficiary_gain"] else 0.0
-        cost    = ev["helper_cost"] / max(len(helpers), 1)
+        cost    = ev["helper_stamina_cost"] / max(len(helpers), 1)
         for h in helpers:
             s = agent_stats.setdefault(h, {"num_events":0, "total_cost":0.0, "total_gain":0.0})
             s["num_events"]   += 1
@@ -197,12 +197,12 @@ if __name__ == "__main__":
     active_segments = segment_active_phases(death_labels_all_prey_ep)
     safe_grass_locs = get_safe_tiles(folder, map='smaller_13x13')
 
-    from gather_and_fence import compute_good_gathering_segmented, compute_successful_fencing_and_helpers_segmented
+    from gather_and_fence import compute_good_gathering_segmented, mark_events_successful_fencing_and_helpers_segmented
     from cooperation import apple_periods_segmented
     from distraction import detect_distraction_events
 
     gather_events = compute_good_gathering_segmented(pos_ep, predator_ids, prey_ids, active_segments)
-    fence_events = compute_successful_fencing_and_helpers_segmented(
+    fence_events = mark_events_successful_fencing_and_helpers_segmented(
       pos_ep, ori_ep, act_ep, rew_ep, predator_ids,
       prey_ids, death_labels_ep, active_segments=active_segments, radius=3,
     )

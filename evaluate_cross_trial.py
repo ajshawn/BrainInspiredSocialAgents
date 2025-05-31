@@ -109,6 +109,8 @@ def abbreviate_ckpt(ckpt):
     abbr = "OP"
   elif "orchard" in ckpt:
     abbr = "OR"
+  elif "random_forest" in ckpt:
+    abbr = "RF"
   else:
     abbr = "XX"
   # Extract the first date (YYYY-MM-DD) and remove dashes.
@@ -118,6 +120,9 @@ def abbreviate_ckpt(ckpt):
   else:
     date_str = "00000000"
   match_ckp = re.search(r'ckp\d+', ckpt)
+  # if not found, try ckpt
+  if not match_ckp:
+    match_ckp = re.search(r'ckpt\d+', ckpt)
   if match_ckp:
     return f"{abbr}{date_str}{match_ckp.group(0)}"
   return f"{abbr}{date_str}"
