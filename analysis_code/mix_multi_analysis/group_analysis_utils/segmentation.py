@@ -25,6 +25,23 @@ def mark_death_periods(stamina_trace, respawn_cooldown=100):
       # Mark the entire 20-element region as death (0)
       labels[start_idx: check_idx] = 0
 
+  # Now, we need to check for the case where the last element is 0.0
+  # If the last element is 0.0, we need to check the last non-linear drop to 0.0 from above 1/18
+  if stamina_trace[-1] == 0.0 and labels[-1] == 1:
+    # Find the last non-zero index
+    last_non_zero_idx = np.where(stamina_trace > 0)[0]
+    if last_non_zero_idx.size > 0:
+      last_non_zero_idx = last_non_zero_idx[-1]
+      # Check if the last non-zero index is followed by a 0.0
+      if last_non_zero_idx + 1 < n and stamina_trace[last_non_zero_idx + 1] == 0.0:
+        # Mark the entire region from the last non-zero index to the end as death (0)
+        labels[last_non_zero_idx:] = 0
+
+  # import matplotlib.pyplot as plt
+  # plt.plot(labels)
+  # plt.plot(stamina_trace)
+  # plt.show()
+
   return labels
 
 
