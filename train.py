@@ -115,7 +115,7 @@ flags.DEFINE_bool(
 flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
 flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
 flags.DEFINE_string("positional_embedding", None, "Whether to use positional embedding for attention")
-
+flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
 # Observation logging flags
 flags.DEFINE_bool("log_obs", False, "Whether to log observations.")
 flags.DEFINE_string("log_filename", "observations.jsonl", "Filename to log observations.")
@@ -157,6 +157,7 @@ def build_experiment_config():
     log_img_dir = FLAGS.log_img_dir
     log_interval = FLAGS.log_interval
     positional_embedding = FLAGS.positional_embedding
+    add_selection_vector = FLAGS.add_selection_vector
 
     frozen_agents = set(
         [int(agent) for agent in FLAGS.frozen_agents.split(",")]
@@ -294,7 +295,7 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention_spatial":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention, feature_extractor=AttentionCNN_FE,
+            impala.make_network_attention_spatial, feature_extractor=AttentionCNN_FE, add_selection_vec = add_selection_vector
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
@@ -309,7 +310,7 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention_tanh":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention_spatial, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
+            impala.make_network_attention_tanh, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()

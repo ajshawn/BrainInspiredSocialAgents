@@ -184,33 +184,38 @@ def make_network_attention_tanh(environment_spec: EnvironmentSpec,
   
 def make_network_attention_spatial(environment_spec: EnvironmentSpec,
                    feature_extractor: hk.Module,
-                   recurrent_dim: int = 128):
+                   recurrent_dim: int = 128,
+                   add_selection_vec: bool = False):
   def forward_fn(inputs, state: hk.LSTMState):
     model = IMPALANetwork_attention_spatial(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor,)
+        feature_extractor=feature_extractor,
+        add_selection_vec=add_selection_vec)
     return model(inputs, state)
 
   def initial_state_fn(batch_size=None) -> hk.LSTMState:
     model = IMPALANetwork_attention_spatial(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor,)
+        feature_extractor=feature_extractor,
+        add_selection_vec=add_selection_vec)
     return model.initial_state(batch_size)
 
   def unroll_fn(inputs, state: hk.LSTMState):
     model = IMPALANetwork_attention_spatial(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor,)
+        feature_extractor=feature_extractor,
+        add_selection_vec=add_selection_vec)
     return model.unroll(inputs, state)
 
   def critic_fn(inputs):
     model = IMPALANetwork_attention_spatial(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
-        feature_extractor=feature_extractor,)
+        feature_extractor=feature_extractor,
+        add_selection_vec=add_selection_vec)
     return model.critic(inputs)
 
   return make_haiku_networks_2(
@@ -279,10 +284,10 @@ class AttentionLayer(hk.Module):
     return output, weights
 
 class AttentionLayerSpatial(hk.Module): 
-  def __init__(self, key_size: int):
+  def __init__(self, key_size: int, add_selection_vec = False):
     super().__init__(name="attention_layer_spatial")
     self.key_size = key_size
-    
+    self.add_selection_vec = add_selection_vec
   def __call__(self, query, key, value):
     # query: LSTM hidden state [B, H] H for hidden state dimension 
     # key, value: CNN features [B, 121, K] K for key/value dimension
@@ -298,6 +303,12 @@ class AttentionLayerSpatial(hk.Module):
     query = hk.Linear(self.key_size)(query)  # [B, K]
     key = hk.Linear(self.key_size)(key)      # [B, 121, K]
     
+    if self.add_selection_vec:
+      # add a learnable selection vector to query 
+      selection_vec = hk.get_parameter("selection_vector", shape=[self.key_size], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      # Broadcast to batch size
+      query += selection_vec[None, :]  # [B, K]
+    
     # Expand query dims for broadcasting
     query = jnp.expand_dims(query, axis=1)       # [B, 1, K]
     # Compute attention scores
@@ -310,7 +321,7 @@ class AttentionLayerSpatial(hk.Module):
     # Apply attention pixel-wise
     output = value * weights # [B, 121, K]
     B, H_square, K = output.shape
-    H = int(jnp.sqrt(H_square))
+    H = 11
     output = jnp.reshape(output, (B, H, H, K))
     return output, weights
 
@@ -359,7 +370,7 @@ class AttentionLayerTanh(hk.Module):
     output = jnp.einsum('bi,bik->bk', weights, value)  # [B, K]
     return output, weights
   
-class PostAttnCNN(hk.RNNCore):
+class PostAttnCNN(hk.Module):
   def __init__(self):
     super().__init__(name="PostAttnCNN")
     self._cnn = hk.Sequential([
@@ -464,11 +475,11 @@ class IMPALANetwork_attention(hk.RNNCore):
     return jnp.squeeze(self._value_layer(inputs), axis=-1)
 
 class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
-  def __init__(self, num_actions, recurrent_dim, feature_extractor):
+  def __init__(self, num_actions, recurrent_dim, feature_extractor, add_selection_vec=False):
     super().__init__(num_actions, recurrent_dim, feature_extractor, positional_embedding=None)
     self.num_actions = num_actions
     self._embed = feature_extractor(num_actions)
-    self._attention = AttentionLayerSpatial(key_size=64)
+    self._attention = AttentionLayerSpatial(key_size=64, add_selection_vec=add_selection_vec)
     self._post_attn_cnn = PostAttnCNN()
     self._recurrent = hk.LSTM(recurrent_dim)
     self._policy_layer = hk.Linear(num_actions, name="policy")
