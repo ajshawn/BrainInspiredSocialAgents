@@ -512,8 +512,9 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
   def unroll(self, inputs, state: hk.LSTMState):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     op = self._embed(inputs)
-    attended, attn_weights = self._attention(state.hidden, op, op)
-    attended = self._post_attn_cnn(attended)  # [B, 64]
+    flatten_op = jnp.reshape(op, (op.shape[0], -1))  # [B, ...]
+    self.op_shape = op.shape  # save the original shape for later use
+    self.flatten_op_dim = flatten_op.shape[-1]  # save the flattened dimension for later use
     # extract other observations
     obs = inputs["observation"]
     inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
@@ -523,23 +524,42 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
     # Add dummy trailing dimensions to rewards if necessary.
     while ready_to_shoot.ndim < inventory.ndim:
       ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
-    if ready_to_shoot.ndim < attended.ndim:
-      attended = jnp.squeeze(attended, axis=0)
+    # if ready_to_shoot.ndim < attended.ndim:
+    #   attended = jnp.squeeze(attended, axis=0)
     # fix for dynamic_unroll with reverb sampled data
     # state = hk.LSTMState(state.hidden, state.cell)
     combined = jnp.concatenate(
-        [attended, ready_to_shoot, inventory, action], 
+        [flatten_op, ready_to_shoot, inventory, action], 
         axis=-1
-    )
+    ) 
+
+    def _step(input_t, state):
+      # Slice out the flattened input for the current time step
+      attn_input = input_t[:self.flatten_op_dim]
+      # Reshape it back to the original shape
+      attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
+      # Apply attention
+      attended, attn_weights = self._attention(state.hidden, attn_input, attn_input)
+      # Apply post-attention CNN
+      attended = self._post_attn_cnn(attended)
+      # Combine with the rest of the input
+      rest_input = input_t[self.flatten_op_dim:]
+      if rest_input.ndim < attended.ndim:
+        attended = jnp.squeeze(attended, axis=0)
+      combined_input = jnp.concatenate([attended, rest_input], axis=-1)
+      # Go through the recurrent layer
+      output, new_state = self._recurrent(combined_input, state)
+      return output, new_state
+
     # Unroll through time
     op, new_states = hk.static_unroll(
-        self._recurrent,
+        _step,
         combined, 
         state
     )
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, attn_weights), new_states
+    return (logits, value, None), new_states
 
 class IMPALANetwork_attention_tanh(IMPALANetwork_attention):
   def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=True):
