@@ -1,14 +1,14 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_spatial_1_meltingpot_coop_mining_2025-05-29_22:34:03.544807" 
+EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_spatial_1_meltingpot_coop_mining_2025-05-30_17:08:47.798118" 
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA_attention_spatial"
-TIME_STAMP="2025-05-29_22:34:03.544807"
+TIME_STAMP="2025-05-30_17:08:47.798118"
 GPUS="1"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in 16  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 125  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -27,9 +27,10 @@ for ckp in 16  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --gold_reward 6 \
         --mining_reward 0 \
         --ckp ${ckp} \
-        --n_episodes 2 \
+        --n_episodes 1 \
         --record_video True \
-        --positional_embedding learnable
+        --positional_embedding learnable \
+        --add_selection_vector True 
         #--log_timesteps True \
         
 
