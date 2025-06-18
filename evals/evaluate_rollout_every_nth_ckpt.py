@@ -113,7 +113,7 @@ def build_cmd(clone: Path, log_root: Path, combo):
   exp_log = str(log_root / f"mix_{exp_id}_comb{combo_tag}")
 
   cmd = [
-    "python", "evaluate_cross_trial.py",
+    "python", "/home/mikan/e/GitHub/social-agents-JAX/evals/evaluate_cross_trial.py",
     "--async_distributed",
     "--available_gpus", "-1",
     "--num_actors", "16",

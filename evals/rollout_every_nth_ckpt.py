@@ -19,7 +19,7 @@ EXPERIMENT_DIR_MAPPING = {
 
 # The base path where all your experiment results are located
 # This is crucial for resolving the full paths from the provided directory names.
-BASE_RESULTS_PATH = Path("/results/")
+BASE_RESULTS_PATH = Path("results/")
 
 # Default list of target episode counts
 DEFAULT_EPISODE_TARGETS = [
@@ -99,12 +99,13 @@ def get_experiment_paths_and_outputs(arg_exp_dirs: List[Path]) -> Dict[Path, Pat
     for full_exp_dir_str, output_root_name in EXPERIMENT_DIR_MAPPING.items():
       full_exp_dir_path = Path(full_exp_dir_str)
       # Check if the provided argument's name matches the name of a known full path
+      print('Checking:', arg_exp_dir.name, '\nagainst', full_exp_dir_path.name)
       if arg_exp_dir.name == full_exp_dir_path.name:
         # Reconstruct the expected full path for the argument using BASE_RESULTS_PATH
         reconstructed_full_arg_path = BASE_RESULTS_PATH / arg_exp_dir.name
 
         # Verify that the reconstructed path matches the full path in our mapping
-        if reconstructed_full_arg_path == full_exp_dir_path:
+        if Path(os.path.abspath(reconstructed_full_arg_path)) == full_exp_dir_path:
           # Map the full experiment directory path to its full output root path
           resolved_mapping[full_exp_dir_path] = BASE_RESULTS_PATH / output_root_name
           found_match = True
@@ -143,7 +144,7 @@ def main():
   parser.add_argument(
     "--eval_script_path",
     type=Path,
-    default="./evaluate_rollout_every_nth_ckpt.py",
+    default="/home/mikan/e/GitHub/social-agents-JAX/evals/evaluate_rollout_every_nth_ckpt.py",
     help="Path to the evaluate_rollout_every_nth_ckpt.py script."
   )
   parser.add_argument(
