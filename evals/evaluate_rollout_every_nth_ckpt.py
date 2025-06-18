@@ -158,6 +158,14 @@ def main():
                  help="Parallel jobs")
   p.add_argument("--out_root", default="./results",
                  help="Where to put logs & clones")
+  p.add_argument("--starting_ckpt", type=int, default=0,
+                 help="Start from this checkpoint number (inclusive)")
+  p.add_argument("--ending_ckpt", type=int, default=None,
+                  help="End at this checkpoint number (exclusive)")
+  p.add_argument("--skip_ckpts", type=int, nargs='*', default=[],)
+  p.add_argument("--k_samples", type=int, default=30,)
+  p.add_argument("--selected_checkpoints", type=int, nargs='*', default=[],
+                 help="If given, only evaluate these checkpoints (overrides stride)")
   args = p.parse_args()
 
   root = Path(args.experiment_dir).expanduser().resolve()
@@ -166,15 +174,31 @@ def main():
     sys.exit(f"No learner checkpoint folder at {learner}")
 
   # 1) sample 30 diverse combos of 2 predator and 4 prey
-  pred_range = list(range(0, 5))
-  prey_range = list(range(5, 13))
-  combos = sample_diverse_combinations(pred_range, prey_range, 30)
+  if 'open' in args.experiment_dir:
+    pred_range = list(range(0, 3))
+    prey_range = list(range(3, 13))
+  else:
+    pred_range = list(range(0, 5))
+    prey_range = list(range(5, 13))
+  combos = sample_diverse_combinations(pred_range, prey_range, args.k_samples)
 
   # 2) find checkpoints every stride
-  prefixes = find_ckpt_prefixes(learner)
-  selected_ckpts = [n for i, n in enumerate(prefixes) if i % args.stride == 0]
-  print(f"Found {len(prefixes)} ckpts, evaluating {len(selected_ckpts)} "
-        f"(every {args.stride}) across {len(combos)} combos with {args.max_workers} workers")
+  if not args.selected_checkpoints:
+    prefixes = find_ckpt_prefixes(learner)
+    if args.starting_ckpt > 0:
+      prefixes = [p for p in prefixes if p >= args.starting_ckpt]
+    if args.ending_ckpt is not None:
+      prefixes = [p for p in prefixes if p < args.ending_ckpt]
+    selected_ckpts = [n for i, n in enumerate(prefixes) if i % args.stride == 0]
+    if args.skip_ckpts:
+      selected_ckpts = [n for n in selected_ckpts if n not in args.skip_ckpts]
+    print(f"Found {len(prefixes)} ckpts, evaluating {len(selected_ckpts)} "
+          f"(every {args.stride}) across {len(combos)} combos with {args.max_workers} workers")
+    print(f'Selected ckpts: {selected_ckpts}')
+  else:
+    selected_ckpts = args.selected_checkpoints
+    print(f"Evaluating {len(selected_ckpts)} ckpts across {len(combos)} combos "
+          f"with {args.max_workers} workers")
 
   out_root = Path(args.out_root)
   out_root.mkdir(parents=True, exist_ok=True)
