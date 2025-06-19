@@ -295,7 +295,7 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention_spatial":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention_spatial, feature_extractor=AttentionCNN_FE, add_selection_vec = add_selection_vector
+            impala.make_network_attention_spatial, feature_extractor=AttentionCNN_FE, add_selection_vec=add_selection_vector
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
