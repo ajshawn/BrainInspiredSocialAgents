@@ -274,6 +274,120 @@ function Avatar:addObservations(tileSet, world, observations)
       end
   }
   observations[#observations + 1] = spec
+
+  observations[#observations + 1] = {
+    name = id .. ".OBJECTS_IN_VIEW",
+    type = "tensor.ByteTensor",
+    shape = {11, 11},
+    func = function(grid)
+      local view_width = 11
+      local view_height = 11
+      local center_x = math.floor(view_width / 2) + 1  -- 6
+      local center_y = view_height - 1                -- 10
+
+      -- Initialize view grid with 0s
+      local acorn_view = {}
+      for y = 1, view_height do
+        acorn_view[y] = {}
+        for x = 1, view_width do
+          acorn_view[y][x] = 0
+        end
+      end
+
+      -- Query objects in both upper and lower physical layers
+      local objectsInView = self:queryPartialObservationWindow('upperPhysical')
+      local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
+      for _, obj in ipairs(objectsInViewLower) do
+        table.insert(objectsInView, obj)
+      end
+
+      local avatar = self.gameObject
+      local transform = avatar:getComponent('Transform')
+      local avatarPos = avatar:getPosition()
+
+      for _, obj in ipairs(objectsInView) do
+        if obj:getState() == "floorAcorn" then
+          local pos = obj:getPosition()
+          local rel = transform:getRelativeDirectionFromAbsolute{
+            pos[1] - avatarPos[1],
+            pos[2] - avatarPos[2]
+          }
+
+          local vx = center_x + rel[1]
+          local vy = center_y + rel[2]
+
+          if vx >= 1 and vx <= view_width and vy >= 1 and vy <= view_height then
+            acorn_view[vy][vx] = 1
+          end
+        end
+      end
+      local tensorView = tensor.ByteTensor(acorn_view)
+      -- print(string.format(
+      --     "tensor view shape: %s", helpers.tostringOneLine(tensorView:shape())))
+      -- print(string.format(
+      --     "tensor view: %s", helpers.tostringOneLine(tensorView)))
+      return tensorView
+    end
+  }
+
+
+  -- observations[#observations + 1] = {
+  --   name = id .. ".OBJECTS_IN_VIEW",
+  --   type = "Tensor.Int32",
+  --   shape = {},
+  --   func = function(grid)
+  --     -- 1) Query objects in the partial observation window on the same layer:
+  --     local objectsInView = self:queryPartialObservationWindow('upperPhysical')
+  
+  --     -- Also gather objects on layer "lowerPhysical" (if that layer exists):
+  --     local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
+  --     for _, obj in ipairs(objectsInViewLower) do
+  --       table.insert(objectsInView, obj)
+  --     end
+
+  --     local avatar = self.gameObject
+  --     local transform = avatar:getComponent('Transform')
+  --     local avatarPos = avatar:getPosition()
+
+  --     local coords = {}
+  --     for _, obj in ipairs(objectsInView) do
+  --       local pos = obj:getPosition()
+  --       local rel = transform:getRelativeDirectionFromAbsolute{
+  --         pos[1] - avatarPos[1],
+  --         pos[2] - avatarPos[2]}
+  --       coords[#coords + 1] = string.format(
+  --           "%s,%s,%s", obj:getState(), rel[1], rel[2])
+  --       print(string.format(
+  --           "Object %s at %s relative to avatar at %s",
+  --           obj:getState(), helpers.tostringOneLine(rel), helpers.tostringOneLine(avatarPos)))
+  --     end
+
+  --   return table.concat(coords, ";")
+
+  
+  --     -- -- 2) Tally how many times each state appears:
+  --     -- local stateCounts = {}
+  --     -- for _, obj in ipairs(objectsInView) do
+  --     --   local state = obj:getState()
+  --     --   stateCounts[state] = (stateCounts[state] or 0) + 1
+  --     -- end
+  
+  --     -- -- 3) Turn that into a single string: "state_name, count, state_name2, count2, ..."
+  --     -- if next(stateCounts) == nil then
+  --     --   -- If there are no objects in view at all, return an empty string
+  --     --   return ""
+  --     -- else
+  --     --   -- Otherwise build the output by appending name/count in pairs
+  --     --   local outputList = {}
+  --     --   for state, count in pairs(stateCounts) do
+  --     --     table.insert(outputList, state)
+  --     --     table.insert(outputList, tostring(count))
+  --     --   end
+  --     --   return table.concat(outputList, ", ")
+  --     -- end
+  --   end
+  -- }
+  
 end
 
 function Avatar:reset()

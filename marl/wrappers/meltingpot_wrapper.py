@@ -15,7 +15,7 @@ from PIL import Image
 
 from marl import types as marl_types
 
-USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT"}
+USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "OBJECTS_IN_VIEW"}
 
 def obs_to_json_dict(data: dm_env.TimeStep.observation) -> dict:
     """Converts a dm_env observation to a dict for JSON serialization."""
