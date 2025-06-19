@@ -321,9 +321,9 @@ class AttentionLayerSpatial(hk.Module):
     # Apply attention pixel-wise
     output = value * weights # [B, 121, K]
     B, H_square, K = output.shape
-    H = 11
-    output = jnp.reshape(output, (B, H, H, K))
-    return output, weights
+    H = 11 # TODO: make this dynamic
+    output = jnp.reshape(output, (B, H, H, K)) # [B, 11, 11, K]
+    return output, output
 
 class AttentionLayerTanh(hk.Module): 
   """Attention layer between CNN and LSTM from https://github.com/AaronCCWong/Show-Attend-and-Tell/blob/master/attention.py"""
