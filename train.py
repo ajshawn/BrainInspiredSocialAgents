@@ -118,7 +118,7 @@ flags.DEFINE_string("positional_embedding", None, "Whether to use positional emb
 flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
 # Observation logging flags
 flags.DEFINE_bool("log_obs", False, "Whether to log observations.")
-flags.DEFINE_string("log_filename", "observations.jsonl", "Filename to log observations.")
+flags.DEFINE_string("log_filename", "temp/observations.jsonl", "Filename to log observations.")
 flags.DEFINE_string(
     "log_img_dir", "agent_view_images", "Directory to save agent view images."
 )
