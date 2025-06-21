@@ -61,14 +61,14 @@ class MeltingPotWrapper(dmlab2d.Environment):
     self.steps = 0
     
     # Set up observaiton logging
-    self._log_filename = log_filename
+    self.log_filename = log_filename
     self.log_img_dir = log_img_dir
     if self.log_obs:
-      if not os.path.exists(os.path.dirname(self._log_filename)):
-        os.makedirs(os.path.dirname(self._log_filename))
+      if not os.path.exists(os.path.dirname(self.log_filename)):
+        os.makedirs(os.path.dirname(self.log_filename))
       if not os.path.exists(self.log_img_dir):
         os.makedirs(self.log_img_dir)
-      self.log_file = open(self._log_filename, "w", encoding="utf-8")
+      self.log_file = open(self.log_filename, "w", encoding="utf-8")
       
   def _show_rgb_image(self, obs_dict, step, output_dir):
     for agent_id, agent_obs in obs_dict.items():
@@ -81,6 +81,17 @@ class MeltingPotWrapper(dmlab2d.Environment):
         pil_img.save(save_path)
         del agent_obs['RGB']
         del agent_obs['WORLD.RGB']
+  
+  def _show_item_coord(self, obs_dict, step, output_dir):
+    for agent_id, agent_obs in obs_dict.items():
+      items_array = np.array(agent_obs['OBJECTS_IN_VIEW'], dtype=np.uint8)
+      items_array *= 255
+      pil_img = Image.fromarray(items_array)
+      pil_img = pil_img.resize((11, 11), Image.BICUBIC)  
+      os.makedirs(output_dir, exist_ok=True)
+      save_path = os.path.join(output_dir, f"step_{step}_agent_{agent_id}_items.png")
+      pil_img.save(save_path)
+      del agent_obs['OBJECTS_IN_VIEW']
 
   def _remove_unwanted_observations(self, observation: marl_types.Observation):
     """Removes unwanted observations from a marl observation."""
@@ -104,6 +115,7 @@ class MeltingPotWrapper(dmlab2d.Environment):
       obs_dict = obs_to_json_dict(timestep.observation)
       if self.steps % self.log_interval == 0:
         self._show_rgb_image(obs_dict, self.steps, self.log_img_dir)
+        self._show_item_coord(obs_dict, self.steps, self.log_img_dir)
         self.log_file.write(json.dumps(obs_dict) + "\n")
       self.steps += 1
     return dm_env.TimeStep(timestep.step_type, reward, discount, observation)
