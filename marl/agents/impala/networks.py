@@ -613,7 +613,7 @@ class IMPALANetwork(hk.RNNCore):
     # state = hk.LSTMState(state.hidden, state.cell)
 
     # unrolling the time dimension
-    op, new_states = hk.static_unroll(self._recurrent, op,
+    op, new_states = hk.static_unroll(self._recurrent, emb,
                                       state)  # , return_all_states=True)
 
     logits = self._policy_layer(op)
