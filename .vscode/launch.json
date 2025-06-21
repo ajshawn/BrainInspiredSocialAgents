@@ -134,7 +134,7 @@
                 "--agent_roles", "default, default, default",
             ],
             "env": {
-                "CUDA_VISIBLE_DEVICES": "0,1",
+                "CUDA_VISIBLE_DEVICES": "1",
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH};${workspaceFolder}${pathSeparator}gits"
             }
         },
@@ -145,27 +145,26 @@
             "program": "evaluate.py",
             "console": "integratedTerminal",
             "env": {
-              "CUDA_VISIBLE_DEVICES": "0, 1",
+              "CUDA_VISIBLE_DEVICES": "1",
               "PYTHONPATH": "./gits/meltingpot:gits/acme:${PYTHONPATH}",
               "LD_LIBRARY_PATH": "$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/lib:/home/kumquat/miniconda3/envs/marl-jax/lib",
             },
             "args": [
               "--available_gpus", "1",
               "--num_actors", "1",
-              "--algo_name", "PopArtIMPALA",
+              "--algo_name", "PopArtIMPALA_attention_spatial",
               "--env_name", "meltingpot",
               "--map_name", "coop_mining",
               "--record_video", "True",
-              "--experiment_dir", "results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572",
-              "--agent_roles", "default, default",
+              "--experiment_dir", "results/PopArtIMPALA_attention_spatial_1_meltingpot_coop_mining_2025-06-04_23:10:55.616448",
+              "--agent_roles", "default, default, default",
               "--dense_ore_regrow", "True",
               "--iron_rate", "0.0001",
               "--gold_rate", "0.00008",
               "--iron_reward", "1",
               "--gold_reward", "6",
               "--mining_reward", "0",
-              "--ckp", "70",
-              "--log_timesteps", "True"
+              "--ckp", "30",
             ],
           }
     ]

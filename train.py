@@ -23,7 +23,7 @@ from marl.agents import opre
 from marl.agents.networks import ArrayFE
 from marl.agents.networks import ImageFE
 from marl.agents.networks import MeltingpotFE
-from marl.agents.networks import AttentionCNN_FE
+from marl.agents.networks import AttentionCNN_FE, AttentionSpatialCNN_FE
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
 from marl.utils import helpers
@@ -157,7 +157,7 @@ def build_experiment_config():
     log_img_dir = FLAGS.log_img_dir
     log_interval = FLAGS.log_interval
     positional_embedding = FLAGS.positional_embedding
-    add_selection_vector = FLAGS.add_selection_vector
+    add_selection_vector = True if FLAGS.add_selection_vector=="True" else False
 
     frozen_agents = set(
         [int(agent) for agent in FLAGS.frozen_agents.split(",")]
@@ -280,7 +280,7 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
+            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding, add_selection_vec = add_selection_vector
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
@@ -295,7 +295,7 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention_spatial":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention_spatial, feature_extractor=AttentionCNN_FE, add_selection_vec=add_selection_vector
+            impala.make_network_attention_spatial, feature_extractor=AttentionSpatialCNN_FE, add_selection_vec = add_selection_vector
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()

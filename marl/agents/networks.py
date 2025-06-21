@@ -201,10 +201,27 @@ class VisualFeatures(hk.Module):
 
 class AttentionCNN_FE(hk.Module):
 
-  def __init__(self, num_actions, flatten_output=True):
+  def __init__(self, num_actions, flatten_output=True, num_channels = 64):
     super().__init__("meltingpot_features")
     self.num_actions = num_actions
-    self._visual_torso = VisualFeatures_attention(flatten_output=flatten_output)
+    self._visual_torso = VisualFeatures_attention(flatten_output=flatten_output, num_channels=num_channels)
+
+  def __call__(self, inputs):
+    # extract environment observation from the full observation object
+    obs = inputs["observation"]
+
+    # extract visual features form RGB observation
+    ip_img = obs["RGB"].astype(jnp.float32) / 255
+    vis_op = self._visual_torso(ip_img)
+
+    return vis_op
+
+class AttentionSpatialCNN_FE(hk.Module):
+
+  def __init__(self, num_actions, flatten_output=True, num_channels = 16):
+    super().__init__("meltingpot_features")
+    self.num_actions = num_actions
+    self._visual_torso = VisualFeatures_attention(flatten_output=flatten_output, num_channels=num_channels)
 
   def __call__(self, inputs):
     # extract environment observation from the full observation object
@@ -219,11 +236,11 @@ class AttentionCNN_FE(hk.Module):
 class VisualFeatures_attention(hk.Module):
   """Simple convolutional stack from MeltingPot paper."""
 
-  def __init__(self, flatten_output=True):
+  def __init__(self, flatten_output=True, num_channels=64):
     super().__init__(name="meltingpot_visual_features")
     self.flatten_output = flatten_output
     self._cnn = hk.Sequential([
-        hk.Conv2D(64, [8, 8], 8, padding="VALID"),
+        hk.Conv2D(num_channels, [8, 8], 8, padding="VALID"),
         jax.nn.relu,
     ])
 
@@ -245,7 +262,7 @@ class VisualFeatures_attention(hk.Module):
           outputs = jnp.reshape(outputs, [-1, outputs.shape[-1]])  # [121, 64]
 
     return outputs
-
+  
 
 class Discriminator(hk.Module):
 
