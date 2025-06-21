@@ -63,11 +63,14 @@ class MeltingPotWrapper(dmlab2d.Environment):
     # Set up observaiton logging
     self.log_filename = log_filename
     self.log_img_dir = log_img_dir
+    self.log_item_dir = log_img_dir + "_items"
     if self.log_obs:
       if not os.path.exists(os.path.dirname(self.log_filename)):
         os.makedirs(os.path.dirname(self.log_filename))
       if not os.path.exists(self.log_img_dir):
         os.makedirs(self.log_img_dir)
+      if not os.path.exists(self.log_item_dir):
+        os.makedirs(self.log_item_dir)
       self.log_file = open(self.log_filename, "w", encoding="utf-8")
       
   def _show_rgb_image(self, obs_dict, step, output_dir):
@@ -115,7 +118,7 @@ class MeltingPotWrapper(dmlab2d.Environment):
       obs_dict = obs_to_json_dict(timestep.observation)
       if self.steps % self.log_interval == 0:
         self._show_rgb_image(obs_dict, self.steps, self.log_img_dir)
-        self._show_item_coord(obs_dict, self.steps, self.log_img_dir)
+        self._show_item_coord(obs_dict, self.steps, self.log_item_dir)
         self.log_file.write(json.dumps(obs_dict) + "\n")
       self.steps += 1
     return dm_env.TimeStep(timestep.step_type, reward, discount, observation)

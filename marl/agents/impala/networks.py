@@ -231,14 +231,125 @@ def make_network_attention_spatial(environment_spec: EnvironmentSpec,
       critic_fn=critic_fn,
   )
 
+def make_network_attention_item_aware(environment_spec: EnvironmentSpec,
+                    feature_extractor: hk.Module,
+                    recurrent_dim: int = 128,
+                    positional_embedding: Optional[str] = None,
+                    attn_enhance_multiplier: float = 1.0):
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model(inputs, state)
+  
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model.initial_state(batch_size)
+  
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model.unroll(inputs, state)
+  
+  def critic_fn(inputs):
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model.critic(inputs)
+  
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+
+def make_network_attention_item_aware(environment_spec: EnvironmentSpec,
+                    feature_extractor: hk.Module,
+                    recurrent_dim: int = 128,
+                    positional_embedding: Optional[str] = None,
+                    attn_enhance_multiplier: float = 1.0):
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model(inputs, state)
+  
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model.initial_state(batch_size)
+  
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model.unroll(inputs, state)
+  
+  def critic_fn(inputs):
+    model = IMPALANetwork_attention_item_aware(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+    return model.critic(inputs)
+  
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+
 class AttentionLayer(hk.Module):
   """Attention layer between CNN and LSTM."""
-  def __init__(self, key_size: int, positional_embedding = None, add_selection_vec = False):
+  def __init__(
+      self, 
+      key_size: int, 
+      positional_embedding = None, 
+      add_selection_vec = False,
+      attn_enhance_multiplier: float = 0.0,
+    ):
+    """
+    Args:
+      key_size: Hidden dim of the key and value vectors
+      positional_embedding: Type of positional embedding to use
+      attn_enhancement_multiplier: Multiplier for enhancing the attention scores for specific locations
+    """
     super().__init__(name="attention_layer")
     self.key_size = key_size
     self.positional_embedding = positional_embedding
+    self.attn_enhance_multiplier = attn_enhance_multiplier
     self.add_selection_vec = add_selection_vec
-  def __call__(self, query, key, value):
+  def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
     # query: LSTM hidden state [B, H] H for hidden state dimension 
     # key, value: CNN features [B, 121, K] K for key/value dimension
     if jnp.ndim(query) == 1:
@@ -285,6 +396,12 @@ class AttentionLayer(hk.Module):
     # Compute attention scores
     scores = jnp.einsum('bik,bjk->bij', query, key)  # [B, 1, 121]
     scores = jnp.squeeze(scores, axis=1)             # [B, 121]
+    if self.attn_enhance_multiplier != 0:
+      # Enhance attention scores for specific locations
+      enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1]*enhance_map.shape[-2]))  # [B, 121]
+      max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
+      enhancement = self.attn_enhance_multiplier * enhance_map * max_scores # [B, 121]
+      scores += enhancement  # [B, 121]
     scores = scores / jnp.sqrt(self.key_size)
     weights = jax.nn.softmax(scores, axis=-1)        # [B, 121]
     
@@ -412,11 +529,11 @@ class PostAttnCNN(hk.Module):
 class IMPALANetwork_attention(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
-  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=None, add_selection_vec=False):
+  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=None, add_selection_vec=False, attn_enhance_multiplier: float = 0.0):
     super().__init__(name="impala_network")
     self.num_actions = num_actions
     self._embed = feature_extractor(num_actions)
-    self._attention = AttentionLayer(key_size=64, positional_embedding=positional_embedding, add_selection_vec = add_selection_vec)
+    self._attention = AttentionLayer(key_size=64, positional_embedding=positional_embedding, add_selection_vec = add_selection_vec, attn_enhance_multiplier=attn_enhance_multiplier)
     self._recurrent = hk.LSTM(recurrent_dim)
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
@@ -584,7 +701,7 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
     return (logits, value, None), new_states
 
 class IMPALANetwork_attention_tanh(IMPALANetwork_attention):
-  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=True):
+  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=None):
     super().__init__(num_actions, recurrent_dim, feature_extractor, positional_embedding)
     self.num_actions = num_actions
     self._embed = feature_extractor(num_actions)
@@ -592,6 +709,43 @@ class IMPALANetwork_attention_tanh(IMPALANetwork_attention):
     self._recurrent = hk.LSTM(recurrent_dim)
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
+
+class IMPALANetwork_attention_item_aware(IMPALANetwork_attention):
+  def __init__(
+      self, 
+      num_actions, 
+      recurrent_dim, 
+      feature_extractor, 
+      positional_embedding=None,
+      attn_enhance_multiplier=10.0,
+    ):
+    super().__init__(num_actions, recurrent_dim, feature_extractor, positional_embedding, attn_enhance_multiplier)
+
+  def __call__(self, inputs, state: hk.LSTMState):
+    embedding = self._embed(inputs) # [B, 121, F]
+    obs = inputs["observation"]
+
+    enhance_mask = obs["OBJECTS_IN_VIEW"]  # [B, 11, 11]
+    attended, attn_weights = self._attention(state.hidden, embedding, embedding, enhance_mask)
+
+    # extract other observations
+    inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+    # Do a one-hot embedding of the actions.
+    action = jax.nn.one_hot(
+        inputs["action"], num_classes=self.num_actions)  # [B, A]
+    # Add dummy trailing dimensions to rewards if necessary.
+    while ready_to_shoot.ndim < inventory.ndim:
+      ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+    if ready_to_shoot.ndim < attended.ndim:
+      attended = jnp.squeeze(attended, axis=0)
+    # Combine attention output and other observations
+    combined = jnp.concatenate([attended, ready_to_shoot, inventory, action], axis=-1)
+    op, new_state = self._recurrent(combined, state)
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, attn_weights), new_state
+
+    
 
 class IMPALANetwork(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
