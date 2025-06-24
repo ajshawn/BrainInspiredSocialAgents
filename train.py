@@ -4,7 +4,7 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
-    "0.3"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+    "0.5"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
@@ -64,7 +64,8 @@ flags.DEFINE_enum(
         "PopArtOPRE", 
         "PopArtIMPALA_attention",
         "PopArtIMPALA_attention_tanh",
-        "PopArtIMPALA_attention_spatial"
+        "PopArtIMPALA_attention_spatial",
+        "PopArtIMPALA_attention_item_aware",
     ],
     "Algorithm to train",
 )
@@ -296,6 +297,21 @@ def build_experiment_config():
         # Create network
         network_factory = functools.partial(
             impala.make_network_attention_spatial, feature_extractor=AttentionSpatialCNN_FE, add_selection_vec = add_selection_vector
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_item_aware":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_item_aware, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
