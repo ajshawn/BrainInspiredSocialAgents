@@ -1,14 +1,14 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-02-17_14:57:15.748665" 
+EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274" 
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2025-02-17_14:57:15.748665"
+ALGORITHM_NAME="PopArtIMPALA_attention"
+TIME_STAMP="2025-06-10_21:32:15.740274"
 GPUS="1"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in {166,270}  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 165  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -18,7 +18,7 @@ for ckp in {166,270}  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --map_name ${EVN_NAME} \
         --map_layout original \
         --experiment_dir ${EXP_DIR_PREFIX} \
-        --agent_roles 'default, default, default' \
+        --agent_roles 'default' \
         --dense_ore_regrow True \
         --iron_rate 0.00012 \
         --gold_rate 0.00008 \
@@ -30,7 +30,8 @@ for ckp in {166,270}  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --n_episodes 1 \
         --record_video True \
         --positional_embedding learnable \
-        --add_selection_vector True
+        --add_selection_vector True \
+        --agent_param_indices '1' \
         #--log_timesteps True \
         
 
