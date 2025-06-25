@@ -347,12 +347,19 @@ class AttentionLayer(hk.Module):
     # Compute attention scores
     scores = jnp.einsum('bik,bjk->bij', query, key)  # [B, 1, 121]
     scores = jnp.squeeze(scores, axis=1)             # [B, 121]
+    # if self.attn_enhance_multiplier != 0:
+    #   # Enhance attention scores for specific locations
+    #   enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1]*enhance_map.shape[-2]))  # [B, 121]
+    #   max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
+    #   enhancement = self.attn_enhance_multiplier * enhance_map * max_scores # [B, 121]
+    #   scores += enhancement  # [B, 121]
     if self.attn_enhance_multiplier != 0:
-      # Enhance attention scores for specific locations
-      enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1]*enhance_map.shape[-2]))  # [B, 121]
+    # Enhance attention scores for specific locations
+      enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1] * enhance_map.shape[-2]))  # [B, 121]
       max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
-      enhancement = self.attn_enhance_multiplier * enhance_map * max_scores # [B, 121]
-      scores += enhancement  # [B, 121]
+      enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, 1]
+      # Use `jnp.where` to set scores where enhance_map == 1
+      scores = jnp.where(enhance_map == 1, enhanced_scores, scores)  # [B, 121]
     scores = scores / jnp.sqrt(self.key_size)
     weights = jax.nn.softmax(scores, axis=-1)        # [B, 121]
     
