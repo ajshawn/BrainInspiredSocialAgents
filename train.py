@@ -124,6 +124,8 @@ flags.DEFINE_string(
     "log_img_dir", "agent_view_images", "Directory to save agent view images."
 )
 flags.DEFINE_integer("log_interval", 1, "Interval to log observations.")
+# Attention enhancement flag
+flags.DEFINE_float("attn_enhance_multiplier", 1.0, "Attention enhancement multiplier")
 
 def _get_custom_env_configs():
     result = {}
@@ -159,6 +161,7 @@ def build_experiment_config():
     log_interval = FLAGS.log_interval
     positional_embedding = FLAGS.positional_embedding
     add_selection_vector = True if FLAGS.add_selection_vector=="True" else False
+    attn_enhance_multiplier = FLAGS.attn_enhance_multiplier
 
     frozen_agents = set(
         [int(agent) for agent in FLAGS.frozen_agents.split(",")]
@@ -311,7 +314,10 @@ def build_experiment_config():
     elif FLAGS.algo_name == "PopArtIMPALA_attention_item_aware":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention_item_aware, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding,
+            impala.make_network_attention_item_aware, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            attn_enhance_multiplier=attn_enhance_multiplier,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
