@@ -66,6 +66,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_tanh",
         "PopArtIMPALA_attention_spatial",
         "PopArtIMPALA_attention_item_aware",
+        "IMPALANetwork_attention_multihead"
     ],
     "Algorithm to train",
 )
@@ -125,7 +126,7 @@ flags.DEFINE_string(
 )
 flags.DEFINE_integer("log_interval", 1, "Interval to log observations.")
 # Attention enhancement flag
-flags.DEFINE_float("attn_enhance_multiplier", 1.0, "Attention enhancement multiplier")
+flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
 
 def _get_custom_env_configs():
     result = {}
@@ -266,6 +267,7 @@ def build_experiment_config():
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.IMPALABuilder(config, core_state_spec=core_spec)
+    
     elif FLAGS.algo_name == "PopArtIMPALA":
         # Create network
         network_factory = functools.partial(
@@ -344,6 +346,25 @@ def build_experiment_config():
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
 
+    elif FLAGS.algo_name == "IMPALANetwork_attention_multihead":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,
+            attn_enhance_multiplier=attn_enhance_multiplier,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
     elif FLAGS.algo_name == "OPRE":
         # Create network
         network_factory = functools.partial(
@@ -362,6 +383,7 @@ def build_experiment_config():
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = opre.OPREBuilder(config, core_state_spec=core_spec)
+    
     elif FLAGS.algo_name == "PopArtOPRE":
         # Create network
         network_factory = functools.partial(
@@ -380,6 +402,7 @@ def build_experiment_config():
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = opre.PopArtOPREBuilder(config, core_state_spec=core_spec)
+    
     else:
         raise ValueError(f"Unknown algo_name {FLAGS.algo_name}")
 
