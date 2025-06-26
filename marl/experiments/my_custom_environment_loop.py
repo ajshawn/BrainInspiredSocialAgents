@@ -72,6 +72,44 @@ class MyCustomEnvironmentLoop(core.Worker):
     self._should_update = should_update
     self._observers = observers
 
+  def _get_time_step_data(self,
+                          timestep: dm_env.TimeStep,
+                          action: Optional[np.ndarray] = None):
+    """Builds the dict of everything you want to log for a single timestep."""
+    data = {
+      "step": len(self._episode_data),
+      "STAMINA": timestep.observation['observation'].get('STAMINA', []),
+      "POSITION": timestep.observation['observation'].get('POSITION', []),
+      "ORIENTATION": timestep.observation['observation'].get('ORIENTATION', []),
+      "actions": action,
+      "logits": getattr(self._actor, '_logits', None),
+      "rewards": timestep.reward,
+      "events": [],
+    }
+    # collect events
+    raw_events = self._environment.events() or []
+    for ev in raw_events:
+      # name, _, _, idx = ev   # unpack depends on your env.events() format
+      # data['events'].append(f"{name} (player {int(idx)})")
+      data['events'].append(ev)
+    # collect tile codes
+    obs = timestep.observation['observation']
+    if 'WORLD.TILE_CODES' in obs:
+      flat = obs['WORLD.TILE_CODES'][0]
+      spec = self._environment.observation_spec()['observation']['WORLD.TILE_CODES']
+      data['tile_code'] = flat.reshape(spec.shape[2], spec.shape[1])
+      print(data['tile_code'])
+    # optional RNN state
+    if hasattr(self._actor, '_states') and self._actor._states is not None:
+      if isinstance(self._actor._states, list):
+        data['hidden'] = [s.hidden.copy() for s in self._actor._states]
+        data['cell']   = [s.cell.copy()   for s in self._actor._states]
+      else:
+        data['hidden'] = self._actor._states.hidden.copy()
+        data['cell']   = self._actor._states.cell.copy()
+    return data
+
+
   def run_episode(self) -> loggers.LoggingData:
     """Run one episode.
 
@@ -89,7 +127,6 @@ class MyCustomEnvironmentLoop(core.Worker):
     episode_steps: int = 0
 
     ## Here is my modification to add the logging of the episode data
-    episode_data = []  # Will store step-wise transitions
 
     # For evaluation, this keeps track of the total undiscounted reward
     # accumulated during the episode.
@@ -105,6 +142,12 @@ class MyCustomEnvironmentLoop(core.Worker):
       # and the initial timestep.
       observer.observe_first(self._environment, timestep)
 
+    # prepare the per‐episode buffer
+    self._episode_data = []
+    # A quick check of the first frame after observation
+    time_step_dict = self._get_time_step_data(timestep, action=None)
+    self._episode_data.append(time_step_dict)
+
     while not timestep.last():
       # Book-keeping.
       episode_steps += 1
@@ -118,46 +161,8 @@ class MyCustomEnvironmentLoop(core.Worker):
       env_step_start = time.time()
       timestep = self._environment.step(action)
       env_step_durations.append(time.time() - env_step_start)
-
-      # Run an episode.
-      # Lets extract the events from the environment.
-      raw_events = self._environment.events()
-      events = []
-      # If the events are not empty, we will convert them to a list of dictionaries.
-      if raw_events:
-        for event in raw_events:
-          # Convert the event to a dictionary.
-          event_name = event[0]  # The first element is the event name.
-          player_index = int(event[1][2])
-          events.append(event_name + f" (player {player_index})")
-      print(self._environment.events())
-      print(events)
-      print()
-
-      # Here we extract the tile code:
-      tile_code = timestep.observation['observation']['WORLD.TILE_CODES'][0]
-
-      time_step_dict = {
-        "step": len(episode_data),
-        # "INVENTORY": timestep.observation['observation']['INVENTORY'],
-        # "READY_TO_SHOOT": timestep.observation['observation']['READY_TO_SHOOT'],
-        # TODO IMPLEMENT THE POSITION IN THE ENVIRONMENT MAP
-        "STAMINA": timestep.observation['observation'].get('STAMINA', []),
-        "POSITION": timestep.observation['observation'].get('POSITION', []),
-        "ORIENTATION": timestep.observation['observation'].get('ORIENTATION', []),
-        "actions": action,
-        "logits": getattr(self._actor, '_logits', []),
-        "rewards": timestep.reward,
-        "events": events,
-        "tile_code": tile_code,
-      }
-      if isinstance(self._actor._states, list):
-        time_step_dict['hidden'] = [np.asarray(s.hidden) for s in self._actor._states]
-        time_step_dict['cell'] = [np.asarray(s.cell) for s in self._actor._states]
-      else:
-        time_step_dict['hidden'] = np.asarray(self._actor._states.hidden)
-        time_step_dict['cell'] = np.asarray(self._actor._states.cell)
-      episode_data.append(time_step_dict)
+      time_step_dict = self._get_time_step_data(timestep, action)
+      self._episode_data.append(time_step_dict)
 
       # Have the agent and observers observe the timestep.
       self._actor.observe(action, next_timestep=timestep)
@@ -192,8 +197,7 @@ class MyCustomEnvironmentLoop(core.Worker):
       'env_reset_duration_sec': env_reset_duration,
       'select_action_duration_sec': np.mean(select_action_durations),
       'env_step_duration_sec': np.mean(env_step_durations),
-      'episode_data': episode_data,
-      'events': events,
+      'episode_data': self._episode_data,
     }
     result.update(counts)
     for observer in self._observers:

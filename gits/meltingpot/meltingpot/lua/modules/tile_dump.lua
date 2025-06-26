@@ -17,43 +17,81 @@ function TileDump:__init__(kwargs)
   self._w = kwargs.width
   self._h = kwargs.height
 
-  --0 is preserved for ignored tiles
-  -- map acorn to 30, floorAcorn to 31
+  -- This table is now only for NON-PLAYER objects.
+  -- Player detection is handled separately and more robustly.
   self._state_to_code = {
-    apple       = 30,
-    floorAcorn = 31,
+    apple      = 1,
+    floorAcorn = 2,
+    -- Add any other non-player item states you need to track.
   }
-  -- now map all player to 10-23
-  for i = 0, 13 do
-    self._state_to_code['player' .. i] = 10 + i
-  end
-
 end
 
 function TileDump:addObservations(tileSet, _world, observations)
-  local sim = assert(self.gameObject.simulation,
-                     "TileDump: no simulation attached")
+  local sim = assert(self.gameObject.simulation,"TileDump: no simulation attached")
   local w, h = self._w, self._h
   local size = w * h
 
   local fn = function()
-    -- build a flat Lua array of length w*h
+    -- Build a flat Lua array of length w*h
     local flat = {}
     for i = 1, size do flat[i] = 0 end
 
+    -- Pass 1: draw players (10+index), +30 if in any “bite” state
     for _, obj in pairs(sim:getAllGameObjects()) do
-      local code = self._state_to_code[obj:getState()]
-      if code then
-        -- getPosition() returns e.g. {x, y}
+
+      if obj:hasComponent('Avatar') then
+        ---- THE ROBUST SOLUTION: Check for the 'Avatar' component first.
+        ---- This component is the definitive, stable identifier for a player agent.
+        --          -- --- DEBUGGING TOOL ---
+        --    -- If you still have issues, uncomment the block below. It will print all
+        --    -- components for every avatar, so you can see exactly what's available.
+        --    print("Found Avatar for player index: " .. tostring(player_index) )
+        --    print('object name: ' .. obj.name)
+        --    print('Avatar', obj:getComponent('Avatar').name)
+        --
+        --    print("Components on this object:")
+        --    for i, comp in ipairs(obj:getComponents()) do
+        --      print("- " .. comp.name)
+        --    end
+        --    print("State of this object: " .. obj:getState())
+        --    print("--------------------")
+
+        local avatarIdx = obj:getComponent('Avatar'):getIndex()
+        local code      = 10 + avatarIdx
+        local state     = obj:getState()
+        -- if biting on an acorn, bump code by 30
+        if state:find("Bite") or state:find('prepToEat') then
+          code = code + 30
+        end
         local pos = obj:getComponent('Transform'):getPosition()
-        local x, y = pos[1] + 1, pos[2] + 1 -- TO pair with Lua's 1-based indexing
-        -- compute 1D index
-        local idx = (y - 1) * w + x
-        flat[idx] = code
+        local x,y = pos.x or pos[1], pos.y or pos[2]
+        -- Lua is 1-based, so shift accordingly
+        local col, row = x + 1, y + 1
+        if col >= 1 and col <= w and row >= 1 and row <= h then
+          local idx1d = (row - 1) * w + col
+          flat[idx1d] = code
+        end
       end
     end
 
-    -- wrap into a 1-D Int32Tensor; DMLab will reshape to (w,h)
+    -- Pass 2: draw all other things (apple, grass…) only into empty cells
+    for _, obj in pairs(sim:getAllGameObjects()) do
+      if not obj:hasComponent('Avatar') then
+        local code = self._state_to_code[obj:getState()]
+        if code then
+          local pos = obj:getComponent('Transform'):getPosition()
+          local x,y = pos.x or pos[1], pos.y or pos[2]
+          local col, row = x + 1, y + 1
+          if col >= 1 and col <= w and row >= 1 and row <= h then
+            local idx1d = (row - 1) * w + col
+            if flat[idx1d] == 0 then
+              flat[idx1d] = code
+            end
+          end
+        end
+      end
+    end
+    -- Wrap into a 1-D Int32Tensor; DMLab will reshape to (w,h)
     return tensor.Int32Tensor(flat)
   end
 
