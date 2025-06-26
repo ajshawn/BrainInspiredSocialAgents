@@ -625,11 +625,26 @@ class PostAttnCNN(hk.Module):
 class IMPALANetwork_attention(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
-  def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=None, add_selection_vec=False, attn_enhance_multiplier: float = 0.0):
+  def __init__(
+      self, 
+      num_actions,
+      recurrent_dim, 
+      feature_extractor, 
+      positional_embedding=None, 
+      add_selection_vec=False, 
+      attn_enhance_multiplier: float = 0.0,
+      use_layer_norm: bool = False):
     super().__init__(name="impala_network")
     self.num_actions = num_actions
+    self.use_layer_norm = use_layer_norm
     self._embed = feature_extractor(num_actions)
-    self._attention = AttentionLayer(key_size=64, positional_embedding=positional_embedding, add_selection_vec = add_selection_vec, attn_enhance_multiplier=attn_enhance_multiplier)
+    self._attention = AttentionLayer(
+      key_size=64, 
+      positional_embedding=positional_embedding, 
+      add_selection_vec=add_selection_vec, 
+      attn_enhance_multiplier=attn_enhance_multiplier,)
+    if self.use_layer_norm:
+      self._attn_layer_norm = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True, name="attn_layer_norm")
     self._recurrent = hk.LSTM(recurrent_dim)
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
@@ -638,6 +653,8 @@ class IMPALANetwork_attention(hk.RNNCore):
     embedding = self._embed(inputs) # [B, 121, F]
     # Apply attention between CNN features and LSTM hidden state
     attended, attn_weights = self._attention(state.hidden, embedding, embedding)
+    if self.use_layer_norm:
+      attended = self._attn_layer_norm(attended)
 
     # extract other observations
     obs = inputs["observation"]
@@ -689,6 +706,8 @@ class IMPALANetwork_attention(hk.RNNCore):
       attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
       # Apply attention
       attended, attn_weights = self._attention(state.hidden, attn_input, attn_input)
+      if self.use_layer_norm:
+        attended = self._attn_layer_norm(attended)
       # Combine with the rest of the input
       rest_input = input_t[self.flatten_op_dim:]
       if rest_input.ndim < attended.ndim:
@@ -895,6 +914,8 @@ class IMPALANetwork_attention_item_aware(IMPALANetwork_attention):
     return (logits, value, None), new_states
 
 class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
+  # TODO: Since call and unroll are not overridden, this class is
+  # not supporting item-aware attention for now.
   def __init__(
       self, 
       num_actions,
@@ -904,21 +925,23 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       key_size=64,
       positional_embedding=None, 
       add_selection_vec=False, 
-      attn_enhance_multiplier: float = 0.0):
-    hk.RNNCore.__init__(self, name="impala_network_multihead_attention")
-    self.num_actions = num_actions
-    self._embed = feature_extractor(num_actions)
+      attn_enhance_multiplier=0.0,
+      use_layer_norm=True,):
+    super().__init__(
+      num_actions, 
+      recurrent_dim, 
+      feature_extractor, 
+      positional_embedding, 
+      add_selection_vec, 
+      attn_enhance_multiplier,
+      use_layer_norm)
     self._attention = MultiHeadAttentionLayer(
         num_heads=num_heads,
         key_size_per_head=key_size // num_heads,
         positional_embedding=positional_embedding,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier)
-    self._recurrent = hk.LSTM(recurrent_dim)
-    self._policy_layer = hk.Linear(num_actions, name="policy")
-    self._value_layer = hk.Linear(1, name="value_layer")
     
-
 class IMPALANetwork(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
