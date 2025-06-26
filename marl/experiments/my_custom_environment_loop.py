@@ -105,7 +105,6 @@ class MyCustomEnvironmentLoop(core.Worker):
       # and the initial timestep.
       observer.observe_first(self._environment, timestep)
 
-    # Run an episode.
     while not timestep.last():
       # Book-keeping.
       episode_steps += 1
@@ -120,10 +119,28 @@ class MyCustomEnvironmentLoop(core.Worker):
       timestep = self._environment.step(action)
       env_step_durations.append(time.time() - env_step_start)
 
+      # Run an episode.
+      # Lets extract the events from the environment.
+      raw_events = self._environment.events()
+      events = []
+      # If the events are not empty, we will convert them to a list of dictionaries.
+      if raw_events:
+        for event in raw_events:
+          # Convert the event to a dictionary.
+          event_name = event[0]  # The first element is the event name.
+          player_index = int(event[1][2])
+          events.append(event_name + f" (player {player_index})")
+      print(self._environment.events())
+      print(events)
+      print()
+
+      # Here we extract the tile code:
+      tile_code = timestep.observation['observation']['WORLD.TILE_CODES'][0]
+
       time_step_dict = {
         "step": len(episode_data),
-        "INVENTORY": timestep.observation['observation']['INVENTORY'],
-        "READY_TO_SHOOT": timestep.observation['observation']['READY_TO_SHOOT'],
+        # "INVENTORY": timestep.observation['observation']['INVENTORY'],
+        # "READY_TO_SHOOT": timestep.observation['observation']['READY_TO_SHOOT'],
         # TODO IMPLEMENT THE POSITION IN THE ENVIRONMENT MAP
         "STAMINA": timestep.observation['observation'].get('STAMINA', []),
         "POSITION": timestep.observation['observation'].get('POSITION', []),
@@ -131,11 +148,8 @@ class MyCustomEnvironmentLoop(core.Worker):
         "actions": action,
         "logits": getattr(self._actor, '_logits', []),
         "rewards": timestep.reward,
-
-        # 'hidden': np.asarray(self._actor._states.hidden),
-        # 'cell': np.asarray(self._actor._states.cell),
-        # 'hidden': self._actor._states.hidden,
-        # 'cell': self._actor._states.cell,
+        "events": events,
+        "tile_code": tile_code,
       }
       if isinstance(self._actor._states, list):
         time_step_dict['hidden'] = [np.asarray(s.hidden) for s in self._actor._states]
@@ -170,6 +184,7 @@ class MyCustomEnvironmentLoop(core.Worker):
 
     # Collect the results and combine with counts.
     steps_per_second = episode_steps / (time.time() - episode_start_time)
+
     result = {
       'episode_length': episode_steps,
       'episode_return': episode_return,
@@ -178,6 +193,7 @@ class MyCustomEnvironmentLoop(core.Worker):
       'select_action_duration_sec': np.mean(select_action_durations),
       'env_step_duration_sec': np.mean(env_step_durations),
       'episode_data': episode_data,
+      'events': events,
     }
     result.update(counts)
     for observer in self._observers:

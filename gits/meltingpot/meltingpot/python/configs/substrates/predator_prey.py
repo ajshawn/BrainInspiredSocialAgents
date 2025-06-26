@@ -1666,6 +1666,7 @@ def get_config():
   ]
   config.global_observation_names = [
       "WORLD.RGB",
+      "WORLD.TILE_CODES",     # 👈 new
   ]
 
   # The specs of the environment (from a single-agent perspective).
@@ -1694,6 +1695,22 @@ def build(
       raise ValueError(f"Unrecognized role: {role}")
 
   # Build the rest of the substrate definition.
+  map_lines = config.layout.ascii_map.strip().splitlines()
+  map_h = len(map_lines)
+  map_w = len(map_lines[0])
+
+  scene = create_scene()
+  scene['components'].append({
+      "component": "TileDump",
+      "kwargs": {
+          "width": map_w,
+          "height": map_h,
+      },
+  })
+
+  # scene['components'].append(
+  #   {"component": "SocialEventLogger"},
+  # )
   substrate_definition = dict(
       levelName="predator_prey",
       levelDirectory="meltingpot/lua/levels",
@@ -1704,7 +1721,7 @@ def build(
       simulation=dict(
           map=config.layout.ascii_map,
           gameObjects=avatar_objects_and_helpers,
-          scene=create_scene(),
+          scene=scene, #create_scene(),
           prefabs=create_prefabs(apple_reward=config.apple_reward),
           charPrefabMap=config.layout.char_prefab_map,
       ),
