@@ -28,6 +28,7 @@ import dm_env
 from dm_env import specs
 import numpy as np
 import tree
+import logging
 
 class MyCustomEnvironmentLoop(core.Worker):
   """A simple RL environment loop.
@@ -86,19 +87,77 @@ class MyCustomEnvironmentLoop(core.Worker):
       "rewards": timestep.reward,
       "events": [],
     }
+    ## Currently, the inventory is always 0. I excluded it.
+    # if 'INVENTORY' in timestep.observation['observation']:
+    #   data['INVENTORY'] = timestep.observation['observation']['INVENTORY']
+    #   print(data['INVENTORY'])
     # collect events
+    # Collect events
+    # Collect events
     raw_events = self._environment.events() or []
-    for ev in raw_events:
-      # name, _, _, idx = ev   # unpack depends on your env.events() format
-      # data['events'].append(f"{name} (player {int(idx)})")
-      data['events'].append(ev)
+    for event_tuple in raw_events:
+      # Each event_tuple is expected to be (event_name_str, list_of_data)
+      # e.g., ('attack_attempt', [b'dict', b'predator_index', 2.0, b'prey_index', 4.0])
+
+      try:
+        # Basic validation of the event_tuple structure
+        if not (isinstance(event_tuple, tuple) and len(event_tuple) == 2 and
+                isinstance(event_tuple[0], str) and isinstance(event_tuple[1], list)):
+          logging.warning(f"Skipping malformed event_tuple: {event_tuple}")
+          continue  # Skip to the next event if format is completely off
+
+        event_name = event_tuple[0]
+        event_data_list = event_tuple[1]
+
+        parsed_event = {'name': event_name}  # Always include the event name
+
+        # Determine the starting index for key-value pairs
+        # If the first element is b'dict', start from index 1.
+        # Otherwise, assume key-value pairs start from index 0.
+        start_idx = 0
+        if event_data_list and event_data_list[0] == b'dict':
+          start_idx = 1
+
+        # Iterate through the list, taking two elements at a time (key and value)
+        current_idx = start_idx
+        while current_idx < len(event_data_list) - 1:  # Ensure there's a key AND a value
+          key_raw = event_data_list[current_idx]
+          value_raw = int(event_data_list[current_idx + 1])
+
+          # Attempt to decode key if it's bytes
+          key_str = None
+          if isinstance(key_raw, bytes):
+            try:
+              key_str = key_raw.decode('utf-8')
+            except UnicodeDecodeError:
+              logging.warning(f"Could not decode event key '{key_raw}' for event '{event_name}'. Skipping pair.")
+          elif isinstance(key_raw, str):
+            key_str = key_raw  # Already a string
+          else:
+            logging.warning(
+              f"Unexpected type for event key '{key_raw}' (type: {type(key_raw)}) for event '{event_name}'. Skipping pair.")
+
+          if key_str:  # Only add if key was successfully processed
+            parsed_event[key_str] = value_raw
+
+          current_idx += 2  # Move to the next potential key
+        print(f"Parsed event: {parsed_event}")
+        data['events'].append(parsed_event)
+
+      except Exception as e:
+        # Catch any other unexpected errors during parsing of a single event
+        logging.error(f"Error parsing event {event_tuple}: {e}")
+        # Optionally, you might append a partially parsed event or a placeholder
+        # to indicate a problem, or just skip it as done above.
+        continue  # Continue to the next raw event
+
     # collect tile codes
     obs = timestep.observation['observation']
     if 'WORLD.TILE_CODES' in obs:
       flat = obs['WORLD.TILE_CODES'][0]
       spec = self._environment.observation_spec()['observation']['WORLD.TILE_CODES']
       data['tile_code'] = flat.reshape(spec.shape[2], spec.shape[1])
-      print(data['tile_code'])
+      # print(data['tile_code'])
     # optional RNN state
     if hasattr(self._actor, '_states') and self._actor._states is not None:
       if isinstance(self._actor._states, list):
