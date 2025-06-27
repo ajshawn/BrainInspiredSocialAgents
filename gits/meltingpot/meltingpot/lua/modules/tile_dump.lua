@@ -45,31 +45,47 @@ function TileDump:addObservations(tileSet, _world, observations)
         --          -- --- DEBUGGING TOOL ---
         --    -- If you still have issues, uncomment the block below. It will print all
         --    -- components for every avatar, so you can see exactly what's available.
-        --    print("Found Avatar for player index: " .. tostring(player_index) )
-        --    print('object name: ' .. obj.name)
-        --    print('Avatar', obj:getComponent('Avatar').name)
+        --print("Found Avatar for player index: " .. tostring(player_index) )
+        --print('object name: ' .. obj.name)
+        --print('Avatar', obj:getComponent('Avatar').name)
         --
-        --    print("Components on this object:")
-        --    for i, comp in ipairs(obj:getComponents()) do
-        --      print("- " .. comp.name)
-        --    end
-        --    print("State of this object: " .. obj:getState())
-        --    print("--------------------")
+        --print("Components on this object:")
+        ----for i, comp in ipairs(obj:getComponents()) do
+        ----  print("- " .. comp.name)
+        ----  -- print the fields of the component
+        ----  for k, v in pairs(comp) do
+        ----    if type(v) == 'function' then
+        ----      print("  " .. k .. ": <function>")
+        ----    end
+        ----  end
+        ----end
+        ---- check if the avatar is dead
+        --print("State of this object: " .. obj:getState())
+        --print("--------------------")
+
 
         local avatarIdx = obj:getComponent('Avatar'):getIndex()
         local code      = 10 + avatarIdx
         local state     = obj:getState()
-        -- if biting on an acorn, bump code by 30
-        if state:find("Bite") or state:find('prepToEat') then
-          code = code + 30
-        end
-        local pos = obj:getComponent('Transform'):getPosition()
-        local x,y = pos.x or pos[1], pos.y or pos[2]
-        -- Lua is 1-based, so shift accordingly
-        local col, row = x + 1, y + 1
-        if col >= 1 and col <= w and row >= 1 and row <= h then
-          local idx1d = (row - 1) * w + col
-          flat[idx1d] = code
+
+        -- if an avatar is dead; equivalent to edible:alive() == false
+        -- local avatar = obj:getComponent('Avatar')
+        -- local edible = obj:getComponent('AvatarEdible')
+        if not state:find('Wait') then
+
+          -- if biting on an acorn, bump code by 30
+          if state:find("Bite") or state:find('prepToEat') then
+            code = code + 30
+          end
+
+          local pos = obj:getComponent('Transform'):getPosition()
+          local x,y = pos.x or pos[1], pos.y or pos[2]
+          -- Lua is 1-based, so shift accordingly
+          local col, row = x + 1, y + 1
+          if col >= 1 and col <= w and row >= 1 and row <= h then
+            local idx1d = (row - 1) * w + col
+            flat[idx1d] = code
+          end
         end
       end
     end
