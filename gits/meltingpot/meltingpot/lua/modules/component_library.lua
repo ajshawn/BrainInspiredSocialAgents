@@ -1136,7 +1136,8 @@ function RoleBasedRewardTile:onEnter(enteringGameObject, contactName)
 end
 
 
-local TileDump = require 'meltingpot.lua.modules.tile_dump'
+local WorldTileDump = require 'meltingpot.lua.modules.tile_dump'
+local AvatarTileDump = require 'meltingpot.lua.modules.avatar_tile_dump'
 --local SocialEventLogger = require 'meltingpot.lua.modules.social_event_logger'
 local allComponents = {
     -- The two mandatory components:
@@ -1157,7 +1158,8 @@ local allComponents = {
     FixedRateRegrow = FixedRateRegrow,
     Animation = Animation,
     RoleBasedRewardTile = RoleBasedRewardTile,
-    TileDump = TileDump
+    WorldTileDump = WorldTileDump,
+    AvatarTileDump = AvatarTileDump,
 }
 
 -- Register all components from this module in the component registry.

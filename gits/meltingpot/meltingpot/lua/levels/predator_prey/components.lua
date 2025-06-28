@@ -92,18 +92,39 @@ end
 
 function PredatorInteractBeam:registerUpdaters(updaterRegistry)
   local interact = function()
-    local playerVolatileVariables = (
-        self.gameObject:getComponent('Avatar'):getVolatileData())
-    local actions = playerVolatileVariables.actions
-    -- Execute the beam if applicable.
-    if self._showForDuration > 0 then
-      self.gameObject:hitBeam(self.hitAndSpriteName, 1, 0)
-      self._showForDuration = self._showForDuration - 1
-    else
-      if actions['interact'] == 1 then
+    local avatarComp = self.gameObject:getComponent('Avatar')
+    local actions = avatarComp:getVolatileData().actions
+    -- attempt attack
+    if actions['interact'] == 1 then
+      -- cooldown check
+      if self._coolingTimer and self._coolingTimer > 0 then
+        events:add('invalid_attack','dict',
+                   'predator_index', avatarComp:getIndex(),
+                   'cooldown_remaining', self._coolingTimer)
+      else
+        -- raycast one cell ahead
+        local transform = self.gameObject:getComponent('Transform')
+        local hit, target, _ = transform:rayCastDirection('upperPhysical',1)
+        if not hit or not target or not target:hasComponent('Avatar') then
+          events:add('null_attack','dict',
+                     'predator_index', avatarComp:getIndex())
+        else
+          local preyIdx = target:getComponent('Avatar'):getIndex()
+          events:add('attack_attempt','dict',
+                     'predator_index', avatarComp:getIndex(),
+                     'prey_index', preyIdx)
+        end
+        -- fire beam
         self._coolingTimer = self._config.cooldownTime
         self.gameObject:hitBeam(self.hitAndSpriteName, 1, 0)
       end
+    end
+    -- decrease timers
+    if self._showForDuration and self._showForDuration>0 then
+      self._showForDuration = self._showForDuration - 1
+    end
+    if self._coolingTimer and self._coolingTimer>0 then
+      self._coolingTimer = self._coolingTimer - 1
     end
   end
 
@@ -295,7 +316,17 @@ function AvatarEdible:reset()
   self.dead = false
 end
 
+-- Added getter for groupRadius.
+function AvatarEdible:getGroupRadius()
+  return self._groupRadius
+end
+
+-- Modified to always return 1 if self._groupRadius is 0.
 function AvatarEdible:_countGroupSize(targetRole)
+  if self._groupRadius == 0 then
+    return 1, {self.gameObject}
+  end
+
   local function isTargetRole(object)
     if targetRole == 'prey' then
       return object:getComponent('Role'):isPrey()
@@ -310,6 +341,7 @@ function AvatarEdible:_countGroupSize(targetRole)
 
   local groupSize = 0
   local objectsWithTargetRoleNearby = {}
+  local invalidCount = 0
   for _, object in pairs(objectsNearby) do
     if object:hasComponent('Role') and isTargetRole(object) then
       if object:getComponent('Stamina'):getBand() ~= 'red' then
@@ -320,16 +352,22 @@ function AvatarEdible:_countGroupSize(targetRole)
             -- Prey only count if they are not currently eating an acorn.
             groupSize = groupSize + 1
             table.insert(objectsWithTargetRoleNearby, object)
+          else
+            -- If the prey is currently eating, it is counted as invalid but not original.
+            invalidCount = invalidCount + 1
           end
         else
           -- Predators do not have the 'InteractEatAcorn' component.
           groupSize = groupSize + 1
           table.insert(objectsWithTargetRoleNearby, object)
         end
+      else
+        -- If the object is in the 'red' stamina band, it is counted as invalid but not original .
+        invalidCount = invalidCount + 1
       end
     end
   end
-  return groupSize, objectsWithTargetRoleNearby
+  return groupSize, objectsWithTargetRoleNearby, invalidCount
 end
 
 
@@ -342,8 +380,9 @@ end
 function AvatarEdible:onHit(hitterObject, hitName)
   local selfRole = self.gameObject:getComponent('Role')
   if hitName == 'predator' and selfRole:isPrey() then
-    local preyGroupSize, preyNearby = self:_countGroupSize('prey')
-    local predatorGroupSize, _ = self:_countGroupSize('predator')
+    local preyGroupSize, _, invalidCount = self:_countGroupSize('prey')
+    local predatorGroupSize, _, _ = self:_countGroupSize('predator')
+    -- Assuming invalidCount calculation logic from user's snippet
     if preyGroupSize <= predatorGroupSize then
       -- Case where the group is too small so the prey will be eaten.
       self:_beEaten()
@@ -356,10 +395,21 @@ function AvatarEdible:onHit(hitterObject, hitName)
       events:add(
         'prey_consumed', 'dict',
         'predator_player_index', hitterAvatar:getIndex(),
-        'prey_player_index', self.gameObject:getComponent('Avatar'):getIndex()
-      )  -- (int, int)
+        'prey_player_index', self.gameObject:getComponent('Avatar'):getIndex(),
+        'prey_group_size', preyGroupSize,
+        'predator_group_size', predatorGroupSize,
+        'invalid_partner_count', invalidCount
+      )  -- (int, int, int, int, int)
     else
       -- Case where the group is big enough to avoid being eaten.
+      -- Expose defense success event as requested by the user's partial snippet
+      local hitterAvatar = hitterObject:getComponent('Avatar')
+      events:add('defense_success','dict',
+                 'predator_index', hitterAvatar:getIndex(),
+                 'prey_group_size', preyGroupSize,
+                 'predator_group_size', predatorGroupSize,
+                 'invalid_partner_count', invalidCount
+                )
       for _, preyObject in ipairs(preyNearby) do
         if preyObject:getComponent('AvatarEdible'):alive() then
           preyObject:getComponent('AvatarAnimation'):armsUp()
