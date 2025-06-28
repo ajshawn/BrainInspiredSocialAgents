@@ -331,62 +331,62 @@ function Avatar:addObservations(tileSet, world, observations)
   }
 
 
-  -- observations[#observations + 1] = {
-  --   name = id .. ".OBJECTS_IN_VIEW",
-  --   type = "Tensor.Int32",
-  --   shape = {},
-  --   func = function(grid)
-  --     -- 1) Query objects in the partial observation window on the same layer:
-  --     local objectsInView = self:queryPartialObservationWindow('upperPhysical')
+  observations[#observations + 1] = {
+    name = id .. ".OBJECTS_IN_VIEW_STR",
+    type = "String",
+    shape = {},
+    func = function(grid)
+      -- 1) Query objects in the partial observation window on the same layer:
+      local objectsInView = self:queryPartialObservationWindow('upperPhysical')
   
-  --     -- Also gather objects on layer "lowerPhysical" (if that layer exists):
-  --     local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
-  --     for _, obj in ipairs(objectsInViewLower) do
-  --       table.insert(objectsInView, obj)
-  --     end
+      -- Also gather objects on layer "lowerPhysical" (if that layer exists):
+      local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
+      for _, obj in ipairs(objectsInViewLower) do
+        table.insert(objectsInView, obj)
+      end
 
-  --     local avatar = self.gameObject
-  --     local transform = avatar:getComponent('Transform')
-  --     local avatarPos = avatar:getPosition()
+      local avatar = self.gameObject
+      local transform = avatar:getComponent('Transform')
+      local avatarPos = avatar:getPosition()
 
-  --     local coords = {}
-  --     for _, obj in ipairs(objectsInView) do
-  --       local pos = obj:getPosition()
-  --       local rel = transform:getRelativeDirectionFromAbsolute{
-  --         pos[1] - avatarPos[1],
-  --         pos[2] - avatarPos[2]}
-  --       coords[#coords + 1] = string.format(
-  --           "%s,%s,%s", obj:getState(), rel[1], rel[2])
-  --       print(string.format(
-  --           "Object %s at %s relative to avatar at %s",
-  --           obj:getState(), helpers.tostringOneLine(rel), helpers.tostringOneLine(avatarPos)))
-  --     end
+      local coords = {}
+      for _, obj in ipairs(objectsInView) do
+        local pos = obj:getPosition()
+        local rel = transform:getRelativeDirectionFromAbsolute{
+          pos[1] - avatarPos[1],
+          pos[2] - avatarPos[2]}
+        coords[#coords + 1] = string.format(
+            "%s,%s,%s", obj:getState(), rel[1], rel[2])
+        -- print(string.format(
+        --     "Object %s at %s relative to avatar at %s",
+        --     obj:getState(), helpers.tostringOneLine(rel), helpers.tostringOneLine(avatarPos)))
+      end
 
-  --   return table.concat(coords, ";")
+    return table.concat(coords, ";")
 
   
-  --     -- -- 2) Tally how many times each state appears:
-  --     -- local stateCounts = {}
-  --     -- for _, obj in ipairs(objectsInView) do
-  --     --   local state = obj:getState()
-  --     --   stateCounts[state] = (stateCounts[state] or 0) + 1
-  --     -- end
+      -- -- 2) Tally how many times each state appears:
+      -- local stateCounts = {}
+      -- for _, obj in ipairs(objectsInView) do
+      --   local state = obj:getState()
+      --   stateCounts[state] = (stateCounts[state] or 0) + 1
+      -- end
   
-  --     -- -- 3) Turn that into a single string: "state_name, count, state_name2, count2, ..."
-  --     -- if next(stateCounts) == nil then
-  --     --   -- If there are no objects in view at all, return an empty string
-  --     --   return ""
-  --     -- else
-  --     --   -- Otherwise build the output by appending name/count in pairs
-  --     --   local outputList = {}
-  --     --   for state, count in pairs(stateCounts) do
-  --     --     table.insert(outputList, state)
-  --     --     table.insert(outputList, tostring(count))
-  --     --   end
-  --     --   return table.concat(outputList, ", ")
-  --     -- end
-  --   end
-  -- }
+      -- -- 3) Turn that into a single string: "state_name, count, state_name2, count2, ..."
+      -- if next(stateCounts) == nil then
+      --   -- If there are no objects in view at all, return an empty string
+      --   return ""
+      -- else
+      --   -- Otherwise build the output by appending name/count in pairs
+      --   local outputList = {}
+      --   for state, count in pairs(stateCounts) do
+      --     table.insert(outputList, state)
+      --     table.insert(outputList, tostring(count))
+      --   end
+      --   return table.concat(outputList, ", ")
+      -- end
+    end
+  }
   
 end
 

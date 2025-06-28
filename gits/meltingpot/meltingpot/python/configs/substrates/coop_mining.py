@@ -517,6 +517,7 @@ def get_config(**kwargs):
         "POSITION",
         "ORIENTATION",
         "OBJECTS_IN_VIEW",
+        "OBJECTS_IN_VIEW_STR",
     ]
     config.global_observation_names = [
         "WORLD.RGB",
@@ -533,6 +534,7 @@ def get_config(**kwargs):
             "POSITION": specs.OBSERVATION["POSITION"],
             "ORIENTATION": specs.OBSERVATION["ORIENTATION"],
             "OBJECTS_IN_VIEW": specs.OBSERVATION["OBJECTS_IN_VIEW"],
+            "OBJECTS_IN_VIEW_STR": specs.OBSERVATION["OBJECTS_IN_VIEW_STR"],
         }
     )
 

@@ -41,6 +41,7 @@ OBSERVATION = immutabledict.immutabledict({
     'ORIENTATION': dm_env.specs.Array(
         shape=(), dtype=np.int32, name='ORIENTATION'),
     'OBJECTS_IN_VIEW': dm_env.specs.Array(shape=(11, 11), dtype=np.uint8, name='OBJECTS_IN_VIEW'),
+    "OBJECTS_IN_VIEW_STR": dm_env.specs.StringArray(shape=(), name='OBJECTS_IN_VIEW_STR'),
 })
 _ACTION = dm_env.specs.DiscreteArray(
     num_values=1, dtype=np.int64, name='action')
