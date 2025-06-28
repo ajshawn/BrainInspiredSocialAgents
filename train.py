@@ -66,7 +66,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_tanh",
         "PopArtIMPALA_attention_spatial",
         "PopArtIMPALA_attention_item_aware",
-        "IMPALANetwork_attention_multihead"
+        "PopArtIMPALA_attention_multihead"
     ],
     "Algorithm to train",
 )
@@ -346,7 +346,7 @@ def build_experiment_config():
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
 
-    elif FLAGS.algo_name == "IMPALANetwork_attention_multihead":
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead":
         # Create network
         network_factory = functools.partial(
             impala.make_network_attention_multihead, 

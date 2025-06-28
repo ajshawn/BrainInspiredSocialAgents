@@ -926,7 +926,7 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       positional_embedding=None, 
       add_selection_vec=False, 
       attn_enhance_multiplier=0.0,
-      use_layer_norm=True,):
+      use_layer_norm=False,):
     super().__init__(
       num_actions, 
       recurrent_dim, 
