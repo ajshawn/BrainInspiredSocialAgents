@@ -83,6 +83,13 @@ class MeltingPotWrapper(dmlab2d.Environment):
         save_path = os.path.join(output_dir, f"step_{step}_agent_{agent_id}.png")
         pil_img.save(save_path)
         del agent_obs['RGB']
+        if agent_id == 'agent_0':
+          # Save the world RGB image for the first agent
+          world_rgb_array = np.array(agent_obs['WORLD.RGB'], dtype=np.uint8)
+          world_pil_img = Image.fromarray(world_rgb_array)
+          world_pil_img = world_pil_img.resize(world_rgb_array.shape[:-1], Image.BICUBIC)
+          world_save_path = os.path.join(output_dir, f"step_{step}_world.png")
+          world_pil_img.save(world_save_path)
         del agent_obs['WORLD.RGB']
   
   def _show_item_coord(self, obs_dict, step, output_dir):
