@@ -123,7 +123,13 @@ class EnvironmentLoopEvents(core.Worker):
         while not timestep.last():
             # Book-keeping.
             episode_steps += 1
+            
+            # current observation (bef action)
 
+            position = timestep.observation['observation'].get('POSITION', []).tolist(),
+            orientation = timestep.observation['observation'].get('ORIENTATION', []).tolist(),
+            obj_in_view = timestep.observation['observation'].get('OBJECTS_IN_VIEW_TENSOR', []).tolist(),
+            
             # Generate an action from the agent's policy.
             select_action_start = time.time()
             action = self._actor.select_action(timestep.observation)
@@ -139,9 +145,9 @@ class EnvironmentLoopEvents(core.Worker):
             events = self._environment.environment.events()
             
             # add a small punishment for the zapping action 
-            # for i, x in enumerate(action):
-            #     if x == 7:
-            #         timestep.reward[i] -= 0.1
+            for i, x in enumerate(action):
+                if x == 7:
+                    timestep.reward[i] -= 0.1
             # f = open("temp_obs.json", "w")
             
             # episode_steps
@@ -173,10 +179,12 @@ class EnvironmentLoopEvents(core.Worker):
                 "extract_gold":extract_gold,
                 "reward":list(map(float, rewards)),
                 "timestep":int(episode_steps),
-                "position": timestep.observation['observation'].get('POSITION', []),
-                "orientation": timestep.observation['observation'].get('ORIENTATION', []),
+                "position": position,
+                "orientation": orientation,
+                "obj_in_view": obj_in_view,
                 "hidden": self._actor._states.hidden.tolist(),
                 "embedding": self._actor._embedding.tolist(),
+                "cell_states": self._actor._states.cell.tolist(),
                 })
 
             # Have the agent and observers observe the timestep.

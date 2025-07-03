@@ -30,7 +30,7 @@ return api_factory.apiFactory{
         -- Scale each sprite to a square of size `spriteSize` X `spriteSize`.
         spriteSize = 8,
         -- Terminate the episode after this many frames.
-        maxEpisodeLengthFrames = 1000,
+        maxEpisodeLengthFrames = 500,
         -- Settings to pass to simulation.lua.
         simulation = {},
     }

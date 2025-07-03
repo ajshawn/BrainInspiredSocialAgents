@@ -1,7 +1,7 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_coop_mining_2025-06-26_18:40:32.248065"
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_item_aware_1_meltingpot_coop_mining_2025-06-27_19:58:25.054307" 
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention_multihead"
-TIME_STAMP="2025-06-26_18:40:32.248065"
+ALGORITHM_NAME="PopArtIMPALA_attention_item_aware"
+TIME_STAMP="2025-06-10_21:32:15.740274"
 LOG_INTERVAL=1
 N_AGENTS=3
 GPUS="5"
@@ -9,9 +9,9 @@ N_HEADS=4
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 60 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 165 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
 
-    obs_out_dir="data/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
+    obs_out_dir="data_log_obs/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"
     log_img_dir="${obs_out_dir}/agent_view_images"
 
@@ -24,7 +24,7 @@ for ckp in 60 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --map_name ${EVN_NAME} \
         --map_layout original \
         --experiment_dir ${EXP_DIR_PREFIX} \
-        --agent_roles 'default, default, default' \
+        --agent_roles 'default,default,default' \
         --dense_ore_regrow True \
         --iron_rate 0.0001 \
         --gold_rate 0.00008 \
@@ -37,11 +37,12 @@ for ckp in 60 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --record_video True \
         --positional_embedding learnable \
         --log_timesteps True \
-        --log_obs True \
+        --agent_param_indices '0,1,2' \
         --log_filename ${log_filename} \
         --log_img_dir ${log_img_dir} \
         --log_interval ${LOG_INTERVAL} \
-        --agent_param_indices "0,1,2"
+        --log_obs True \
+        --attn_enhance_multiplier 2
         
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"

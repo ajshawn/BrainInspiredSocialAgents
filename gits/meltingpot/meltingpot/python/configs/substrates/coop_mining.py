@@ -50,11 +50,11 @@ MAX_TOKENS_PER_TYPE = 6
 ASCII_MAP = """
 WWWWWWWWWWWWWWWWWWWWWWWWWWW
 WOOOOOOOOOOOOOOOOOOOOOOOOOW
-WOPOOOOOOOOOPOOOOOPOOOOOPOW
+WOPOOOOOOOOOOOOOOOPOOOOOPOW
 WOOOOOOOOWOOOOOOOOOOOOOOOOW
 WOOOOOOOOWOOOOOOOOOOWOOOOOW
 WOOOOOOOOWOOOOOOOOOOWOOOOOW
-WOOOOOOOOWWWWWWWOOOOWOOOPOW
+WOOOOOOOOWWWWWWWOOOOWOOOOOW
 WOPOWWOOOOWOOOOOOOOOWOOOOOW
 WOOOOOOOOOWOOPOOOOOOOOOOOOW
 WOOOOOOOOOWOOOOOWWWOOOOOOOW
@@ -72,7 +72,7 @@ WOOOOOOOOOWOOOOOOOOWOOOOOOW
 WOOOOWOOOOOOOOOOOOOWOOOOOOW
 WOOOOWOOOOOOOOOWWWWWWWWOOOW
 WOOOOWOOOOOOOOOOOOWOOOOOOOW
-WOPOOOOOOPOOOOOOOPOOOOOOPOW
+WOPOOOOOOOOOOOOOOOOOOOOOPOW
 WOOOOOOOOOOOOOOOOOOOOOOOOOW
 WWWWWWWWWWWWWWWWWWWWWWWWWWW
 """
@@ -80,7 +80,7 @@ WWWWWWWWWWWWWWWWWWWWWWWWWWW
 SMALL_MAP = """
 WWWWWWWWWWWWWWWW
 WOOOOOOOOOOOOOOW
-WOPOOPOOOOOPOOOW
+WOPOOOOOOOOPOOOW
 WOOOWOOOOOOOOOOW
 WOOOWOOOOOOOOOOW
 WOOOOOOOOOOOWWWW
@@ -517,6 +517,7 @@ def get_config(**kwargs):
         "POSITION",
         "ORIENTATION",
         "OBJECTS_IN_VIEW",
+        "OBJECTS_IN_VIEW_TENSOR",
         "OBJECTS_IN_VIEW_STR",
     ]
     config.global_observation_names = [
@@ -535,12 +536,14 @@ def get_config(**kwargs):
             "ORIENTATION": specs.OBSERVATION["ORIENTATION"],
             "OBJECTS_IN_VIEW": specs.OBSERVATION["OBJECTS_IN_VIEW"],
             "OBJECTS_IN_VIEW_STR": specs.OBSERVATION["OBJECTS_IN_VIEW_STR"],
+            "OBJECTS_IN_VIEW_TENSOR": specs.OBSERVATION["OBJECTS_IN_VIEW_TENSOR"],
         }
     )
 
     # The roles assigned to each player.
     config.valid_roles = frozenset({"default", "target"})
     config.default_player_roles = ("default",) * 6
+    config.max_episode_length = kwargs.get("max_episode_length", 5000)
 
     return config
 
@@ -615,7 +618,7 @@ def build(
         levelDirectory="meltingpot/lua/levels",
         numPlayers=num_players,
         # Define upper bound of episode length since episodes end stochastically.
-        maxEpisodeLengthFrames=5000,
+        maxEpisodeLengthFrames=config.max_episode_length,
         spriteSize=8,
         topology="BOUNDED",  # Choose from ["BOUNDED", "TORUS"],
         simulation={

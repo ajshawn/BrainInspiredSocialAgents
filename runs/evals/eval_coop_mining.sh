@@ -8,7 +8,7 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in 165  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 180;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -17,22 +17,23 @@ for ckp in 165  ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
         --map_layout original \
+        --max_episode_length 250 \
         --experiment_dir ${EXP_DIR_PREFIX} \
-        --agent_roles 'default' \
+        --agent_roles 'default,default' \
         --dense_ore_regrow True \
-        --iron_rate 0.00012 \
-        --gold_rate 0.00008 \
+        --iron_rate 0.00015 \
+        --gold_rate 0.00015 \
         --conservative_mine_beam True \
         --iron_reward 1 \
         --gold_reward 6 \
         --mining_reward 0 \
         --ckp ${ckp} \
-        --n_episodes 1 \
+        --n_episodes 20 \
         --record_video True \
         --positional_embedding learnable \
         --add_selection_vector True \
-        --agent_param_indices '1' \
-        #--log_timesteps True \
+        --agent_param_indices '0,1'\
+        --log_timesteps True \
         
 
     recording_dir="recordings/meltingpot/${EVN_NAME}"

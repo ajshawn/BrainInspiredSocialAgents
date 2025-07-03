@@ -15,7 +15,7 @@ from PIL import Image
 
 from marl import types as marl_types
 
-USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "OBJECTS_IN_VIEW"}
+USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "OBJECTS_IN_VIEW","OBJECTS_IN_VIEW_TENSOR","POSITION","ORIENTATION"}
 
 def obs_to_json_dict(data: dm_env.TimeStep.observation) -> dict:
     """Converts a dm_env observation to a dict for JSON serialization."""
@@ -71,7 +71,7 @@ class MeltingPotWrapper(dmlab2d.Environment):
         os.makedirs(self.log_img_dir)
       if not os.path.exists(self.log_item_dir):
         os.makedirs(self.log_item_dir)
-      self.log_file = open(self.log_filename, "w", encoding="utf-8")
+      self.log_file = open(self.log_filename, "a", encoding="utf-8")
       
   def _show_rgb_image(self, obs_dict, step, output_dir):
     for agent_id, agent_obs in obs_dict.items():

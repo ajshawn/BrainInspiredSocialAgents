@@ -4,7 +4,7 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
-    "0.5"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+    "0.4"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
@@ -79,6 +79,7 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_integer("seed", 0, "Random seed.")
 flags.DEFINE_integer("num_steps", None, "Number of env steps to run.")
+flags.DEFINE_integer("max_episode_length", None, "Max Number of steps per episode.")
 flags.DEFINE_string(
     "exp_log_dir", "./results/", "Directory to store experiment logs in."
 )
@@ -142,6 +143,8 @@ def _get_custom_env_configs():
             result["gold_rate"] = FLAGS.gold_rate
     if FLAGS.map_layout:
         result[FLAGS.map_layout] = True
+    if FLAGS.max_episode_length:
+        result["max_episode_length"] = FLAGS.max_episode_length
     return result
 
 
