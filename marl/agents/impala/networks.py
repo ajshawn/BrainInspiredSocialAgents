@@ -672,7 +672,7 @@ class IMPALANetwork_attention(hk.RNNCore):
     op, new_state = self._recurrent(combined, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, attn_weights), new_state
+    return (logits, value, op, attn_weights), new_state
 
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
     return self._recurrent.initial_state(batch_size)
@@ -715,17 +715,18 @@ class IMPALANetwork_attention(hk.RNNCore):
       combined_input = jnp.concatenate([attended, rest_input], axis=-1)
       # Go through the recurrent layer
       output, new_state = self._recurrent(combined_input, state)
-      return output, new_state
+      return (output,attn_weights), new_state
 
     # Unroll through time
-    op, new_states = hk.static_unroll(
+    optuple, new_states = hk.static_unroll(
         _step,
         combined, 
         state
     )
+    op,attn_weights = optuple
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, None), new_states
+    return (logits, value, op, attn_weights), new_states
 
   def critic(self, inputs):
     return jnp.squeeze(self._value_layer(inputs), axis=-1)
@@ -763,7 +764,7 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
     op, new_state = self._recurrent(combined, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, attn_weights), new_state
+    return (logits, value, op, attn_weights), new_state
   
   def unroll(self, inputs, state: hk.LSTMState):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
@@ -813,7 +814,7 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
     )
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, None), new_states
+    return (logits, value,op, None), new_states
 
 class IMPALANetwork_attention_tanh(IMPALANetwork_attention):
   def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=None):
@@ -858,7 +859,7 @@ class IMPALANetwork_attention_item_aware(IMPALANetwork_attention):
     op, new_state = self._recurrent(combined, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, attn_weights), new_state
+    return (logits, value, op, attn_weights), new_state
   
   def unroll(self, inputs, state: hk.LSTMState):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
@@ -911,7 +912,7 @@ class IMPALANetwork_attention_item_aware(IMPALANetwork_attention):
     )
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, None), new_states
+    return (logits, value, op, None), new_states
 
 class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
   # TODO: Since call and unroll are not overridden, this class is
@@ -941,7 +942,7 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
         positional_embedding=positional_embedding,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier)
-    
+     
 class IMPALANetwork(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
@@ -958,7 +959,7 @@ class IMPALANetwork(hk.RNNCore):
     op, new_state = self._recurrent(emb, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, emb), new_state
+    return (logits, value, op, emb), new_state
 
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
     return self._recurrent.initial_state(batch_size)
@@ -976,7 +977,7 @@ class IMPALANetwork(hk.RNNCore):
 
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, emb), new_states
+    return (logits, value, op, emb), new_states
 
   def critic(self, inputs):
     return jnp.squeeze(self._value_layer(inputs), axis=-1)

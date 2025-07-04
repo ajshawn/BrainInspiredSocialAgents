@@ -363,7 +363,7 @@ def build_experiment_config():
         )
         # Construct the agent.
         config = impala.IMPALAConfig(
-            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=0.001,
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)

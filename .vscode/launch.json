@@ -10,12 +10,14 @@
             "args": [
                 "--available_gpus", "0",
                 "--num_actors", "1",
-                "--algo_name", "IMPALANetwork_attention_multihead",
+                "--algo_name", "PopArtIMPALA_attention_multihead",
                 "--env_name", "meltingpot",
-                "--map_name", "predator_prey__open",
+                "--map_name", "coop_mining",
             ],
             "env": {
-                "CUDA_VISIBLE_DEVICES": "1"
+              "CUDA_VISIBLE_DEVICES": "1",
+              "PYTHONPATH": "./gits/meltingpot:gits/acme:${PYTHONPATH}",
+              "LD_LIBRARY_PATH": "$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/lib:/home/kumquat/miniconda3/envs/marl-jax/lib",
             },
             "justMyCode": false
         },

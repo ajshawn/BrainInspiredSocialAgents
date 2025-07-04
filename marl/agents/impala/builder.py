@@ -141,6 +141,7 @@ class PopArtIMPALABuilder(MABuilder):
         random_key=random_key,
         discount=self._config.discount,
         entropy_cost=self._config.entropy_cost,
+        head_entropy_cost=self._config.head_entropy_cost,
         baseline_cost=self._config.baseline_cost,
         max_abs_reward=self._config.max_abs_reward,
         counter=counter,

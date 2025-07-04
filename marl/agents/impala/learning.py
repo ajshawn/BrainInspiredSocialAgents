@@ -16,8 +16,8 @@ import reverb
 from marl import types
 from marl.agents import learning
 from marl.agents import learning_memory_efficient
-from marl.agents.impala.loss import batched_art_impala_loss
-from marl.agents.impala.loss import batched_popart_impala_loss
+from marl.agents.impala.loss import batched_art_impala_loss, batched_art_impala_loss_head_entropy
+from marl.agents.impala.loss import batched_popart_impala_loss, batched_popart_impala_loss_head_entropy
 from marl.agents.impala.loss import impala_loss
 
 _PMAP_AXIS_NAME = "data"
@@ -64,25 +64,46 @@ class PopArtIMPALALearner(learning.MALearnerPopArt):
       discount: float = 0.99,
       baseline_cost: float = 1.0,
       entropy_cost: float = 0.0,
+      head_entropy_cost: float = 0.0,
       max_abs_reward: float = np.inf,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
   ):
-    loss_fn = (
-        functools.partial(
-            batched_art_impala_loss,
-            discount=discount,
-            baseline_cost=baseline_cost,
-            entropy_cost=entropy_cost,
-            max_abs_reward=max_abs_reward,
-        ) if popart[1] else functools.partial(
-            batched_popart_impala_loss,
-            discount=discount,
-            baseline_cost=baseline_cost,
-            entropy_cost=entropy_cost,
-            max_abs_reward=max_abs_reward,
-        ))
+    if popart[1]:  # ART
+        loss_fn = (
+            functools.partial(
+                batched_art_impala_loss_head_entropy,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                head_entropy_cost=head_entropy_cost,
+                max_abs_reward=max_abs_reward,
+            ) if head_entropy_cost != 0.0 else functools.partial(
+                batched_art_impala_loss,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                max_abs_reward=max_abs_reward,
+            )
+        )
+    else:  # PopArt
+        loss_fn = (
+            functools.partial(
+                batched_popart_impala_loss_head_entropy,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                head_entropy_cost=head_entropy_cost,
+                max_abs_reward=max_abs_reward,
+            ) if head_entropy_cost != 0.0 else functools.partial(
+                batched_popart_impala_loss,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                max_abs_reward=max_abs_reward,
+            )
+        )
     super().__init__(network, popart[0], iterator, optimizer, n_agents,
                      random_key, loss_fn, counter, logger, devices)
 
@@ -129,25 +150,48 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
       discount: float = 0.99,
       baseline_cost: float = 1.0,
       entropy_cost: float = 0.0,
+      head_entropy_cost: float = 0.0,
       max_abs_reward: float = np.inf,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       frozen_agents: Optional[set] = None,
   ):
-    loss_fn = (
-        functools.partial(
-            batched_art_impala_loss,
-            discount=discount,
-            baseline_cost=baseline_cost,
-            entropy_cost=entropy_cost,
-            max_abs_reward=max_abs_reward,
-        ) if popart[1] else functools.partial(
-            batched_popart_impala_loss,
-            discount=discount,
-            baseline_cost=baseline_cost,
-            entropy_cost=entropy_cost,
-            max_abs_reward=max_abs_reward,
-        ))
+
+    if popart[1]:  # ART
+        loss_fn = (
+            functools.partial(
+                batched_art_impala_loss_head_entropy,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                head_entropy_cost=head_entropy_cost,
+                max_abs_reward=max_abs_reward,
+            ) if head_entropy_cost != 0.0 else functools.partial(
+                batched_art_impala_loss,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                max_abs_reward=max_abs_reward,
+            )
+        )
+    else:  # PopArt
+        loss_fn = (
+            functools.partial(
+                batched_popart_impala_loss_head_entropy,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                head_entropy_cost=head_entropy_cost,
+                max_abs_reward=max_abs_reward,
+            ) if head_entropy_cost != 0.0 else functools.partial(
+                batched_popart_impala_loss,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                max_abs_reward=max_abs_reward,
+            )
+        )
+
     super().__init__(network, popart[0], iterator, optimizer, n_agents,
                      random_key, loss_fn, counter, logger, devices, frozen_agents)

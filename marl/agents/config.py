@@ -50,6 +50,7 @@ class MAConfig:
   # # Loss configuration.
   baseline_cost: float = 1.0
   entropy_cost: float = 0.003
+  head_entropy_cost: float = 0.0
   max_abs_reward: float = np.inf
 
   # Replay options
