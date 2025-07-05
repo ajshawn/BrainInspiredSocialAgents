@@ -4,7 +4,7 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
-    "0.4"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+    "0.5"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
@@ -66,7 +66,8 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_tanh",
         "PopArtIMPALA_attention_spatial",
         "PopArtIMPALA_attention_item_aware",
-        "PopArtIMPALA_attention_multihead"
+        "PopArtIMPALA_attention_multihead",
+        "PopArtIMPALA_attention_multihead_disturb",
     ],
     "Algorithm to train",
 )
@@ -128,6 +129,14 @@ flags.DEFINE_string(
 flags.DEFINE_integer("log_interval", 1, "Interval to log observations.")
 # Attention enhancement flag
 flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
+# Attention head flags
+flags.DEFINE_string(
+    "disturb_heads", "0",
+    "Comma separated list of attention heads to disturb.",
+)
+flags.DEFINE_integer(
+    "num_heads", 4, "Number of attention heads to use in the attention network."
+)
 
 def _get_custom_env_configs():
     result = {}
@@ -166,6 +175,8 @@ def build_experiment_config():
     positional_embedding = FLAGS.positional_embedding
     add_selection_vector = True if FLAGS.add_selection_vector=="True" else False
     attn_enhance_multiplier = FLAGS.attn_enhance_multiplier
+    disturb_heads = [int(head) for head in FLAGS.disturb_heads.split(",")]
+    n_heads = FLAGS.num_heads
 
     frozen_agents = set(
         [int(agent) for agent in FLAGS.frozen_agents.split(",")]
@@ -357,6 +368,28 @@ def build_experiment_config():
             positional_embedding=positional_embedding,
             add_selection_vec=add_selection_vector,
             attn_enhance_multiplier=attn_enhance_multiplier,
+            num_heads=n_heads,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_disturb":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_disturb, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,
+            attn_enhance_multiplier=attn_enhance_multiplier,
+            num_heads=n_heads,
+            disturb_heads=disturb_heads,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()

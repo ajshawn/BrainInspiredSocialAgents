@@ -3,10 +3,11 @@ from acme.specs import EnvironmentSpec
 import haiku as hk
 import jax.numpy as jnp
 import jax
+import numpy as np
 from marl.agents.networks import make_haiku_networks
 from marl.agents.networks import make_haiku_networks_2
 
-from typing import Optional
+from typing import Optional, List
 
 # Useful type aliases
 Images = jnp.ndarray
@@ -343,7 +344,76 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
       unroll_fn=unroll_fn,
       critic_fn=critic_fn,
   )                       
-                                                                    
+
+def make_network_attention_multihead_disturb(environment_spec: EnvironmentSpec,
+                                feature_extractor: hk.Module,
+                                recurrent_dim: int = 128,
+                                positional_embedding: Optional[str] = None,
+                                add_selection_vec: bool = False,
+                                attn_enhance_multiplier: float = 0.0,
+                                num_heads: int = 4,
+                                key_size: int = 64,
+                                disturb_heads: List[int] = []):   
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_multihead_attention_disturb(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        disturb_head_indices=disturb_heads)
+    return model(inputs, state) 
+
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_multihead_attention_disturb(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        disturb_head_indices=disturb_heads)
+    return model.initial_state(batch_size)
+
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_multihead_attention_disturb(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        disturb_head_indices=disturb_heads)
+    return model.unroll(inputs, state)
+
+  def critic_fn(inputs):
+    model = IMPALANetwork_multihead_attention_disturb(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        disturb_head_indices=disturb_heads)
+    return model.critic(inputs)
+  
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+
 class MultiHeadAttentionLayer(hk.Module):
   def __init__(
       self,
@@ -409,6 +479,98 @@ class MultiHeadAttentionLayer(hk.Module):
       max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, H, 1]
       enhanced_scores = self.attn_enhance_multiplier * max_scores
       scores = jnp.where(enhance_map[:, None, :] == 1, enhanced_scores, scores)
+
+    scores = scores / jnp.sqrt(self.key_size_per_head * self.num_heads)  # Scale scores
+    weights = jax.nn.softmax(scores, axis=-1)  # [B, H, N]
+
+    # Weighted sum
+    output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
+    output = output.reshape(output.shape[0], -1)  # [B, model_dim]
+    return output, weights
+
+class MultiHeadAttentionDisturbLayer(hk.Module):
+  def __init__(
+      self,
+      num_heads: int,
+      key_size_per_head: int,
+      positional_embedding=None,
+      add_selection_vec=False,
+      attn_enhance_multiplier: float = 0.0,
+      disturb_head_indices: List[int] = [],
+  ):
+    super().__init__(name="multihead_attention_layer")
+    self.num_heads = num_heads
+    self.key_size_per_head = key_size_per_head  # per head
+    self.positional_embedding = positional_embedding
+    self.attn_enhance_multiplier = attn_enhance_multiplier
+    self.add_selection_vec = add_selection_vec
+    self.model_dim = num_heads * key_size_per_head
+    if len(disturb_head_indices) > self.num_heads:
+      raise ValueError("disturb_head_indices cannot be longer than num_heads")
+    self.disturb_head_indices = np.array(disturb_head_indices, dtype=int)
+
+  def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
+    if jnp.ndim(query) == 1:
+      query = jnp.expand_dims(query, axis=0)
+    if jnp.ndim(key) == 2:
+      key = jnp.expand_dims(key, axis=0)
+      value = jnp.expand_dims(value, axis=0)
+
+    B, N, _ = key.shape
+
+    # Positional embedding
+    if self.positional_embedding == 'fixed':
+      H = 11
+      y = jnp.linspace(-1.0, 1.0, H)
+      x = jnp.linspace(-1.0, 1.0, H)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")
+      coords = jnp.stack([yy, xx], axis=-1).reshape([N, 2])
+      coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])
+      key = jnp.concatenate([key, coords], axis=-1)
+      value = jnp.concatenate([value, coords], axis=-1)
+    elif self.positional_embedding == 'learnable':
+      pos_emb = hk.get_parameter("pos_embedding", shape=[N, self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      key += pos_emb[None, :, :]
+      value += pos_emb[None, :, :]
+
+    # Linear projections
+    q_proj = hk.Linear(self.model_dim)(query)  # [B, model_dim]
+    k_proj = hk.Linear(self.model_dim)(key)    # [B, N, model_dim]
+    v_proj = hk.Linear(self.model_dim)(value)  # [B, N, model_dim]
+
+    if self.add_selection_vec:
+      selection_vec = hk.get_parameter("selection_vector", shape=[self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      q_proj += selection_vec[None, :]
+
+    # Split into heads
+    grid_dim, embed_dim = k_proj.shape[-2], k_proj.shape[-1]
+    q = q_proj.reshape(-1, self.num_heads, self.key_size_per_head)  # [B, H, K]
+    q = q[:, :, None, :] # [B, H, 1, K]
+    k = k_proj.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)  # [B, N, H, K]
+    k = jnp.transpose(k, (0, 2, 1, 3))  # [B, H, N, K]
+    v = v_proj.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)  # [B, N, H, K]
+    v = jnp.transpose(v, (0, 2, 1, 3))  # [B, H, N, K]
+
+    # Scaled dot-product attention
+    scores = jnp.einsum("bhqd,bhkd->bhqk", q, k).squeeze(2)  # [B, H, N]
+
+    # === Disturb specified heads, vectorized ===    
+    # Make a boolean mask [H] with True at disturbed heads
+    mask = jnp.zeros((self.num_heads,), dtype=bool).at[self.disturb_head_indices].set(True)
+    mask = mask[None, :, None]  # [1, H, 1] to broadcast
+    all_ones = jnp.ones((B, self.num_heads, N))  # [B, H, N]
+    scores = jnp.where(mask, all_ones, scores)
+    
+    # Replace scores of some head with other head's scores
+    # third_head = scores[:, 2:3, :]
+    # expanded = jnp.broadcast_to(third_head, scores.shape)  # shape: [B, H, N]
+    # scores = jnp.where(mask, expanded, scores)
+    
+    # if self.attn_enhance_multiplier != 0:
+    #   enhance_map = enhance_map.reshape((-1, N))  # [B, N]
+    #   max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, H, 1]
+    #   enhanced_scores = self.attn_enhance_multiplier * max_scores
+    #   scores = jnp.where(enhance_map[:, None, :] == 1, enhanced_scores, scores)
 
     scores = scores / jnp.sqrt(self.key_size_per_head * self.num_heads)  # Scale scores
     weights = jax.nn.softmax(scores, axis=-1)  # [B, H, N]
@@ -485,19 +647,19 @@ class AttentionLayer(hk.Module):
     # Compute attention scores
     scores = jnp.einsum('bik,bjk->bij', query, key)  # [B, 1, 121]
     scores = jnp.squeeze(scores, axis=1)             # [B, 121]
-    # if self.attn_enhance_multiplier != 0:
-    #   # Enhance attention scores for specific locations
-    #   enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1]*enhance_map.shape[-2]))  # [B, 121]
-    #   max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
-    #   enhancement = self.attn_enhance_multiplier * enhance_map * max_scores # [B, 121]
-    #   scores += enhancement  # [B, 121]
     if self.attn_enhance_multiplier != 0:
-    # Enhance attention scores for specific locations
-      enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1] * enhance_map.shape[-2]))  # [B, 121]
+      # Enhance attention scores for specific locations
+      enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1]*enhance_map.shape[-2]))  # [B, 121]
       max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
-      enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, 1]
-      # Use `jnp.where` to set scores where enhance_map == 1
-      scores = jnp.where(enhance_map == 1, enhanced_scores, scores)  # [B, 121]
+      enhancement = self.attn_enhance_multiplier * enhance_map * max_scores # [B, 121]
+      scores += enhancement  # [B, 121]
+    # if self.attn_enhance_multiplier != 0:
+    # # Enhance attention scores for specific locations
+    #   enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1] * enhance_map.shape[-2]))  # [B, 121]
+    #   max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
+    #   enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, 1]
+    #   # Use `jnp.where` to set scores where enhance_map == 1
+    #   scores = jnp.where(enhance_map == 1, enhanced_scores, scores)  # [B, 121]
     scores = scores / jnp.sqrt(self.key_size)
     weights = jax.nn.softmax(scores, axis=-1)        # [B, 121]
     
@@ -814,7 +976,7 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
     )
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value,op, None), new_states
+    return (logits, value, op, None), new_states
 
 class IMPALANetwork_attention_tanh(IMPALANetwork_attention):
   def __init__(self, num_actions, recurrent_dim, feature_extractor, positional_embedding=None):
@@ -942,7 +1104,38 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
         positional_embedding=positional_embedding,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier)
-     
+
+class IMPALANetwork_multihead_attention_disturb(IMPALANetwork_attention):
+  # TODO: Since call and unroll are not overridden, this class is
+  # not supporting item-aware attention for now.
+  def __init__(
+      self, 
+      num_actions,
+      recurrent_dim, 
+      feature_extractor, 
+      num_heads=4,
+      key_size=64,
+      positional_embedding=None, 
+      add_selection_vec=False, 
+      attn_enhance_multiplier=0.0,
+      use_layer_norm=False,
+      disturb_head_indices=[]):
+    super().__init__(
+      num_actions, 
+      recurrent_dim, 
+      feature_extractor, 
+      positional_embedding, 
+      add_selection_vec, 
+      attn_enhance_multiplier,
+      use_layer_norm)
+    self._attention = MultiHeadAttentionDisturbLayer(
+        num_heads=num_heads,
+        key_size_per_head=key_size // num_heads,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        disturb_head_indices=disturb_head_indices)
+
 class IMPALANetwork(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
