@@ -111,7 +111,7 @@ def visualize_attn(csv_path, image_dir, n_agents, save_dir=None, n_heads=1):
 
     all_image_paths = [
         os.path.join(image_dir, fname) for fname in os.listdir(image_dir)
-        if fname.lower().endswith(".png") and 'global' not in fname
+        if fname.lower().endswith(".png") and 'world' not in fname
     ]
     all_image_paths = sorted(
         all_image_paths,
