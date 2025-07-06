@@ -145,9 +145,9 @@ class EnvironmentLoopEvents(core.Worker):
             events = self._environment.environment.events()
             
             # add a small punishment for the zapping action 
-            for i, x in enumerate(action):
-                if x == 7:
-                    timestep.reward[i] -= 0.1
+            # for i, x in enumerate(action):
+            #     if x == 7:
+            #         timestep.reward[i] -= 0.1
             # f = open("temp_obs.json", "w")
             
             # episode_steps
