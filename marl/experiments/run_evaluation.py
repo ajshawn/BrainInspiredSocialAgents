@@ -191,7 +191,7 @@ class Evaluate(core.Actor):
             # self.episode_params = ma_utils.select_idx(self.loaded_params,
             #                                           self.selected_params)
 
-        (logits, _, embedding), new_states = self._p_forward(
+        (logits, _, _, embedding), new_states = self._p_forward(
             self.episode_params, observations, self._states
         )
         # probability based action selection
