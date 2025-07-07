@@ -21,6 +21,10 @@ from marl.utils import experiment_utils as ma_utils
 
 _PMAP_AXIS_NAME = "data"
 
+'''
+In the memory-efficient version, each device holds only 1 agent’s state at a time — repeated across all chunks — not all agents at once.
+Only the master controller (self._combined_states) logically holds all agents — but on-device, only one chunk is materialized at a time.
+'''
 
 class MALearner(acme.Learner):
 
