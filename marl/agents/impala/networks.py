@@ -600,7 +600,7 @@ class AttentionLayer(hk.Module):
     self.positional_embedding = positional_embedding
     self.attn_enhance_multiplier = attn_enhance_multiplier
     self.add_selection_vec = add_selection_vec
-  def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
+  def __call__(self, query, key, value, enhance_map=None):
     # query: LSTM hidden state [B, H] H for hidden state dimension 
     # key, value: CNN features [B, 121, K] K for key/value dimension
     if jnp.ndim(query) == 1:
@@ -647,19 +647,92 @@ class AttentionLayer(hk.Module):
     # Compute attention scores
     scores = jnp.einsum('bik,bjk->bij', query, key)  # [B, 1, 121]
     scores = jnp.squeeze(scores, axis=1)             # [B, 121]
-    if self.attn_enhance_multiplier != 0:
-      # Enhance attention scores for specific locations
-      enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1]*enhance_map.shape[-2]))  # [B, 121]
-      max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
-      enhancement = self.attn_enhance_multiplier * enhance_map * max_scores # [B, 121]
-      scores += enhancement  # [B, 121]
-    # if self.attn_enhance_multiplier != 0:
+    scores = scores / jnp.sqrt(self.key_size)
+    weights = jax.nn.softmax(scores, axis=-1)        # [B, 121]
+    
+    # Apply attention
+    output = jnp.einsum('bi,bik->bk', weights, value)  # [B, K]
+    return output, weights
+
+class AttentionItemAwareLayer(hk.Module):
+  """Attention layer between CNN and LSTM."""
+  def __init__(
+      self, 
+      key_size: int, 
+      positional_embedding = None, 
+      add_selection_vec = False,
+      attn_enhance_multiplier: float = 0.0,
+    ):
+    """
+    Args:
+      key_size: Hidden dim of the key and value vectors
+      positional_embedding: Type of positional embedding to use
+      attn_enhancement_multiplier: Multiplier for enhancing the attention scores for specific locations
+    """
+    super().__init__(name="attention_layer")
+    self.key_size = key_size
+    self.positional_embedding = positional_embedding
+    self.attn_enhance_multiplier = attn_enhance_multiplier
+    self.add_selection_vec = add_selection_vec
+  def __call__(self, query, key, value, enhance_map):
+    # query: LSTM hidden state [B, H] H for hidden state dimension 
+    # key, value: CNN features [B, 121, K] K for key/value dimension
+    if jnp.ndim(query) == 1:
+      # Add batch dimension to query
+      query = jnp.expand_dims(query, axis=0)
+    if jnp.ndim(key) == 2:
+      # Add sequence dimension to key/value
+      key = jnp.expand_dims(key, axis=0)
+      value = jnp.expand_dims(value, axis=0)
+    if self.positional_embedding == 'fixed':
+      # # Add fixed CoordConv positional embedding [H, W, 2]
+      B, N, _ = key.shape
+      H = 11
+      y = jnp.linspace(-1.0, 1.0, H)
+      x = jnp.linspace(-1.0, 1.0, H) # assuming square grid, H = W
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")  # shape [H, W]
+      coords = jnp.stack([yy, xx], axis=-1)       # [H, W, 2]
+      coords = jnp.reshape(coords, [N, 2])         # [121, 2]
+      coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])  # [B, 121, 2]
+      key = jnp.concatenate([key, coords], axis=-1)    # [B, 121, C+2]
+      value = jnp.concatenate([value, coords], axis=-1)  # [B, 121, C+2] 
+    elif self.positional_embedding == 'learnable':
+      # learnable positional embedding [121, 64]
+      #jax.debug.print('learnable positional embedding')
+      pos_emb = hk.get_parameter("pos_embedding", shape=[key.shape[1], self.key_size], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      # Broadcast to batch size
+      key += pos_emb[None, :, :]
+      value += pos_emb[None, :, :]
+    # else:
+    #   jax.debug.print('no positional embedding')
+    #   jax.debug.print(self.positional_embedding)
+
+    ## Project query, key, value to same dimension
+    query = hk.Linear(self.key_size)(query)  # [B, K]
+    key = hk.Linear(self.key_size)(key)      # [B, 121, K]
+    value = hk.Linear(self.key_size)(value)  # [B, 121, K]
+    if self.add_selection_vec:
+      # add a learnable selection vector to query 
+      selection_vec = hk.get_parameter("selection_vector", shape=[self.key_size], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      # Broadcast to batch size
+      query += selection_vec[None, :]  # [B, K]
+    # Expand query dims for broadcasting
+    query = jnp.expand_dims(query, axis=1)       # [B, 1, K]
+    # Compute attention scores
+    scores = jnp.einsum('bik,bjk->bij', query, key)  # [B, 1, 121]
+    scores = jnp.squeeze(scores, axis=1)             # [B, 121]
+   
+    # Enhance attention scores for specific locations
+    # enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1]*enhance_map.shape[-2]))  # [B, 121]
+    # max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
+    # enhancement = self.attn_enhance_multiplier * enhance_map * max_scores # [B, 121]
+    # scores += enhancement  # [B, 121]
     # # Enhance attention scores for specific locations
-    #   enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1] * enhance_map.shape[-2]))  # [B, 121]
-    #   max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
-    #   enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, 1]
-    #   # Use `jnp.where` to set scores where enhance_map == 1
-    #   scores = jnp.where(enhance_map == 1, enhanced_scores, scores)  # [B, 121]
+    enhance_map = enhance_map.reshape((-1, enhance_map.shape[-1] * enhance_map.shape[-2]))  # [B, 121]
+    max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, 1]
+    enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, 1]
+    # Use `jnp.where` to set scores where enhance_map == 1
+    scores = jnp.where(enhance_map == 1, enhanced_scores, scores)  # [B, 121]
     scores = scores / jnp.sqrt(self.key_size)
     weights = jax.nn.softmax(scores, axis=-1)        # [B, 121]
     
@@ -995,9 +1068,25 @@ class IMPALANetwork_attention_item_aware(IMPALANetwork_attention):
       recurrent_dim, 
       feature_extractor, 
       positional_embedding=None,
-      attn_enhance_multiplier=2.0,
+      attn_enhance_multiplier=1.0,
+      add_selection_vec=False, 
+      use_layer_norm: bool = False
     ):
-    super().__init__(num_actions, recurrent_dim, feature_extractor, positional_embedding, attn_enhance_multiplier)
+    super().__init__(
+      num_actions=num_actions,
+      recurrent_dim=recurrent_dim,
+      feature_extractor=feature_extractor,
+      positional_embedding=positional_embedding,
+      add_selection_vec=add_selection_vec,
+      attn_enhance_multiplier=attn_enhance_multiplier,
+      use_layer_norm=use_layer_norm
+    )
+    self._attention = AttentionItemAwareLayer(
+      key_size=64,
+      positional_embedding=positional_embedding, 
+      add_selection_vec=add_selection_vec,
+      attn_enhance_multiplier=attn_enhance_multiplier,
+    )
 
   def __call__(self, inputs, state: hk.LSTMState):
     embedding = self._embed(inputs) # [B, 121, F]
