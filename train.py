@@ -68,6 +68,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_item_aware",
         "PopArtIMPALA_attention_multihead",
         "PopArtIMPALA_attention_multihead_disturb",
+        "PopArtIMPALA_attention_multihead_item_aware",
     ],
     "Algorithm to train",
 )
@@ -397,6 +398,25 @@ def build_experiment_config():
         # Construct the agent.
         config = impala.IMPALAConfig(
             n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=0.001,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+        
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_item_aware":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_item_aware, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,
+            num_heads=n_heads,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_cross_entropy_cost= 0.01,
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)

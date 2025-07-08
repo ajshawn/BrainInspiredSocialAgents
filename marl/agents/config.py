@@ -47,10 +47,11 @@ class MAConfig:
   scale_lb = 1e-2
   scale_ub = 1e6
 
-  # # Loss configuration.
+  # Loss configuration.
   baseline_cost: float = 1.0
   entropy_cost: float = 0.003
   head_entropy_cost: float = 0.0
+  head_cross_entropy_cost: float = 0.0
   max_abs_reward: float = np.inf
 
   # Replay options

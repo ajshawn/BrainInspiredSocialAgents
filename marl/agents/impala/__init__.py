@@ -15,3 +15,4 @@ from marl.agents.impala.networks import make_network_attention_spatial
 from marl.agents.impala.networks import make_network_attention_item_aware
 from marl.agents.impala.networks import make_network_attention_multihead
 from marl.agents.impala.networks import make_network_attention_multihead_disturb
+from marl.agents.impala.networks import make_network_attention_multihead_item_aware
