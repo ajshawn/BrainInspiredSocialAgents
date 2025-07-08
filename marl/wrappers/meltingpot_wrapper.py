@@ -15,7 +15,8 @@ from PIL import Image
 
 from marl import types as marl_types
 
-USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "OBJECTS_IN_VIEW","OBJECTS_IN_VIEW_TENSOR","POSITION","ORIENTATION"}
+# USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "OBJECTS_IN_VIEW","OBJECTS_IN_VIEW_TENSOR","POSITION","ORIENTATION"}
+USED_OBS_KEYS = {"global", "RGB", "INVENTORY", "READY_TO_SHOOT", "OBJECTS_IN_VIEW"}
 
 def obs_to_json_dict(data: dm_env.TimeStep.observation) -> dict:
     """Converts a dm_env observation to a dict for JSON serialization."""
@@ -96,11 +97,17 @@ class MeltingPotWrapper(dmlab2d.Environment):
     for agent_id, agent_obs in obs_dict.items():
       items_array = np.array(agent_obs['OBJECTS_IN_VIEW'], dtype=np.uint8)
       items_array *= 255
-      pil_img = Image.fromarray(items_array)
-      pil_img = pil_img.resize((11, 11), Image.BICUBIC)  
-      os.makedirs(output_dir, exist_ok=True)
-      save_path = os.path.join(output_dir, f"step_{step}_agent_{agent_id}_items.png")
-      pil_img.save(save_path)
+      
+      if items_array.ndim == 2:
+        items_array = np.expand_dims(items_array, axis=0)  # Add a channel dimension if missing
+      
+      for i in range(items_array.shape[0]):
+        pil_img = Image.fromarray(items_array[i])
+        pil_img = pil_img.resize((11, 11), Image.BICUBIC)
+        os.makedirs(output_dir, exist_ok=True)
+        save_path = os.path.join(output_dir, f"step_{step}_agent_{agent_id}_items_{i}.png")
+        pil_img.save(save_path)
+      
       del agent_obs['OBJECTS_IN_VIEW']
 
   def _remove_unwanted_observations(self, observation: marl_types.Observation):

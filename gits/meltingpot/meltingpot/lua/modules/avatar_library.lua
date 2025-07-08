@@ -278,58 +278,61 @@ function Avatar:addObservations(tileSet, world, observations)
   observations[#observations + 1] = {
     name = id .. ".OBJECTS_IN_VIEW",
     type = "tensor.ByteTensor",
-    shape = {11, 11},
+    shape = {3, 11, 11},  -- 3 channels: acorn, apple, player
     func = function(grid)
       local view_width = 11
       local view_height = 11
       local center_x = math.floor(view_width / 2) + 1  -- 6
-      local center_y = view_height - 1                -- 10
-
-      -- Initialize view grid with 0s
-      local acorn_view = {}
-      for y = 1, view_height do
-        acorn_view[y] = {}
-        for x = 1, view_width do
-          acorn_view[y][x] = 0
+      local center_y = view_height - 1                 -- 10
+  
+      -- Initialize three channels with zeros
+      local view = {}
+      for c = 1, 3 do
+        view[c] = {}
+        for y = 1, view_height do
+          view[c][y] = {}
+          for x = 1, view_width do
+            view[c][y][x] = 0
+          end
         end
       end
-
-      -- Query objects in both upper and lower physical layers
+  
+      -- Query objects in both layers
       local objectsInView = self:queryPartialObservationWindow('upperPhysical')
       local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
       for _, obj in ipairs(objectsInViewLower) do
         table.insert(objectsInView, obj)
       end
-
+  
       local avatar = self.gameObject
       local transform = avatar:getComponent('Transform')
       local avatarPos = avatar:getPosition()
-
+  
       for _, obj in ipairs(objectsInView) do
-        -- if obj:getState() == "floorAcorn" then
-        if obj:getState() == "goldRaw" then
-          local pos = obj:getPosition()
-          local rel = transform:getRelativeDirectionFromAbsolute{
-            pos[1] - avatarPos[1],
-            pos[2] - avatarPos[2]
-          }
-
-          local vx = center_x + rel[1]
-          local vy = center_y + rel[2]
-
-          if vx >= 1 and vx <= view_width and vy >= 1 and vy <= view_height then
-            acorn_view[vy][vx] = 1
+        local pos = obj:getPosition()
+        local rel = transform:getRelativeDirectionFromAbsolute{
+          pos[1] - avatarPos[1],
+          pos[2] - avatarPos[2]
+        }
+  
+        local vx = center_x + rel[1]
+        local vy = center_y + rel[2]
+  
+        if vx >= 1 and vx <= view_width and vy >= 1 and vy <= view_height then
+          if obj:getState() == "floorAcorn" then
+            view[1][vy][vx] = 1  -- Channel 1: acorn
+          elseif obj:getState() == "apple" then
+            view[2][vy][vx] = 1  -- Channel 2: apple
+          elseif obj:hasComponent('Avatar') then
+            view[3][vy][vx] = 1  -- Channel 3: other player
           end
         end
       end
-      local tensorView = tensor.ByteTensor(acorn_view)
-      -- print(string.format(
-      --     "tensor view shape: %s", helpers.tostringOneLine(tensorView:shape())))
-      -- print(string.format(
-      --     "tensor view: %s", helpers.tostringOneLine(tensorView)))
-      return tensorView
+  
+      return tensor.ByteTensor(view)
     end
   }
+  
 
 
   -- observations[#observations + 1] = {
