@@ -4,7 +4,7 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
-    "0.5"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+    "0.4"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
@@ -376,7 +376,7 @@ def build_experiment_config():
         )
         # Construct the agent.
         config = impala.IMPALAConfig(
-            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=0.1,
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
