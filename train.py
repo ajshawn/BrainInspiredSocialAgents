@@ -119,8 +119,19 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
 flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
+
+# Attention network flags
 flags.DEFINE_string("positional_embedding", None, "Whether to use positional embedding for attention")
 flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
+flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
+flags.DEFINE_string(
+    "disturb_heads", "0",
+    "Comma separated list of attention heads to disturb.",
+)
+flags.DEFINE_integer(
+    "num_heads", 4, "Number of attention heads to use in the attention network."
+)
+
 # Observation logging flags
 flags.DEFINE_bool("log_obs", False, "Whether to log observations.")
 flags.DEFINE_string("log_filename", "temp/observations.jsonl", "Filename to log observations.")
@@ -128,15 +139,16 @@ flags.DEFINE_string(
     "log_img_dir", "agent_view_images", "Directory to save agent view images."
 )
 flags.DEFINE_integer("log_interval", 1, "Interval to log observations.")
-# Attention enhancement flag
-flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
-# Attention head flags
-flags.DEFINE_string(
-    "disturb_heads", "0",
-    "Comma separated list of attention heads to disturb.",
+
+# Loss selection flags
+flags.DEFINE_float(
+    "head_entropy_cost", 0.0, "Head entropy cost for attention networks."
 )
-flags.DEFINE_integer(
-    "num_heads", 4, "Number of attention heads to use in the attention network."
+flags.DEFINE_float(
+    "head_cross_entropy_cost", 0.0, "Head cross entropy cost for attention networks."
+)
+flags.DEFINE_float(
+    "head_mse_cost", 0.0, "Head MSE cost for attention networks."
 )
 
 def _get_custom_env_configs():
@@ -178,6 +190,17 @@ def build_experiment_config():
     attn_enhance_multiplier = FLAGS.attn_enhance_multiplier
     disturb_heads = [int(head) for head in FLAGS.disturb_heads.split(",")]
     n_heads = FLAGS.num_heads
+    head_entropy_cost = FLAGS.head_entropy_cost
+    head_cross_entropy_cost = FLAGS.head_cross_entropy_cost
+    head_mse_cost = FLAGS.head_mse_cost
+    
+    # For now, assert only one of the attention head auxiliary losses is used
+    assert(sum([
+            head_entropy_cost > 0.0,
+            head_cross_entropy_cost > 0.0,
+            head_mse_cost > 0.0,
+        ]) <= 1)
+        
 
     frozen_agents = set(
         [int(agent) for agent in FLAGS.frozen_agents.split(",")]
@@ -416,7 +439,10 @@ def build_experiment_config():
         )
         # Construct the agent.
         config = impala.IMPALAConfig(
-            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_cross_entropy_cost= 0.01,
+            n_agents=environment_specs.num_agents, 
+            memory_efficient=memory_efficient, 
+            head_cross_entropy_cost=head_cross_entropy_cost,
+            head_mse_cost=head_mse_cost,
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)

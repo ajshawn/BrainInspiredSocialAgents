@@ -17,7 +17,7 @@ from marl import types
 from marl.agents import learning
 from marl.agents import learning_memory_efficient
 from marl.agents.impala.loss import batched_art_impala_loss, batched_art_impala_loss_head_entropy, \
-    batched_art_impala_loss_head_cross_entropy
+    batched_art_impala_loss_head_cross_entropy, batched_art_impala_loss_head_mse
 from marl.agents.impala.loss import batched_popart_impala_loss, batched_popart_impala_loss_head_entropy
 from marl.agents.impala.loss import impala_loss
 
@@ -67,6 +67,7 @@ class PopArtIMPALALearner(learning.MALearnerPopArt):
       entropy_cost: float = 0.0,
       head_entropy_cost: float = 0.0,
       head_cross_entropy_cost: float = 0.0,
+      head_mse_cost: float = 0.0,
       max_abs_reward: float = np.inf,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
@@ -89,6 +90,15 @@ class PopArtIMPALALearner(learning.MALearnerPopArt):
                 baseline_cost=baseline_cost,
                 entropy_cost=entropy_cost,
                 head_cross_entropy_cost=head_cross_entropy_cost,
+                max_abs_reward=max_abs_reward,
+            )
+        elif head_mse_cost != 0.0:
+            loss_fn = functools.partial(
+                batched_art_impala_loss_head_mse,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                head_mse_cost=head_mse_cost,
                 max_abs_reward=max_abs_reward,
             )
         else:
@@ -164,6 +174,7 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
       entropy_cost: float = 0.0,
       head_entropy_cost: float = 0.0,
       head_cross_entropy_cost: float = 0.0,
+      head_mse_cost: float = 0.0,
       max_abs_reward: float = np.inf,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
@@ -188,6 +199,15 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
                 baseline_cost=baseline_cost,
                 entropy_cost=entropy_cost,
                 head_cross_entropy_cost=head_cross_entropy_cost,
+                max_abs_reward=max_abs_reward,
+            )
+        elif head_mse_cost != 0.0:
+            loss_fn = functools.partial(
+                batched_art_impala_loss_head_mse,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                head_mse_cost=head_mse_cost,
                 max_abs_reward=max_abs_reward,
             )
         else:
