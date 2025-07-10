@@ -192,7 +192,7 @@ def build_experiment_config():
 
     if FLAGS.experiment_dir:
         assert (
-            FLAGS.algo_name in FLAGS.experiment_dir
+            FLAGS.algo_name in FLAGS.experiment_dir or "disturb" in FLAGS.algo_name
         ), f"experiment_dir must be a {FLAGS.algo_name} experiment"
         assert (
             FLAGS.env_name in FLAGS.experiment_dir
