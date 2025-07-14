@@ -1,12 +1,12 @@
-GPUS="4,5,6,7"
-EXP_DIR="/local/shawn/marl-jax/results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323"
+GPUS="0"
 
 CUDA_VISIBLE_DEVICES=${GPUS} python train.py \
   --async_distributed \
   --available_gpus ${GPUS} \
-  --num_actors 26 \
-  --algo_name PopArtIMPALA \
+  --num_actors 13 \
+  --algo_name PopArtIMPALA_attention_multihead_item_aware \
   --env_name meltingpot \
   --map_name predator_prey__open \
   --seed 1 \
-  --experiment_dir ${EXP_DIR}
+  --positional_embedding learnable \
+  --head_cross_entropy_cost 0.01
