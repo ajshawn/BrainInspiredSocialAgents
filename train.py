@@ -125,6 +125,7 @@ flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
 flags.DEFINE_string("positional_embedding", None, "Whether to use positional embedding for attention")
 flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
 flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
+flags.DEFINE_integer("attn_key_size", 64, "Size of the attention key vector.")
 flags.DEFINE_string(
     "disturb_heads", "0",
     "Comma separated list of attention heads to disturb.",
@@ -194,6 +195,7 @@ def build_experiment_config():
     head_entropy_cost = FLAGS.head_entropy_cost
     head_cross_entropy_cost = FLAGS.head_cross_entropy_cost
     head_mse_cost = FLAGS.head_mse_cost
+    attn_key_size = FLAGS.attn_key_size
     
     # For now, assert only one of the attention head auxiliary losses is used
     assert(sum([
@@ -409,6 +411,7 @@ def build_experiment_config():
             add_selection_vec=add_selection_vector,
             attn_enhance_multiplier=attn_enhance_multiplier,
             num_heads=n_heads,
+            key_size=attn_key_size,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
@@ -449,6 +452,7 @@ def build_experiment_config():
             positional_embedding=positional_embedding,
             add_selection_vec=add_selection_vector,
             num_heads=n_heads,
+            key_size=attn_key_size,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
