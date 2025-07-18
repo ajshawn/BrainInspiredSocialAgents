@@ -472,7 +472,47 @@ def make_network_attention_multihead_item_aware(environment_spec: EnvironmentSpe
       unroll_fn=unroll_fn,
       critic_fn=critic_fn,
   )
-                                 
+
+def make_network_impala_cnn_visualization(environment_spec: EnvironmentSpec,
+                   feature_extractor: hk.Module,
+                   recurrent_dim: int = 128,
+                   ):
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetworkCNNVis(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor)
+    return model(inputs, state)
+
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetworkCNNVis(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor)
+    return model.initial_state(batch_size)
+
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetworkCNNVis(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor)
+    return model.unroll(inputs, state)
+
+  def critic_fn(inputs):
+    model = IMPALANetworkCNNVis(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor)
+    return model.critic(inputs)
+
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+
 
 class MultiHeadAttentionLayer(hk.Module):
   def __init__(
@@ -1430,3 +1470,31 @@ class IMPALANetwork(hk.RNNCore):
 
   def critic(self, inputs):
     return jnp.squeeze(self._value_layer(inputs), axis=-1)
+
+class IMPALANetworkCNNVis(IMPALANetwork):
+  """Network architecture as described in MeltingPot paper"""
+
+  def __init__(self, num_actions, recurrent_dim, feature_extractor):
+    super().__init__(num_actions, recurrent_dim, feature_extractor)
+
+  def __call__(self, inputs, state: hk.LSTMState):
+    emb, cnn_attn = self._embed(inputs)
+    op, new_state = self._recurrent(emb, state)
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, op, cnn_attn), new_state
+
+  def unroll(self, inputs, state: hk.LSTMState):
+    """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
+    emb, _ = self._embed(inputs)
+
+    # fix for dynamic_unroll with reverb sampled data
+    # state = hk.LSTMState(state.hidden, state.cell)
+
+    # unrolling the time dimension
+    op, new_states = hk.static_unroll(self._recurrent, emb,
+                                      state)  # , return_all_states=True)
+
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, op, emb), new_states

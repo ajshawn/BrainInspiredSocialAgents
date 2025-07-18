@@ -165,6 +165,41 @@ class MeltingpotFE(hk.Module):
 
     return combined_op
 
+class MeltingpotFECNNVis(hk.Module):
+
+  def __init__(self, num_actions):
+    super().__init__("meltingpot_features")
+    self.num_actions = num_actions
+    self._visual_torso = VisualFeaturesCNNVis()
+
+  def __call__(self, inputs):
+    # extract environment observation from the full observation object
+    obs = inputs["observation"]
+
+    # extract visual features form RGB observation
+    ip_img = obs["RGB"].astype(jnp.float32) / 255
+    vis_op, cnn_attn = self._visual_torso(ip_img)
+
+    # extract other observations
+    inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+
+    # Do a one-hot embedding of the actions.
+    action = jax.nn.one_hot(
+        inputs["action"], num_classes=self.num_actions)  # [B, A]
+
+    # Add dummy trailing dimensions to rewards if necessary.
+    while ready_to_shoot.ndim < inventory.ndim:
+      ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+
+    # check if the dimensions of all the tensors match
+    # assert vis_op.ndim==inventory.ndim==ready_to_shoot.ndim==action.ndim
+
+    # concatenate all the results
+    combined_op = jnp.concatenate([vis_op, ready_to_shoot, inventory, action],
+                                  axis=-1)
+
+    return combined_op, cnn_attn  # Return both the final output and the attention features
+
 class VisualFeatures(hk.Module):
   """Simple convolutional stack from MeltingPot paper."""
 
@@ -198,6 +233,48 @@ class VisualFeatures(hk.Module):
 
     outputs = self._ff(outputs)
     return outputs
+
+class VisualFeaturesCNNVis(hk.Module):
+  """Simple convolutional stack from MeltingPot paper."""
+
+  def __init__(self):
+    super().__init__(name="meltingpot_visual_features")
+    self._cnn_1 = hk.Sequential([
+        hk.Conv2D(16, [8, 8], 8, padding="VALID"),
+        jax.nn.relu,
+    ])
+    self._cnn_2 = hk.Sequential([
+        hk.Conv2D(32, [4, 4], 1, padding="VALID"),
+        jax.nn.relu,
+    ])
+    self._ff = hk.Sequential([
+        hk.Linear(64),
+        jax.nn.relu,
+        hk.Linear(64),
+        jax.nn.relu,
+    ])
+
+  def __call__(self, inputs: Images) -> jnp.ndarray:
+    inputs_rank = jnp.ndim(inputs)
+    batched_inputs = inputs_rank == 4
+    if inputs_rank < 3 or inputs_rank > 4:
+      raise ValueError("Expected input BHWC or HWC. Got rank %d" % inputs_rank)
+
+    cnn_attn = self._cnn_1(inputs)  # Shape: [B, 11, 11, 16]
+    outputs = self._cnn_2(cnn_attn)  # Shape: [B, 8, 8, 32]
+
+    # Reduce channel dimension of cnn_attn as sum of absolute values
+    cnn_attn = jnp.sum(jnp.abs(cnn_attn), axis=-1)  # Shape: [B, 11, 11]
+    cnn_attn = jnp.reshape(cnn_attn, (-1, cnn_attn.shape[-1] * cnn_attn.shape[-2]))  # [B, 121]
+    cnn_attn = jax.nn.softmax(cnn_attn, axis=-1)    
+
+    if batched_inputs:
+      outputs = jnp.reshape(outputs, [outputs.shape[0], -1])  # [B, D]
+    else:
+      outputs = jnp.reshape(outputs, [-1])  # [D]
+
+    outputs = self._ff(outputs)
+    return outputs, cnn_attn  # Return both the final output and the attention features
 
 class AttentionCNN_FE(hk.Module):
 
@@ -263,7 +340,6 @@ class VisualFeatures_attention(hk.Module):
 
     return outputs
   
-
 class Discriminator(hk.Module):
 
   def __init__(self, diversity_dim, discriminator_ensembles):

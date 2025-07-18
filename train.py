@@ -4,7 +4,7 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
-    "0.4"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+    "0.7"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
@@ -22,7 +22,7 @@ from marl.agents import impala
 from marl.agents import opre
 from marl.agents.networks import ArrayFE
 from marl.agents.networks import ImageFE
-from marl.agents.networks import MeltingpotFE
+from marl.agents.networks import MeltingpotFE, MeltingpotFECNNVis
 from marl.agents.networks import AttentionCNN_FE, AttentionSpatialCNN_FE
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
@@ -59,7 +59,8 @@ flags.DEFINE_enum(
     "IMPALA",
     [
         "IMPALA", 
-        "PopArtIMPALA", 
+        "PopArtIMPALA",
+        "PopArtIMPALA_CNN_visualization", 
         "OPRE", 
         "PopArtOPRE", 
         "PopArtIMPALA_attention",
@@ -215,7 +216,7 @@ def build_experiment_config():
 
     if FLAGS.experiment_dir:
         assert (
-            FLAGS.algo_name in FLAGS.experiment_dir or "disturb" in FLAGS.algo_name
+            FLAGS.algo_name in FLAGS.experiment_dir or "disturb" in FLAGS.algo_name or "visualization" in FLAGS.algo_name
         ), f"experiment_dir must be a {FLAGS.algo_name} experiment"
         assert (
             FLAGS.env_name in FLAGS.experiment_dir
@@ -310,6 +311,21 @@ def build_experiment_config():
         # Create network
         network_factory = functools.partial(
             impala.make_network_2, feature_extractor=feature_extractor
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_CNN_visualization":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_impala_cnn_visualization, feature_extractor=MeltingpotFECNNVis
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
