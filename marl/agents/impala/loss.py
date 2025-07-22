@@ -10,6 +10,7 @@ from acme.jax import utils
 import haiku as hk
 import jax
 import jax.numpy as jnp
+from jax import lax
 import numpy as np
 import rlax
 from distrax._src.utils import math
@@ -1086,8 +1087,12 @@ def batched_art_impala_loss_head_cross_entropy(
 
     # Attention-Item Cross Entropy loss
     # items: [B, T, item_types, 11, 11]
-    # attn_weights: [T, B, n_heads, 121]
-    item_types = items.shape[-3]
+    # attn_weights: [B, T, n_heads, 121]
+    _, _, _, n_heads, _ = attn_weights.shape
+    # When n_heads-1 > n_items, use CE loss on the first (n_items) heads
+    # Otherwise, use CE loss on the first (n_heads-1) items and heads
+    items = items[:,:,:n_heads-1,:,:]
+    _, _, item_types, _, _ = items.shape
     # Flatten items to [..., item_types, 121]
     item_flat = items.reshape(*items.shape[:-2], -1)  # [B, T, item_types, 121] 
     # Normalize each item vector
