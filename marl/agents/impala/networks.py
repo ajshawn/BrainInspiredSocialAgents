@@ -414,6 +414,83 @@ def make_network_attention_multihead_disturb(environment_spec: EnvironmentSpec,
       critic_fn=critic_fn,
   )
 
+def make_network_attention_multihead_enhance(environment_spec: EnvironmentSpec,
+                                feature_extractor: hk.Module,
+                                recurrent_dim: int = 128,
+                                positional_embedding: Optional[str] = None,
+                                add_selection_vec: bool = False,
+                                attn_enhance_multiplier: float = 0.0,
+                                num_heads: int = 4,
+                                key_size: int = 64,
+                                attn_enhance_head_indices: List[int] = [],
+                                attn_enhance_item_idx: int = 0):
+  """
+  Create a multi-head attention network with enhanced attention on specified heads.
+  """
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_multihead_attention_enhance(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        attn_enhance_head_indices=attn_enhance_head_indices,
+        attn_enhance_item_idx=attn_enhance_item_idx)
+    return model(inputs, state)
+  
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_multihead_attention_enhance(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        attn_enhance_head_indices=attn_enhance_head_indices,
+        attn_enhance_item_idx=attn_enhance_item_idx)
+    return model.initial_state(batch_size)
+  
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_multihead_attention_enhance(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        attn_enhance_head_indices=attn_enhance_head_indices,
+        attn_enhance_item_idx=attn_enhance_item_idx)
+    return model.unroll(inputs, state)
+  
+  def critic_fn(inputs):
+    model = IMPALANetwork_multihead_attention_enhance(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        num_heads=num_heads,
+        key_size=key_size,
+        attn_enhance_head_indices=attn_enhance_head_indices,
+        attn_enhance_item_idx=attn_enhance_item_idx)
+    return model.critic(inputs)
+
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+
 def make_network_attention_multihead_item_aware(environment_spec: EnvironmentSpec,
                                 feature_extractor: hk.Module,
                                 recurrent_dim: int = 128,
@@ -521,7 +598,9 @@ class MultiHeadAttentionLayer(hk.Module):
       key_size_per_head: int,
       positional_embedding=None,
       add_selection_vec=False,
-      attn_enhance_multiplier: float = 0.0):
+      attn_enhance_multiplier: float = 0.0,
+      attn_enhance_head_indices: List[int] = [],
+  ):
     super().__init__(name="multihead_attention_layer")
     self.num_heads = num_heads
     self.key_size_per_head = key_size_per_head  # per head
@@ -529,6 +608,7 @@ class MultiHeadAttentionLayer(hk.Module):
     self.attn_enhance_multiplier = attn_enhance_multiplier
     self.add_selection_vec = add_selection_vec
     self.model_dim = num_heads * key_size_per_head
+    self.attn_enhance_head_indices = np.array(attn_enhance_head_indices, dtype=int)
 
   def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
     if jnp.ndim(query) == 1:
@@ -574,11 +654,22 @@ class MultiHeadAttentionLayer(hk.Module):
 
     # Scaled dot-product attention
     scores = jnp.einsum("bhqd,bhkd->bhqk", q, k).squeeze(2)  # [B, H, N]
+
     if self.attn_enhance_multiplier != 0:
       enhance_map = enhance_map.reshape((-1, N))  # [B, N]
       max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, H, 1]
-      enhanced_scores = self.attn_enhance_multiplier * max_scores
-      scores = jnp.where(enhance_map[:, None, :] == 1, enhanced_scores, scores)
+      enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, H, 1]
+      # Create a mask for enhanced heads: [H], 1 for enhance, 0 for others
+      enhance_mask = jnp.isin(jnp.arange(self.num_heads), self.attn_enhance_head_indices).astype(jnp.float32)  # [H]
+      enhance_mask = enhance_mask[None, :, None]  # [1, H, 1] for broadcasting
+      # Broadcast enhance_map to match scores shape: [B, 1, N]
+      enhance_map = enhance_map[:, None, :]
+      # Apply enhancement only for selected heads and enhance_map positions
+      scores = jnp.where(
+          (enhance_map == 1) & (enhance_mask == 1),
+          enhanced_scores,
+          scores
+      )
 
     scores = scores / jnp.sqrt(self.key_size_per_head * self.num_heads)  # Scale scores
     weights = jax.nn.softmax(scores, axis=-1)  # [B, H, N]
@@ -1432,6 +1523,63 @@ class IMPALANetwork_multihead_attention_item_aware(IMPALANetwork_attention):
     value = jnp.squeeze(self._value_layer(op), axis=-1)
     return (logits, value, op, (attn_weights, objects_in_view)), new_states
 
+class IMPALANetwork_multihead_attention_enhance(IMPALANetwork_attention):
+  def __init__(
+      self, 
+      num_actions,
+      recurrent_dim, 
+      feature_extractor, 
+      num_heads=4,
+      key_size=64,
+      positional_embedding=None, 
+      add_selection_vec=False, 
+      use_layer_norm=False,
+      attn_enhance_multiplier=1.0,
+      attn_enhance_head_indices=[],
+      attn_enhance_item_idx=0,):
+    super().__init__(
+      num_actions,
+      recurrent_dim,
+      feature_extractor,
+      positional_embedding=positional_embedding,
+      add_selection_vec=add_selection_vec,
+      use_layer_norm=use_layer_norm)
+    self._attention = MultiHeadAttentionLayer(
+        num_heads=num_heads,
+        key_size_per_head=key_size // num_heads,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier,
+        attn_enhance_head_indices=attn_enhance_head_indices)
+    self.attn_enhance_item_idx = attn_enhance_item_idx  # index of the item to enhance attention on
+
+  def __call__(self, inputs, state: hk.LSTMState):
+    # TODO: current version does not support test time attention enhancement
+    embedding = self._embed(inputs) # [B, 121, F]
+    obs = inputs["observation"]
+
+    objects_in_view = obs["OBJECTS_IN_VIEW"]  # [B, n_item_types, 11, 11]
+    focal_objects = objects_in_view[:, self.attn_enhance_item_idx, :, :]  # [B, 11, 11]
+    focal_objects = jnp.reshape(focal_objects, (focal_objects.shape[0], -1))  # [B, 121]
+    attended, attn_weights = self._attention(state.hidden, embedding, embedding, enhance_map=focal_objects)
+
+    # extract other observations
+    inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+    # Do a one-hot embedding of the actions.
+    action = jax.nn.one_hot(
+        inputs["action"], num_classes=self.num_actions)  # [B, A]
+    # Add dummy trailing dimensions to rewards if necessary.
+    while ready_to_shoot.ndim < inventory.ndim:
+      ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+    if ready_to_shoot.ndim < attended.ndim:
+      attended = jnp.squeeze(attended, axis=0)
+    # Combine attention output and other observations
+    combined = jnp.concatenate([attended, ready_to_shoot, inventory, action], axis=-1)
+    op, new_state = self._recurrent(combined, state)
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, op, attn_weights), new_state
+  
 class IMPALANetwork(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 

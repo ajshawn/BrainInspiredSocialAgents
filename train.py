@@ -69,6 +69,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_item_aware",
         "PopArtIMPALA_attention_multihead",
         "PopArtIMPALA_attention_multihead_disturb",
+        "PopArtIMPALA_attention_multihead_enhance",
         "PopArtIMPALA_attention_multihead_item_aware",
     ],
     "Algorithm to train",
@@ -125,6 +126,8 @@ flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
 flags.DEFINE_string("positional_embedding", None, "Whether to use positional embedding for attention")
 flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
 flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
+flags.DEFINE_string("attn_enhance_head_indices", "0", "Comma separated list of attention heads to enhance.")
+flags.DEFINE_integer("attn_enhance_item_idx", 0, "Index of the item to enhance attention on.")
 flags.DEFINE_integer("attn_key_size", 64, "Size of the attention key vector.")
 flags.DEFINE_string(
     "disturb_heads", "0",
@@ -190,6 +193,8 @@ def build_experiment_config():
     positional_embedding = FLAGS.positional_embedding
     add_selection_vector = True if FLAGS.add_selection_vector=="True" else False
     attn_enhance_multiplier = FLAGS.attn_enhance_multiplier
+    attn_enhance_head_indices = [int(head) for head in FLAGS.attn_enhance_head_indices.split(",")]
+    attn_enhance_item_idx = FLAGS.attn_enhance_item_idx
     disturb_heads = [int(head) for head in FLAGS.disturb_heads.split(",")]
     n_heads = FLAGS.num_heads
     head_entropy_cost = FLAGS.head_entropy_cost
@@ -218,7 +223,10 @@ def build_experiment_config():
 
     if FLAGS.experiment_dir:
         assert (
-            FLAGS.algo_name in FLAGS.experiment_dir or "disturb" in FLAGS.algo_name or "visualization" in FLAGS.algo_name
+            FLAGS.algo_name in FLAGS.experiment_dir or \
+                "disturb" in FLAGS.algo_name or \
+                "visualization" in FLAGS.algo_name or \
+                "enhance" in FLAGS.algo_name
         ), f"experiment_dir must be a {FLAGS.algo_name} experiment"
         assert (
             FLAGS.env_name in FLAGS.experiment_dir
@@ -444,6 +452,30 @@ def build_experiment_config():
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
         
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_enhance":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_enhance, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,            
+            num_heads=n_heads,
+            key_size=attn_key_size,
+            attn_enhance_multiplier=attn_enhance_multiplier,
+            attn_enhance_head_indices=attn_enhance_head_indices,
+            attn_enhance_item_idx=attn_enhance_item_idx,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=head_entropy_cost,
+            head_cross_entropy_cost=head_cross_entropy_cost, head_mse_cost=head_mse_cost
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+                
     elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_item_aware":
         # Create network
         network_factory = functools.partial(
