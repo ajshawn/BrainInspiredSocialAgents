@@ -1558,9 +1558,9 @@ class IMPALANetwork_multihead_attention_enhance(IMPALANetwork_attention):
     embedding = self._embed(inputs) # [B, 121, F]
     obs = inputs["observation"]
 
-    objects_in_view = obs["OBJECTS_IN_VIEW"]  # [B, n_item_types, 11, 11]
-    focal_objects = objects_in_view[:, self.attn_enhance_item_idx, :, :]  # [B, 11, 11]
-    focal_objects = jnp.reshape(focal_objects, (focal_objects.shape[0], -1))  # [B, 121]
+    objects_in_view = obs["OBJECTS_IN_VIEW"]  # [n_item_types, 11, 11]
+    focal_objects = objects_in_view[self.attn_enhance_item_idx]  # [11, 11]
+    focal_objects = jnp.reshape(focal_objects, (-1, focal_objects.shape[-1]*focal_objects.shape[-2]))  # [B, 121]
     attended, attn_weights = self._attention(state.hidden, embedding, embedding, enhance_map=focal_objects)
 
     # extract other observations
