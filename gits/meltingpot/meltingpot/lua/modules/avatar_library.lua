@@ -319,9 +319,9 @@ function Avatar:addObservations(tileSet, world, observations)
         local vy = center_y + rel[2]
   
         if vx >= 1 and vx <= view_width and vy >= 1 and vy <= view_height then
-          if obj:getState() == "floorAcorn" then
+          if obj:getState() == "goldRaw" or obj:getState() == "goldPartial" then
             view[1][vy][vx] = 1  -- Channel 1: acorn
-          elseif obj:getState() == "apple" then
+          elseif obj:getState() == "ironRaw" then
             view[2][vy][vx] = 1  -- Channel 2: apple
           elseif obj:hasComponent('Avatar') then
             view[3][vy][vx] = 1  -- Channel 3: other player

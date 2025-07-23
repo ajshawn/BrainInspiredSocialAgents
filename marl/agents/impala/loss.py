@@ -1091,7 +1091,7 @@ def batched_art_impala_loss_head_cross_entropy(
     _, _, _, n_heads, _ = attn_weights.shape
     # When n_heads-1 > n_items, use CE loss on the first (n_items) heads
     # Otherwise, use CE loss on the first (n_heads-1) items and heads
-    items = items[:,:,:n_heads-1,:,:]
+    items = items[:,:,:n_heads,:,:]
     _, _, item_types, _, _ = items.shape
     # Flatten items to [..., item_types, 121]
     item_flat = items.reshape(*items.shape[:-2], -1)  # [B, T, item_types, 121] 
