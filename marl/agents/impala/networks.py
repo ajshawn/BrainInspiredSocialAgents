@@ -1634,7 +1634,9 @@ class IMPALANetworkCNNVis(IMPALANetwork):
 
   def unroll(self, inputs, state: hk.LSTMState):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
-    emb, _ = self._embed(inputs)
+    emb, cnn_attn = self._embed(inputs)
+    obs = inputs["observation"]
+    objects_in_view = obs["OBJECTS_IN_VIEW"]  # [B, n_item_types, 11, 11]
 
     # fix for dynamic_unroll with reverb sampled data
     # state = hk.LSTMState(state.hidden, state.cell)
@@ -1645,4 +1647,4 @@ class IMPALANetworkCNNVis(IMPALANetwork):
 
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, op, emb), new_states
+    return (logits, value, op, (cnn_attn, objects_in_view)), new_states

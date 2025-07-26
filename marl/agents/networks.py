@@ -267,6 +267,8 @@ class VisualFeaturesCNNVis(hk.Module):
     cnn_attn = jnp.sum(jnp.abs(cnn_attn), axis=-1)  # Shape: [B, 11, 11]
     cnn_attn = jnp.reshape(cnn_attn, (-1, cnn_attn.shape[-1] * cnn_attn.shape[-2]))  # [B, 121]
     cnn_attn = jax.nn.softmax(cnn_attn, axis=-1)    
+    # To be consistent with multihead attention, reshape to [B, n_heads=1, 121]
+    cnn_attn = jnp.expand_dims(cnn_attn, axis=-2)  # [B, 1, 121]
 
     if batched_inputs:
       outputs = jnp.reshape(outputs, [outputs.shape[0], -1])  # [B, D]
