@@ -3,6 +3,7 @@ import os
 import glob
 import pandas as pd
 from collections import defaultdict
+import argparse
 
 def parse_log_file(filepath):
     """
@@ -65,9 +66,13 @@ def main(log_dir, output_csv='aggregated_results.csv'):
 
     df = pd.DataFrame(all_results)
     df.insert(0, 'FileName', filenames)
+    output_csv = os.path.join(log_dir, output_csv)
     df.to_csv(output_csv, index=False)
     print(f'✅ Results saved to {output_csv}')
 
 if __name__ == '__main__':
-    log_directory = './temp'  # adjust as needed
-    main(log_directory)
+    argparser = argparse.ArgumentParser(description='Parse log files and compute statistics.')
+    argparser.add_argument('--log_dir', '-p', type=str, required=True, help='Directory containing log files')
+
+    args = argparser.parse_args()
+    main(args.log_dir) 
