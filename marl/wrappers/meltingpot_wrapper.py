@@ -44,7 +44,9 @@ class MeltingPotWrapper(dmlab2d.Environment):
                log_obs: bool = False,
                log_filename: str = "observations.jsonl",
                log_img_dir: str = "agent_view_images",
-               log_interval: int = 1):
+               log_interval: int = 1,
+               attn_enhance_agent_skip_indices: list[int] = None,
+    ):
     self._environment = environment
     self.reward_scale = reward_scale
     self._reset_next_step = True
@@ -59,6 +61,7 @@ class MeltingPotWrapper(dmlab2d.Environment):
     ]
     self.log_obs = log_obs
     self.log_interval = log_interval
+    self.attn_enhance_agent_skip_indices = attn_enhance_agent_skip_indices or []
     self.steps = 0
     
     # Set up observaiton logging
@@ -116,6 +119,14 @@ class MeltingPotWrapper(dmlab2d.Environment):
         key: value for key, value in observation.items() if key in USED_OBS_KEYS
     }
 
+  def _mask_items_for_skipped_agents(self, observation: marl_types.Observation):
+    """Masks items in the observation for agents that are skipped."""
+    for i, obs in enumerate(observation):
+      if i in self.attn_enhance_agent_skip_indices:
+        obs["OBJECTS_IN_VIEW"] = np.zeros_like(obs["OBJECTS_IN_VIEW"])
+    
+    return observation
+
   def _refine_timestep(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
     """Refines a dm_env.TimeStep to use dict instead of list for data of multiple-agents."""
     reward = [reward * self.reward_scale for reward in timestep.reward]
@@ -126,6 +137,9 @@ class MeltingPotWrapper(dmlab2d.Environment):
         self._remove_unwanted_observations(agent_obs)
         for agent_obs in timestep.observation
     ]
+
+    # Mask items for skipped agents
+    observation = self._mask_items_for_skipped_agents(observation)
     
     # Log observation
     if self.log_obs:

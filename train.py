@@ -127,6 +127,7 @@ flags.DEFINE_string("positional_embedding", None, "Whether to use positional emb
 flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
 flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
 flags.DEFINE_string("attn_enhance_head_indices", "0", "Comma separated list of attention heads to enhance.")
+flags.DEFINE_string("attn_enhance_agent_skip_indices", "", "Comma separated list of agent indices to skip for attention enhancement.")
 flags.DEFINE_integer("attn_enhance_item_idx", 0, "Index of the item to enhance attention on.")
 flags.DEFINE_integer("attn_key_size", 64, "Size of the attention key vector.")
 flags.DEFINE_string(
@@ -194,6 +195,11 @@ def build_experiment_config():
     add_selection_vector = True if FLAGS.add_selection_vector=="True" else False
     attn_enhance_multiplier = FLAGS.attn_enhance_multiplier
     attn_enhance_head_indices = [int(head) for head in FLAGS.attn_enhance_head_indices.split(",")]
+    attn_enhance_agent_skip_indices = (
+        [int(agent) for agent in FLAGS.attn_enhance_agent_skip_indices.split(",")]
+        if FLAGS.attn_enhance_agent_skip_indices
+        else []
+    )
     attn_enhance_item_idx = FLAGS.attn_enhance_item_idx
     disturb_heads = [int(head) for head in FLAGS.disturb_heads.split(",")]
     n_heads = FLAGS.num_heads
@@ -291,7 +297,8 @@ def build_experiment_config():
             log_obs=log_obs,
             log_filename=log_filename,
             log_img_dir=log_img_dir,
-            log_interval=log_interval,            
+            log_interval=log_interval,    
+            attn_enhance_agent_skip_indices=attn_enhance_agent_skip_indices,    
             **custom_env_configs,
         )
         feature_extractor = MeltingpotFE

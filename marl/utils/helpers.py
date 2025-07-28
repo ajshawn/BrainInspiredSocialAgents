@@ -62,6 +62,7 @@ def make_meltingpot_environment(seed: int,
                                 log_filename: str = "observations.jsonl",
                                 log_img_dir: str = "agent_view_images",
                                 log_interval: int = 1,
+                                attn_enhance_agent_skip_indices: List[int] = None,
                                 **kwargs) -> dmlab2d.Environment:
   """Returns a MeltingPot environment."""
   env_config = substrate.get_config(substrate_name)
@@ -89,7 +90,8 @@ def make_meltingpot_environment(seed: int,
       log_obs=log_obs,
       log_filename=log_filename,
       log_img_dir=log_img_dir,
-      log_interval=log_interval,            
+      log_interval=log_interval,  
+      attn_enhance_agent_skip_indices=attn_enhance_agent_skip_indices          
     )
   env = SinglePrecisionWrapper(env)
   env = ObservationActionRewardWrapper(env)
@@ -169,6 +171,7 @@ def env_factory(seed: int,
                 log_filename: str = "observations.jsonl",
                 log_img_dir: str = "agent_view_images",
                 log_interval: int = 1,
+                attn_enhance_agent_skip_indices: List[int] = None,
                 **kwargs):
   if env_name[-1].isdigit():
     final_env = make_meltingpot_scenario(
@@ -194,6 +197,7 @@ def env_factory(seed: int,
         log_filename=log_filename,
         log_img_dir=log_img_dir,
         log_interval=log_interval,
+        attn_enhance_agent_skip_indices=attn_enhance_agent_skip_indices,
         **kwargs)
   return final_env
 
