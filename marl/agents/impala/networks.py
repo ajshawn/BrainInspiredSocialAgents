@@ -633,15 +633,45 @@ class MultiHeadAttentionLayer(hk.Module):
       pos_emb = hk.get_parameter("pos_embedding", shape=[N, self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
       key += pos_emb[None, :, :]
       value += pos_emb[None, :, :]
+    elif self.positional_embedding == 'frequency':
+      # Linear projections
+      # NOTE: Frequency positional embedding now only works for single head due to the concatenation
+      
+  
+      H = W = 11  # assume inputs arranged as HxW grid
 
-    # Linear projections
+      # Create spatial coordinates
+      y = jnp.linspace(0, 1, H)
+      x = jnp.linspace(0, 1, W)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")  # [H, W]
+
+      # Define frequency basis size
+      U = V = 8
+      u = jnp.arange(1, U + 1)[None, None, :]  # [1,1,U]
+      v = jnp.arange(1, V + 1)[None, None, :]  # [1,1,V]
+
+      a = yy[:, :, None] * u * jnp.pi  # [H,W,U]
+      b = xx[:, :, None] * v * jnp.pi  # [H,W,V]
+
+      # Outer product of cosines across frequencies
+      freq_basis = jnp.einsum("hwu,hwv->hwuv", jnp.cos(a), jnp.cos(b))
+      freq_basis = freq_basis.reshape(H, W, -1)  # [H,W,U*V]
+
+      # Tile for batch
+      freq_basis = jnp.broadcast_to(freq_basis[None, ...], (B, H, W, U * V))
+      freq_basis = freq_basis.reshape(B, N, -1)  # [B,N,U*V]
+
+      # Add frequency basis to projected keys and values
+      key += freq_basis
+      value += freq_basis
+      
     q_proj = hk.Linear(self.model_dim)(query)  # [B, model_dim]
     k_proj = hk.Linear(self.model_dim)(key)    # [B, N, model_dim]
     v_proj = hk.Linear(self.model_dim)(value)  # [B, N, model_dim]
 
-    if self.add_selection_vec:
-      selection_vec = hk.get_parameter("selection_vector", shape=[self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
-      q_proj += selection_vec[None, :]
+    # if self.add_selection_vec:
+    #   selection_vec = hk.get_parameter("selection_vector", shape=[self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
+    #   q_proj += selection_vec[None, :]
 
     # Split into heads
     grid_dim, embed_dim = k_proj.shape[-2], k_proj.shape[-1]
@@ -655,21 +685,21 @@ class MultiHeadAttentionLayer(hk.Module):
     # Scaled dot-product attention
     scores = jnp.einsum("bhqd,bhkd->bhqk", q, k).squeeze(2)  # [B, H, N]
 
-    if self.attn_enhance_multiplier != 0:
-      enhance_map = enhance_map.reshape((-1, N))  # [B, N]
-      max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, H, 1]
-      enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, H, 1]
-      # Create a mask for enhanced heads: [H], 1 for enhance, 0 for others
-      enhance_mask = jnp.isin(jnp.arange(self.num_heads), self.attn_enhance_head_indices).astype(jnp.float32)  # [H]
-      enhance_mask = enhance_mask[None, :, None]  # [1, H, 1] for broadcasting
-      # Broadcast enhance_map to match scores shape: [B, 1, N]
-      enhance_map = enhance_map[:, None, :]
-      # Apply enhancement only for selected heads and enhance_map positions
-      scores = jnp.where(
-          (enhance_map == 1) & (enhance_mask == 1),
-          enhanced_scores,
-          scores
-      )
+    # if self.attn_enhance_multiplier != 0:
+    #   enhance_map = enhance_map.reshape((-1, N))  # [B, N]
+    #   max_scores = jnp.max(scores, axis=-1, keepdims=True)  # [B, H, 1]
+    #   enhanced_scores = self.attn_enhance_multiplier * max_scores  # [B, H, 1]
+    #   # Create a mask for enhanced heads: [H], 1 for enhance, 0 for others
+    #   enhance_mask = jnp.isin(jnp.arange(self.num_heads), self.attn_enhance_head_indices).astype(jnp.float32)  # [H]
+    #   enhance_mask = enhance_mask[None, :, None]  # [1, H, 1] for broadcasting
+    #   # Broadcast enhance_map to match scores shape: [B, 1, N]
+    #   enhance_map = enhance_map[:, None, :]
+    #   # Apply enhancement only for selected heads and enhance_map positions
+    #   scores = jnp.where(
+    #       (enhance_map == 1) & (enhance_mask == 1),
+    #       enhanced_scores,
+    #       scores
+    #   )
 
     scores = scores / jnp.sqrt(self.key_size_per_head * self.num_heads)  # Scale scores
     weights = jax.nn.softmax(scores, axis=-1)  # [B, H, N]
