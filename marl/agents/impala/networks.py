@@ -661,9 +661,12 @@ class MultiHeadAttentionLayer(hk.Module):
       freq_basis = jnp.broadcast_to(freq_basis[None, ...], (B, H, W, U * V))
       freq_basis = freq_basis.reshape(B, N, -1)  # [B,N,U*V]
 
-      # Add frequency basis to projected keys and values
+      # # Add frequency basis to projected keys and values
       key += freq_basis
       value += freq_basis
+      # Concat frequency basis to projected keys and values
+      # key = jnp.concatenate([key, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
+      # value = jnp.concatenate([value, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
       
     q_proj = hk.Linear(self.model_dim)(query)  # [B, model_dim]
     k_proj = hk.Linear(self.model_dim)(key)    # [B, N, model_dim]
@@ -1077,7 +1080,17 @@ class PostAttnCNN(hk.Module):
 
     outputs = self._ff(outputs)
     return outputs
-
+  
+def zero_state_lstm(lstm: hk.LSTM):
+    def wrapped(inputs, state):
+        if inputs.ndim == 1:
+          batch_size = None
+        else:
+          batch_size = state.hidden.shape[0]
+        zero_state = lstm.initial_state(batch_size)
+        return lstm(inputs, zero_state)
+    return wrapped
+    
 class IMPALANetwork_attention(hk.RNNCore):
   """Network architecture as described in MeltingPot paper"""
 
@@ -1089,7 +1102,8 @@ class IMPALANetwork_attention(hk.RNNCore):
       positional_embedding=None, 
       add_selection_vec=False, 
       attn_enhance_multiplier: float = 0.0,
-      use_layer_norm: bool = False):
+      use_layer_norm: bool = False,
+      zero_state: bool = True,):
     super().__init__(name="impala_network")
     self.num_actions = num_actions
     self.use_layer_norm = use_layer_norm
@@ -1101,7 +1115,11 @@ class IMPALANetwork_attention(hk.RNNCore):
       attn_enhance_multiplier=attn_enhance_multiplier,)
     if self.use_layer_norm:
       self._attn_layer_norm = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True, name="attn_layer_norm")
-    self._recurrent = hk.LSTM(recurrent_dim)
+    self._lstm_core = hk.LSTM(recurrent_dim)
+    if zero_state:
+      self._recurrent = zero_state_lstm(self._lstm_core)
+    else:
+      self._recurrent = self._lstm_core
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
     
@@ -1131,13 +1149,14 @@ class IMPALANetwork_attention(hk.RNNCore):
     return (logits, value, op, attn_weights), new_state
 
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
-    return self._recurrent.initial_state(batch_size)
+    return self._lstm_core.initial_state(batch_size)
 
   def unroll(self, inputs, state: hk.LSTMState):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     op = self._embed(inputs)
     flatten_op = jnp.reshape(op, (op.shape[0], -1))  # [B, ...]
     self.op_shape = op.shape  # save the original shape for later use
+    #jax.debug.print("op shape: {}", op.shape)
     self.flatten_op_dim = flatten_op.shape[-1]  # save the flattened dimension for later use
     # extract other observations
     obs = inputs["observation"]
@@ -1169,7 +1188,7 @@ class IMPALANetwork_attention(hk.RNNCore):
       if rest_input.ndim < attended.ndim:
         attended = jnp.squeeze(attended, axis=0)
       combined_input = jnp.concatenate([attended, rest_input], axis=-1)
-      # Go through the recurrent layer
+      # Go through the recurrent layer    
       output, new_state = self._recurrent(combined_input, state)
       return (output,attn_weights), new_state
 
