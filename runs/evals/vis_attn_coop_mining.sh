@@ -1,15 +1,15 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_item_aware_1_meltingpot_coop_mining_2025-06-27_19:58:25.054307" 
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-08-06_09:59:21.132454"
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention_item_aware"
-TIME_STAMP="2025-06-10_21:32:15.740274"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
+TIME_STAMP="2025-08-06_09:59:21.132454"
 LOG_INTERVAL=1
 N_AGENTS=3
-GPUS="5"
-N_HEADS=4
+GPUS="0"
+N_HEADS=1
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 165 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 55 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
 
     obs_out_dir="data_log_obs/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"
@@ -35,15 +35,15 @@ for ckp in 165 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --ckp ${ckp} \
         --n_episodes 1 \
         --record_video True \
-        --positional_embedding learnable \
-        --log_timesteps True \
+        --positional_embedding frequency \
         --agent_param_indices '0,1,2' \
+        --log_timesteps True \
         --log_filename ${log_filename} \
         --log_img_dir ${log_img_dir} \
         --log_interval ${LOG_INTERVAL} \
         --log_obs True \
-        --attn_enhance_multiplier 2
-        
+        --num_heads ${N_HEADS} > "baseline.txt" 2>&1 
+     
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
 

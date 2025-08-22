@@ -31,7 +31,7 @@ def read_attn_weights(
             keys = data[0].keys()
             log_dict = {key: np.vstack([entry[key] for entry in data]) for key in keys}
     attn_weights = log_dict[ATTEN_WEIGHTS_KEY]
-    if n_heads > 1:
+    if n_heads >= 1:
         attn_weights = rearrange(attn_weights, '(t n_agent) 1 n_head h -> t n_agent n_head h', n_agent=n_agents, n_head=n_heads)
     elif attn_weights.ndim == 3:
         attn_weights = rearrange(attn_weights, '(t n) 1 h -> t n h', n=n_agents)
@@ -41,7 +41,7 @@ def read_attn_weights(
         raise ValueError(f"Unexpected attention weights shape: {attn_weights.shape}")
     sorted_indices = np.argsort(log_dict[TIME_STEP_KEY].reshape(-1))
     attn_weights = attn_weights[sorted_indices]
-    if n_heads > 1:
+    if n_heads >= 1:
         attn_weights = rearrange(attn_weights, 't n_agent n_head h -> n_agent t n_head h')
     else:
         attn_weights = rearrange(attn_weights, 't n h -> n t 1 h')

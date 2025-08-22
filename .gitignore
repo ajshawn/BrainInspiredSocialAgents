@@ -3,6 +3,9 @@ results_saved/
 results/
 recordings/
 *.pdf
+baseline.txt
+data_log_obs/
+rresults/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

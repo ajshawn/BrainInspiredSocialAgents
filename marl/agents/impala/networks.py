@@ -1103,7 +1103,7 @@ class IMPALANetwork_attention(hk.RNNCore):
       add_selection_vec=False, 
       attn_enhance_multiplier: float = 0.0,
       use_layer_norm: bool = False,
-      zero_state: bool = True,):
+      zero_state: bool = False,):
     super().__init__(name="impala_network")
     self.num_actions = num_actions
     self.use_layer_norm = use_layer_norm

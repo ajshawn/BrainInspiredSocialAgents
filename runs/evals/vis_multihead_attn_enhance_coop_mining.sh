@@ -1,21 +1,21 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-08_22:58:06.833516"
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:43:20.078198"
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention_multihead_enhance"
-TIME_STAMP="2025-07-08_22:58:06.833516"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
+TIME_STAMP="2025-07-23_16:43:20.078198"
 LOG_INTERVAL=1
 N_AGENTS=3
-GPUS="7"
-N_HEADS=4
+GPUS="1"
+N_HEADS=1
 attn_enhance_item_idx=1
 attn_enhance_multiplier=2
 attn_enhance_head_indices="0,1,2,3"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for attn_enhance_head_indices in "0,1,2,3" "0,1"; do
-for attn_enhance_item_idx in 1 0; do
-for attn_enhance_multiplier in 2 1; do
-for ckp in 152 ;do
+for attn_enhance_head_indices in "0"; do
+for attn_enhance_item_idx in 1 0 2; do
+for attn_enhance_multiplier in 2; do
+for ckp in 74 ;do
 
     obs_out_dir="data/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}_enhance_heads${attn_enhance_head_indices}item${attn_enhance_item_idx}strength${attn_enhance_multiplier}"
     log_filename="${obs_out_dir}/observations.jsonl"
