@@ -351,12 +351,15 @@ DENSER_ORE_REGROW = {
 PLAYER_COLOR_PALETTES = []
 for human_readable_color in colors.human_readable:
     PLAYER_COLOR_PALETTES.append(shapes.get_palette(human_readable_color))
-
+FIXED_COLOR_PALETTES = [
+    shapes.get_palette("blue")  # or any fixed color you want
+    for _ in colors.human_readable
+]
 
 def get_avatar_object(num_players: int, player_index: int):
     """Construct an avatar object."""
     lua_index = player_index + 1
-    color_palette = PLAYER_COLOR_PALETTES[player_index]
+    color_palette = FIXED_COLOR_PALETTES[player_index]
     avatar_sprite_name = "avatarSprite{}".format(lua_index)
     avatar_object = {
         "name": "avatar",
