@@ -352,7 +352,7 @@ PLAYER_COLOR_PALETTES = []
 for human_readable_color in colors.human_readable:
     PLAYER_COLOR_PALETTES.append(shapes.get_palette(human_readable_color))
 FIXED_COLOR_PALETTES = [
-    shapes.get_palette("blue")  # or any fixed color you want
+    shapes.get_palette((45, 110, 220))  # the first human readable color
     for _ in colors.human_readable
 ]
 

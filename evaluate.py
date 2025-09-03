@@ -71,9 +71,10 @@ def main(_):
                 #     scenario_name=scenario_name,
                 #     #record= False, #True if FLAGS.record_video=="True" else False,
                 # )
-                env_factory = lambda: helpers.make_meltingpot_scenario(
+                env_factory = lambda seed: helpers.make_meltingpot_scenario(
+                    seed=seed,
                     scenario_name=scenario_name,
-                    record=False
+                    record=True,#(FLAGS.record_video == "True"),
                 )
                 env_factory(0)
                 config.environment_factory = env_factory
