@@ -31,8 +31,3 @@ CUDA_VISIBLE_DEVICES=${GPUS} python train.py  --async_distributed --available_gp
 #   --gold_reward 6 \
 #   --mining_reward 0 \
 #   --head_cross_entropy_cost 0.05
-
-
-
-
-
