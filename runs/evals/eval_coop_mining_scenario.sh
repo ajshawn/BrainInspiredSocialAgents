@@ -2,7 +2,7 @@ EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-0
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA_attention"
 TIME_STAMP="2025-06-10_21:32:15.740274"
-GPUS="1"
+GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 

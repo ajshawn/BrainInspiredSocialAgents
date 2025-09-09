@@ -234,8 +234,8 @@ def build_experiment_config():
         else None
     )
 
-    agent_param_indices = [int(idx) for idx in FLAGS.agent_param_indices.split(",")]
-    config.agent_param_indices = agent_param_indices
+    #agent_param_indices = [int(idx) for idx in FLAGS.agent_param_indices.split(",")]
+    #config.agent_param_indices = agent_param_indices
 
     if FLAGS.experiment_dir:
         assert (
@@ -565,6 +565,7 @@ def build_experiment_config():
 
     # Add frozen agents
     builder._config.frozen_agents = frozen_agents
+    print(f"Frozen agents: {frozen_agents}") if frozen_agents else print("No frozen agents.")
 
     return (
         experiments.MAExperimentConfig(
@@ -598,8 +599,12 @@ def main(_):
         #print(FLAGS.ckp_map)
         #print(FLAGS.ckp_map.split(","))
         ckp_map = {
-            int(agent): int(ckpt)
-            for agent, ckpt in (pair.split(":") for pair in FLAGS.ckp_map.split(","))
+            int(target): {
+                "ckpt_num": int(ckpt_num),
+                "ckpt_agent": int(ckpt_agent)
+            }
+            for target, pair in (entry.split(":") for entry in FLAGS.ckp_map.split(","))
+            for ckpt_num, ckpt_agent in [pair.split("-")]
         }
     else:
         ckp_map = None

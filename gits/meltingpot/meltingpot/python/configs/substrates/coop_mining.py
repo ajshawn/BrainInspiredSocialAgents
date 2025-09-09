@@ -355,6 +355,7 @@ FIXED_COLOR_PALETTES = [
     shapes.get_palette((45, 110, 220))  # the first human readable color
     for _ in colors.human_readable
 ]
+FIXED_COLOR_PALETTES[0] = shapes.get_palette((220, 45, 110))  # make the first player different from the rest for visibility
 
 def get_avatar_object(num_players: int, player_index: int):
     """Construct an avatar object."""

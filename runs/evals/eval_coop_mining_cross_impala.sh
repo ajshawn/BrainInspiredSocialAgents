@@ -1,9 +1,9 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-09-04_01:34:46.303068,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274" 
-ckp_map="0:180-0,1:60-1,2:60-2,3:60-0,4:150-2"
+EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572" 
+ckp_map="0:120-0,1:40-1,2:40-2,3:30-0,4:115-2"
 
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention"
-TIME_STAMP="2025-06-10_21:32:15.740274"
+ALGORITHM_NAME="PopArtIMPALA"
+TIME_STAMP="2025-03-14_14:39:21.229188"
 GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
@@ -16,7 +16,6 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --available_gpus ${GPUS} \
     --num_actors 16 \
     --algo_name ${ALGORITHM_NAME} \
-    --positional_embedding learnable \
     --env_name meltingpot \
     --map_name ${EVN_NAME} \
     --map_layout original \

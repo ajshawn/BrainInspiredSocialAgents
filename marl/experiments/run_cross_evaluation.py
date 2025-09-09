@@ -66,37 +66,33 @@ def run_cross_evaluation(
         environment_spec=environment_specs,
     )
 
-    # initialize empty 
-    # s0 = learner._combined_states.params.copy()
-    # combined_params = {}
-    # for k in list(s0.values())[0].keys():
-    #     combined_params[k] = {}
-    #     for k_ in list(s0.values())[0][k].keys():
-    #         combined_params[k][k_] = jnp.zeros_like(
-    #             list(s0.values())[0][k][k_]
-    #         )
     template = learner._combined_states.params
     combined_params = jax.tree_map(lambda x: jnp.zeros_like(x), template)
 
     # Load params from each dir and checkpoint needed 
     jax.debug.print(f"ckpdir{checkpointing_config.directory}")
     dirs = checkpointing_config.directory.split(",")
+    dummy = dirs[0]
+    dirs = dirs[1:]
     jax.debug.print(dirs[0])
-    for agent_idx, ckpt in ckp_map.items():
+
+    for target_id, info in ckp_map.items():
+        ckpt_num = info["ckpt_num"]
+        ckpt_agent = info["ckpt_agent"]
         checkpointer = tf_savers.Checkpointer(
             objects_to_save={"learner": learner},
-            directory= dirs[agent_idx],
+            directory=dirs[target_id],
             subdirectory="learner",
             time_delta_minutes=checkpointing_config.model_time_delta_minutes,
             add_uid=checkpointing_config.add_uid,
             max_to_keep=checkpointing_config.max_to_keep,
         )
-        checkpointer.restore(ckp=ckpt)
+        checkpointer.restore(ckp=ckpt_num)
         cache = learner._combined_states.params.copy()
         for k in combined_params.keys():
             for k_ in combined_params[k].keys():
-                combined_params[k][k_] = combined_params[k][k_].at[agent_idx].set(
-                    cache[k][k_][agent_idx]
+                combined_params[k][k_] = combined_params[k][k_].at[target_id].set(
+                    cache[k][k_][ckpt_agent]
                 )
     print("Combined parameters from checkpoints:", ckp_map)
 

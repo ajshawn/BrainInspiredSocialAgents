@@ -36,7 +36,7 @@ ActorId = int
 InferenceServer = inference_server.InferenceServer[types.PolicyValueFn]
 
 
-def make_distributed_experiment(
+def make_distributed_experiment_cross(
     experiment: ma_config.MAExperimentConfig,
     num_actors: int,
     *,
@@ -147,34 +147,54 @@ def make_distributed_experiment(
         counter,
     )
 
+    temp_learner = experiment.builder.make_learner(
+        random_key,
+        networks,
+        iterator,
+        experiment.logger_factory,
+        spec,
+        replay,
+        counter,
+    )
+
     if primary_learner is None:
       # --- Restore multiple checkpoints into combined learner ---
-      template = learner._combined_states.params
-      combined_params = jax.tree_map(lambda x: jnp.zeros_like(x), template)
+      #combined_params = jax.tree_map(lambda x: jnp.zeros_like(x), template)
 
       jax.debug.print(f"ckpdir {checkpointing_config.directory}")
       dirs = checkpointing_config.directory.split(",")
-      jax.debug.print(dirs[0])
+      dummy = dirs[0]
+      dirs = dirs[1:]
 
-      for agent_idx, ckpt in ckp_map.items():
+      checkpointer = tf_savers.Checkpointer(
+            objects_to_save={"learner": learner},
+            directory=dummy,
+            subdirectory="learner",
+            time_delta_minutes=checkpointing_config.model_time_delta_minutes,
+            add_uid=checkpointing_config.add_uid,
+            max_to_keep=checkpointing_config.max_to_keep,
+        )
+      checkpointer.restore()
+      params = learner._combined_states.params
+
+      for target_id, info in ckp_map.items():
+          ckpt_num = info["ckpt_num"]
+          ckpt_agent = info["ckpt_agent"]
           checkpointer = tf_savers.Checkpointer(
-              objects_to_save={"learner": learner},
-              directory=dirs[agent_idx],
+              objects_to_save={"learner": temp_learner},
+              directory=dirs[target_id],
               subdirectory="learner",
               time_delta_minutes=checkpointing_config.model_time_delta_minutes,
               add_uid=checkpointing_config.add_uid,
               max_to_keep=checkpointing_config.max_to_keep,
           )
-          checkpointer.restore(ckp=ckpt)
-          cache = learner._combined_states.params.copy()
-          for k in combined_params.keys():
-              for k_ in combined_params[k].keys():
-                  combined_params[k][k_] = combined_params[k][k_].at[agent_idx].set(
-                      cache[k][k_][agent_idx]
-                  )
-
-      learner._combined_states = learner._combined_states.replace(params=combined_params)
-      print("Combined parameters from checkpoints:", ckp_map)
+          checkpointer.restore(ckp=ckpt_num)
+          cache = temp_learner._combined_states.params.copy()
+          for k in params.keys():
+              for k_ in params[k].keys():
+                  params[k][k_].at[target_id].set(
+                      cache[k][k_][ckpt_agent]  # source from ckpt_agent
+                  )  
 
       learner = savers.CheckpointingRunner(
           learner,
@@ -190,6 +210,8 @@ def make_distributed_experiment(
       # NOTE: This initially synchronizes secondary learner states with the
       # primary one. Further synchronization should be handled by the learner
       # properly doing a pmap/pmean on the loss/gradients, respectively.
+
+    #breakpoint()
 
     return learner
 
@@ -237,6 +259,7 @@ def make_distributed_experiment(
     environment = experiment.environment_factory(
         utils.sample_uint32(environment_key))
     environment_spec = ma_specs.MAEnvironmentSpec(environment)
+    # breakpoint()
 
     networks = experiment.network_factory(
         environment_spec.get_single_agent_environment_specs())

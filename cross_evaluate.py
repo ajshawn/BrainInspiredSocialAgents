@@ -58,8 +58,12 @@ def main(_):
         #print(FLAGS.ckp_map)
         #print(FLAGS.ckp_map.split(","))
         ckp_map = {
-            int(agent): int(ckpt)
-            for agent, ckpt in (pair.split(":") for pair in FLAGS.ckp_map.split(","))
+            int(target): {
+                "ckpt_num": int(ckpt_num),
+                "ckpt_agent": int(ckpt_agent)
+            }
+            for target, pair in (entry.split(":") for entry in FLAGS.ckp_map.split(","))
+            for ckpt_num, ckpt_agent in [pair.split("-")]
         }
     else:
         ckp_map = None
