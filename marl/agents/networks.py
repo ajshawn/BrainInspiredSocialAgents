@@ -295,6 +295,23 @@ class AttentionCNN_FE(hk.Module):
     vis_op = self._visual_torso(ip_img)
 
     return vis_op
+  
+class AttentionCNN_FE_SelfSupervise(hk.Module):
+
+  def __init__(self, num_actions, flatten_output=True, num_channels = 64):
+    super().__init__("meltingpot_features")
+    self.num_actions = num_actions
+    self._visual_torso = VisualFeatures_attention_selfsupervise(num_channels=num_channels)
+
+  def __call__(self, inputs):
+    # extract environment observation from the full observation object
+    obs = inputs["observation"]
+
+    # extract visual features form RGB observation
+    ip_img = obs["RGB"].astype(jnp.float32) / 255
+    vis_op, guidance_map = self._visual_torso(ip_img)
+
+    return vis_op, guidance_map
 
 class AttentionSpatialCNN_FE(hk.Module):
 
@@ -342,6 +359,67 @@ class VisualFeatures_attention(hk.Module):
           outputs = jnp.reshape(outputs, [-1, outputs.shape[-1]])  # [121, 64]
 
     return outputs
+
+class VisualFeatures_attention_selfsupervise(hk.Module):
+  """Visual CNN + self-supervised attention guidance.
+
+  - Features are always flattened to [B, 121, 64].
+  - Guidance map is shaped [B, 1, 11, 11].
+  - Guidance is non-differentiable (no gradients traced).
+  """
+
+  def __init__(self, num_channels=64, match_atol=0.0, eps=1e-8):
+    super().__init__(name="meltingpot_visual_features_selfsupervise")
+    self.match_atol = match_atol
+    self.eps = eps
+    self._cnn = hk.Sequential([
+        hk.Conv2D(num_channels, [8, 8], 8, padding="VALID"),  # [B, 11, 11, 64]
+        jax.nn.relu,
+    ])
+
+  def __call__(self, inputs: jnp.ndarray):
+    inputs_rank = jnp.ndim(inputs)
+    batched_inputs = inputs_rank == 4
+    if inputs_rank < 3 or inputs_rank > 4:
+      raise ValueError(f"Expected input BHWC or HWC. Got rank {inputs_rank}")
+
+    feats = self._cnn(inputs)  # [B, 11, 11, 64] or [11, 11, 64]
+
+    if batched_inputs:
+      outputs = jnp.reshape(feats, [feats.shape[0], -1, feats.shape[-1]])  # [B, 121, 64]
+    else:
+      outputs = jnp.reshape(feats, [-1, feats.shape[-1]])                  # [121, 64]
+
+    # Build guidance WITHOUT tracing gradients from outputs.
+    guidance = self._build_guidance(outputs, batched_inputs)  # [B,1,11,11] or [1,1,11,11]
+
+    return outputs, guidance
+
+  def _build_guidance(self, outputs, batched: bool):
+    """Compute softmax(1/freq) and reshape to [B,1,11,11] or [1,1,11,11], with no grad."""
+    x = jax.lax.stop_gradient(outputs)
+
+    if batched:
+      # x: [B, 121, 64]
+      eq = jnp.all(jnp.isclose(x[:, :, None, :], x[:, None, :, :],
+                               atol=self.match_atol, rtol=0.0),
+                   axis=-1)  # [B, 121, 121]
+      counts = jnp.sum(eq, axis=-1)           # [B, 121]
+      weights = 1.0 / (counts + self.eps)     # [B, 121]
+      attn = jax.nn.softmax(weights, axis=-1) # [B, 121]
+      guidance = attn.reshape(attn.shape[0], 1, 11, 11)  # [B, 1, 11, 11]
+    else:
+      # x: [121, 64]
+      eq = jnp.all(jnp.isclose(x[None, :, :], x[:, None, :],
+                               atol=self.match_atol, rtol=0.0),
+                   axis=-1)  # [121, 121]
+      counts = jnp.sum(eq, axis=-1)           # [121]
+      weights = 1.0 / (counts + self.eps)     # [121]
+      attn = jax.nn.softmax(weights, axis=-1) # [121]
+      guidance = attn.reshape(1, 1, 11, 11)   # [1, 1, 11, 11]
+
+    return jax.lax.stop_gradient(guidance)
+
   
 class Discriminator(hk.Module):
 

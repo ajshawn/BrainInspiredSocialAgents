@@ -550,6 +550,65 @@ def make_network_attention_multihead_item_aware(environment_spec: EnvironmentSpe
       critic_fn=critic_fn,
   )
 
+def make_network_attention_multihead_self_supervision(environment_spec: EnvironmentSpec,
+                                feature_extractor: hk.Module,
+                                recurrent_dim: int = 128,
+                                positional_embedding: Optional[str] = None,
+                                add_selection_vec: bool = False,                            
+                                num_heads: int = 4,
+                                key_size: int = 64):   
+  def forward_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_multihead_attention_self_supervision(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        num_heads=num_heads,
+        key_size=key_size)
+    return model(inputs, state) 
+
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_multihead_attention_self_supervision(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        num_heads=num_heads,
+        key_size=key_size)
+    return model.initial_state(batch_size)
+  
+  def unroll_fn(inputs, state: hk.LSTMState):
+    model = IMPALANetwork_multihead_attention_self_supervision(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        num_heads=num_heads,
+        key_size=key_size)
+    return model.unroll(inputs, state)
+  
+  def critic_fn(inputs):
+    model = IMPALANetwork_multihead_attention_self_supervision(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        num_heads=num_heads,
+        key_size=key_size)
+    return model.critic(inputs)
+  
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )
+                                                      
 def make_network_impala_cnn_visualization(environment_spec: EnvironmentSpec,
                    feature_extractor: hk.Module,
                    recurrent_dim: int = 128,
@@ -1571,6 +1630,111 @@ class IMPALANetwork_multihead_attention_item_aware(IMPALANetwork_attention):
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
     return (logits, value, op, (attn_weights, objects_in_view)), new_states
+
+class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention):
+  def __init__(
+      self, 
+      num_actions,
+      recurrent_dim, 
+      feature_extractor, 
+      num_heads=4,
+      key_size=64,
+      positional_embedding=None, 
+      add_selection_vec=False, 
+      use_layer_norm=False,):
+    super().__init__(
+      num_actions,
+      recurrent_dim,
+      feature_extractor,
+      positional_embedding=positional_embedding,
+      add_selection_vec=add_selection_vec,
+      use_layer_norm=use_layer_norm)
+    self._attention = MultiHeadAttentionLayer(
+        num_heads=num_heads,
+        key_size_per_head=key_size // num_heads,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=0)
+    
+  def __call__(self, inputs, state: hk.LSTMState):
+    # TODO: current version does not support test time attention enhancement
+    embedding, _ = self._embed(inputs) # [B, 121, F]
+    obs = inputs["observation"]
+
+    attended, attn_weights = self._attention(state.hidden, embedding, embedding)
+
+    # extract other observations
+    inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+    # Do a one-hot embedding of the actions.
+    action = jax.nn.one_hot(
+        inputs["action"], num_classes=self.num_actions)  # [B, A]
+    # Add dummy trailing dimensions to rewards if necessary.
+    while ready_to_shoot.ndim < inventory.ndim:
+      ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+    if ready_to_shoot.ndim < attended.ndim:
+      attended = jnp.squeeze(attended, axis=0)
+    # Combine attention output and other observations
+    combined = jnp.concatenate([attended, ready_to_shoot, inventory, action], axis=-1)
+    op, new_state = self._recurrent(combined, state)
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, op, attn_weights), new_state
+  
+  def unroll(self, inputs, state: hk.LSTMState):
+    """
+      Efficient unroll that applies embeddings, MLP, & convnet in one pass.
+      
+      Same as normal IMPALANetwork_attention, but also return objects_in_view heatmaps from 
+      observation, which is used for item-aware cross-entropy loss.
+    """
+    op, self_guidance_attn_map = self._embed(inputs) # [B, 121, F], [B, n_item_types, 11, 11]
+    flatten_op = jnp.reshape(op, (op.shape[0], -1))  # [B, ...]
+    self.op_shape = op.shape  # save the original shape for later use
+    self.flatten_op_dim = flatten_op.shape[-1]  # save the flattened dimension for later use
+    # extract other observations
+    obs = inputs["observation"]
+    inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+    # Do a one-hot embedding of the actions.
+    action = jax.nn.one_hot(
+        inputs["action"], num_classes=self.num_actions)  # [B, A]
+    # Add dummy trailing dimensions to rewards if necessary.
+    while ready_to_shoot.ndim < inventory.ndim:
+      ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+    # fix for dynamic_unroll with reverb sampled data
+    # state = hk.LSTMState(state.hidden, state.cell)
+    combined = jnp.concatenate(
+        [flatten_op, ready_to_shoot, inventory, action], 
+        axis=-1
+    ) 
+
+    def _step(input_t, state):
+      # Slice out the flattened input for the current time step
+      attn_input = input_t[:self.flatten_op_dim]
+      # Reshape it back to the original shape
+      attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
+      # Apply attention
+      attended, attn_weights = self._attention(state.hidden, attn_input, attn_input)
+      if self.use_layer_norm:
+        attended = self._attn_layer_norm(attended)
+      # Combine with the rest of the input
+      rest_input = input_t[self.flatten_op_dim:]
+      if rest_input.ndim < attended.ndim:
+        attended = jnp.squeeze(attended, axis=0)
+      combined_input = jnp.concatenate([attended, rest_input], axis=-1)
+      # Go through the recurrent layer
+      output, new_state = self._recurrent(combined_input, state)
+      return (output, attn_weights), new_state
+
+    # Unroll through time
+    optuple, new_states = hk.static_unroll(
+        _step,
+        combined, 
+        state
+    )
+    op, attn_weights = optuple
+    logits = self._policy_layer(op)
+    value = jnp.squeeze(self._value_layer(op), axis=-1)
+    return (logits, value, op, (attn_weights, self_guidance_attn_map)), new_states
 
 class IMPALANetwork_multihead_attention_enhance(IMPALANetwork_attention):
   def __init__(

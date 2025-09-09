@@ -23,7 +23,7 @@ from marl.agents import opre
 from marl.agents.networks import ArrayFE
 from marl.agents.networks import ImageFE
 from marl.agents.networks import MeltingpotFE, MeltingpotFECNNVis
-from marl.agents.networks import AttentionCNN_FE, AttentionSpatialCNN_FE
+from marl.agents.networks import AttentionCNN_FE, AttentionSpatialCNN_FE, AttentionCNN_FE_SelfSupervise
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
 from marl.utils import helpers
@@ -71,6 +71,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_multihead_disturb",
         "PopArtIMPALA_attention_multihead_enhance",
         "PopArtIMPALA_attention_multihead_item_aware",
+        "PopArtIMPALA_attention_multihead_self_supervision",
     ],
     "Algorithm to train",
 )
@@ -493,6 +494,30 @@ def build_experiment_config():
         network_factory = functools.partial(
             impala.make_network_attention_multihead_item_aware, 
             feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,
+            num_heads=n_heads,
+            key_size=attn_key_size,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, 
+            memory_efficient=memory_efficient, 
+            head_entropy_cost=head_entropy_cost,
+            head_cross_entropy_cost=head_cross_entropy_cost,
+            head_mse_cost=head_mse_cost,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_self_supervision":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_self_supervision, 
+            feature_extractor=AttentionCNN_FE_SelfSupervise,
             positional_embedding=positional_embedding,
             add_selection_vec=add_selection_vector,
             num_heads=n_heads,
