@@ -157,7 +157,7 @@ class CheckpointingConfig:
           take up to 10 minutes so keep that in mind when setting this frequency.
     """
 
-    max_to_keep: int = 5000
+    max_to_keep: int = 500
     directory: str = "~/acme"
     add_uid: bool = False
     model_time_delta_minutes: int = 60

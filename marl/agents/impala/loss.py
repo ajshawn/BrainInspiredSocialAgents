@@ -76,6 +76,7 @@ def batched_art_impala_loss(
      hidden_features,_), _ = unroll_fn(params, observations, initial_state)
 
     # Compute importance sampling weights: current policy / behavior policy
+    breakpoint()
     rhos = categorical_importance_sampling_ratios(logits[:, :-1],
                                                   behaviour_logits[:, :-1],
                                                   actions[:, :-1])

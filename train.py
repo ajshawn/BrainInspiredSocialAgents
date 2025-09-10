@@ -72,6 +72,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_multihead_enhance",
         "PopArtIMPALA_attention_multihead_item_aware",
         "PopArtIMPALA_attention_multihead_self_supervision",
+        "simple_transformer",
     ],
     "Algorithm to train",
 )
@@ -522,6 +523,26 @@ def build_experiment_config():
             add_selection_vec=add_selection_vector,
             num_heads=n_heads,
             key_size=attn_key_size,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, 
+            memory_efficient=memory_efficient, 
+            head_entropy_cost=head_entropy_cost,
+            head_cross_entropy_cost=head_cross_entropy_cost,
+            head_mse_cost=head_mse_cost,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "simple_transformer":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_simple_transformer,
+            feature_extractor=MeltingpotFE,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()

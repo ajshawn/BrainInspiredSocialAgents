@@ -16,6 +16,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import reverb
+import numpy as np
 
 from marl import specs as ma_specs
 from marl import types
@@ -39,8 +40,8 @@ class MABuilder(builders.ActorLearnerBuilder[types.RecurrentNetworks,
     """Creates an IMPALA learner."""
     self._config = config
     core_state_spec = {
-        "hidden": core_state_spec.hidden,
-        "cell": core_state_spec.cell
+        "hidden": getattr(core_state_spec, "hidden", np.array([0])),
+        "cell": getattr(core_state_spec, "cell", np.array([0])),
     }
     self._core_state_spec = core_state_spec
     self._sequence_length = self._config.sequence_length

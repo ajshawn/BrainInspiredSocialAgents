@@ -107,7 +107,7 @@ def make_distributed_experiment(
         counter,
         key="counter",
         subdirectory="counter",
-        time_delta_minutes=5,
+        time_delta_minutes=60,
         directory=checkpointing_config.directory,
         add_uid=checkpointing_config.add_uid,
         max_to_keep=checkpointing_config.max_to_keep,

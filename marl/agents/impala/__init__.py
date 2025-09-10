@@ -19,3 +19,4 @@ from marl.agents.impala.networks import make_network_attention_multihead_enhance
 from marl.agents.impala.networks import make_network_attention_multihead_item_aware
 from marl.agents.impala.networks import make_network_impala_cnn_visualization
 from marl.agents.impala.networks import make_network_attention_multihead_self_supervision
+from marl.agents.impala.simpletr import make_network_simple_transformer
