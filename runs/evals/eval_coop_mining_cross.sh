@@ -1,6 +1,9 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-09-04_01:34:46.303068,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274" 
-ckp_map="0:180-0,1:60-1,2:60-2,3:60-0,4:150-2"
+#EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-09-04_01:34:46.303068,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639" 
+#ckp_map="0:180-0,1:60-1,2:60-2,3:60-3,4:40-0"
 
+save_dir="./cross_eval_results/attention-alone"
+EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274"
+ckp_map="0:180-1"
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA_attention"
 TIME_STAMP="2025-06-10_21:32:15.740274"
@@ -22,7 +25,8 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --map_layout original \
     --max_episode_length 500 \
     --experiment_dir ${EXP_DIR_PREFIX} \
-    --agent_roles 'default,default,default,default,default' \
+    --save_dir ${save_dir} \
+    --agent_roles 'default' \
     --dense_ore_regrow True \
     --iron_rate 0.0002 \
     --gold_rate 0.0001 \
@@ -32,8 +36,8 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --mining_reward 0 \
     --ckp_map ${ckp_map} \
     --n_episodes 10 \
-    --agent_param_indices '0,1,2,3,4'\
-    --record_video True \
+    --agent_param_indices '0'\
+    #--record_video True \
     #--log_timesteps True \
     #--add_selection_vector True \
         

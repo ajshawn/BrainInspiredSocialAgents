@@ -1,6 +1,9 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572" 
-ckp_map="0:120-0,1:40-1,2:40-2,3:30-0,4:115-2"
+#EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572" 
+#ckp_map="0:120-2,1:40-1,2:40-2,3:40-3,4:30-0"
 
+save_dir="./cross_eval_results/impala-alone"
+EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572"
+ckp_map="0:120-1"
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA"
 TIME_STAMP="2025-03-14_14:39:21.229188"
@@ -21,7 +24,8 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --map_layout original \
     --max_episode_length 500 \
     --experiment_dir ${EXP_DIR_PREFIX} \
-    --agent_roles 'default,default,default,default,default' \
+    --save_dir ${save_dir} \
+    --agent_roles 'default' \
     --dense_ore_regrow True \
     --iron_rate 0.0002 \
     --gold_rate 0.0001 \
@@ -31,8 +35,8 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --mining_reward 0 \
     --ckp_map ${ckp_map} \
     --n_episodes 10 \
-    --agent_param_indices '0,1,2,3,4'\
-    --record_video True \
+    --agent_param_indices '0'\
+    #--record_video True \
     #--log_timesteps True \
     #--add_selection_vector True \
         
