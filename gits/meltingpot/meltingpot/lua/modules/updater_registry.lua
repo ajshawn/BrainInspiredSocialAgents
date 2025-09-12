@@ -289,6 +289,9 @@ function UpdaterRegistry:registerGrid(grid, callbacks)
       -- Only set the updater once, regardless of how many components requested
       -- it. Per priority.
       if updaterNames[updateSpec._updaterName] == nil then
+        if type(updateSpec.probability) ~= "number" then
+          updateSpec.probability = 0.0005
+        end
         grid:setUpdater{
             -- update really should be called `updaterName`
             update = updateSpec._updaterName,

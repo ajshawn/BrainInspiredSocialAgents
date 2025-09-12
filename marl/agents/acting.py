@@ -52,6 +52,7 @@ class MAActor(core.Actor):
       self._states = self._initial_states
 
     observations = jax.tree_util.tree_map(lambda x: jnp.array(x), observations)
+    # breakpoint()
     (logits, _, _,_), new_states = self._forward(self._params, observations,
                                             self._states)
 

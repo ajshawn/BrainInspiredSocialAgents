@@ -1715,30 +1715,30 @@ SCENARIO_CONFIGS: Mapping[str, ScenarioConfig] = immutabledict.immutabledict(
             'default': {'coop_mining__defector_0'},
         },
     ),
-    coop_mining_3=ScenarioConfig(
-        description='residents visited by a cooperator',
-        tags={
-            'resident',
-        },
-        substrate='coop_mining',
-        roles=('default',) * 6,
-        is_focal=(True,) * 5 + (False,) * 1,
-        bots_by_role={
-            'default': {'coop_mining__cooperator_0',},
-        },
-    ),
-    coop_mining_4=ScenarioConfig(
-        description='residents visited by a defector',
-        tags={
-            'resident',
-        },
-        substrate='coop_mining',
-        roles=('default',) * 6,
-        is_focal=(True,) * 5 + (False,) * 1,
-        bots_by_role={
-            'default': {'coop_mining__defector_0',},
-        },
-    ),
+    # coop_mining_3=ScenarioConfig(
+    #     description='residents visited by a cooperator',
+    #     tags={
+    #         'resident',
+    #     },
+    #     substrate='coop_mining',
+    #     roles=('default',) * 6,
+    #     is_focal=(True,) * 5 + (False,) * 1,
+    #     bots_by_role={
+    #         'default': {'coop_mining__cooperator_0',},
+    #     },
+    # ),
+    # coop_mining_4=ScenarioConfig(
+    #     description='residents visited by a defector',
+    #     tags={
+    #         'resident',
+    #     },
+    #     substrate='coop_mining',
+    #     roles=('default',) * 6,
+    #     is_focal=(True,) * 5 + (False,) * 1,
+    #     bots_by_role={
+    #         'default': {'coop_mining__defector_0',},
+    #     },
+    # ),
     coop_mining_5=ScenarioConfig(
         description='find the cooperator partner',
         tags={

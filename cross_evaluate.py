@@ -37,9 +37,16 @@ flags.DEFINE_string(
     "ckp_map", None, "map which agent comes from which checkpoint"
 ) # example: 0:50, 1:50, 2:50
 
+flags.DEFINE_string(
+    "save_dir", None, "save directory for cross evaluation results"
+) 
+
 def main(_):
     if FLAGS.experiment_dir is None:
         raise ValueError("experiment_dir must be specified")
+    
+    if FLAGS.save_dir is None:
+        FLAGS.save_dir = FLAGS.experiment_dir
 
     config, experiment_dir = train.build_experiment_config()
 
@@ -48,7 +55,7 @@ def main(_):
     )
 
     config.logger_factory = functools.partial(
-        make_experiment_logger, log_dir=experiment_dir, use_tb=False
+        make_experiment_logger, log_dir=FLAGS.save_dir, use_tb=False
     )
 
     agent_param_indices = [int(idx) for idx in FLAGS.agent_param_indices.split(",")]
@@ -58,8 +65,12 @@ def main(_):
         #print(FLAGS.ckp_map)
         #print(FLAGS.ckp_map.split(","))
         ckp_map = {
-            int(agent): int(ckpt)
-            for agent, ckpt in (pair.split(":") for pair in FLAGS.ckp_map.split(","))
+            int(target): {
+                "ckpt_num": int(ckpt_num),
+                "ckpt_agent": int(ckpt_agent)
+            }
+            for target, pair in (entry.split(":") for entry in FLAGS.ckp_map.split(","))
+            for ckpt_num, ckpt_agent in [pair.split("-")]
         }
     else:
         ckp_map = None

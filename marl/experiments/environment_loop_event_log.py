@@ -142,8 +142,8 @@ class EnvironmentLoopEvents(core.Worker):
 
             rewards = timestep.reward
             #OBS = self._environment.observation_spec()
-            events = self._environment.environment.events()
             
+            events = self._environment.environment.events()
             # add a small punishment for the zapping action 
             # for i, x in enumerate(action):
             #     if x == 7:

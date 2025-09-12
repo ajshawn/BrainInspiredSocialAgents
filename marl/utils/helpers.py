@@ -141,6 +141,7 @@ def make_meltingpot_scenario(seed: int,
                         ) if len(wrappers) > 0 else None
   env = scenario.build(scenario_name, substrate_transform=substrate_transform)
   if record:
+    print('recording')
     vid_rec = partial(
         my_render_func_efficient,
         recorder=MeltingPotRecorder(f"{scenario_name}"))
