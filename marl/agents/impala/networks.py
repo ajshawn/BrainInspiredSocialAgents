@@ -1657,13 +1657,10 @@ class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention
         attn_enhance_multiplier=0)
     
   def __call__(self, inputs, state: hk.LSTMState):
-    # TODO: current version does not support test time attention enhancement
-    embedding, _ = self._embed(inputs) # [B, 121, F]
+  
+    embedding, self_guidance_attn_map = self._embed(inputs) # [B, 121, F]
     obs = inputs["observation"]
-
     attended, attn_weights = self._attention(state.hidden, embedding, embedding)
-
-    # extract other observations
     inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
     # Do a one-hot embedding of the actions.
     action = jax.nn.one_hot(
@@ -1678,7 +1675,9 @@ class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention
     op, new_state = self._recurrent(combined, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, op, attn_weights), new_state
+    #return (logits, value, op, attn_weights), new_state
+    return (logits, value, op, self_guidance_attn_map), new_state
+  
   
   def unroll(self, inputs, state: hk.LSTMState):
     """

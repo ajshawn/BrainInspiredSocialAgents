@@ -32,7 +32,8 @@ def read_attn_weights(
             log_dict = {key: np.vstack([entry[key] for entry in data]) for key in keys}
     attn_weights = log_dict[ATTEN_WEIGHTS_KEY]
     if n_heads >= 1:
-        attn_weights = rearrange(attn_weights, '(t n_agent) 1 n_head h -> t n_agent n_head h', n_agent=n_agents, n_head=n_heads)
+        #attn_weights = rearrange(attn_weights, '(t n_agent) 1 n_head h -> t n_agent n_head h', n_agent=n_agents, n_head=n_heads)
+        attn_weights = rearrange(attn_weights, '(t n_agent) 1 n_head h w -> t n_agent n_head (h w)', n_agent=n_agents, n_head=n_heads)
     elif attn_weights.ndim == 3:
         attn_weights = rearrange(attn_weights, '(t n) 1 h -> t n h', n=n_agents)
     elif attn_weights.ndim == 4:

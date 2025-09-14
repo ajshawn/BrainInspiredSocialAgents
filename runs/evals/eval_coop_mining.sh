@@ -1,19 +1,26 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-08-17_13:13:13.664194" 
+EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_multihead_self_supervision_1_meltingpot_coop_mining_2025-09-12_13:23:54.367894" 
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
-TIME_STAMP="2025-08-17_13:13:13.664194"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead_self_supervision"
+TIME_STAMP="2025-09-12_13:23:54.367894"
+
+# EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274" 
+# EVN_NAME="coop_mining"
+# ALGORITHM_NAME="PopArtIMPALA_attention"
+# TIME_STAMP="2025-06-10_21:32:15.740274"
+
 GPUS="1"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in 25;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 33;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
         --num_actors 16 \
         --algo_name ${ALGORITHM_NAME} \
+        --num_heads 1 \
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
         --map_layout original \
@@ -29,7 +36,7 @@ for ckp in 25;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --mining_reward 0 \
         --ckp ${ckp} \
         --n_episodes 2 \
-        --positional_embedding frequency \
+        --positional_embedding learnable \
         --agent_param_indices '0,1,2'\
         --record_video True \
         #--log_timesteps True \

@@ -396,29 +396,59 @@ class VisualFeatures_attention_selfsupervise(hk.Module):
     return outputs, guidance
 
   def _build_guidance(self, outputs, batched: bool):
-    """Compute softmax(1/freq) and reshape to [B,1,11,11] or [1,1,11,11], with no grad."""
-    x = jax.lax.stop_gradient(outputs)
+      """
+      Compute class-wise softmax(1/freq) (implemented as softmax(-log freq)),
+      keep rarest classes up to 30% coverage, reshape to [B,1,11,11] or [1,1,11,11].
+      Gradients are stopped on the returned guidance.
+      """
+      x = outputs  # we’ll stop grads at the very end
 
-    if batched:
-      # x: [B, 121, 64]
-      eq = jnp.all(jnp.isclose(x[:, :, None, :], x[:, None, :, :],
-                               atol=self.match_atol, rtol=0.0),
-                   axis=-1)  # [B, 121, 121]
-      counts = jnp.sum(eq, axis=-1)           # [B, 121]
-      weights = 1.0 / (counts + self.eps)     # [B, 121]
-      attn = jax.nn.softmax(weights, axis=-1) # [B, 121]
-      guidance = attn.reshape(attn.shape[0], 1, 11, 11)  # [B, 1, 11, 11]
-    else:
-      # x: [121, 64]
-      eq = jnp.all(jnp.isclose(x[None, :, :], x[:, None, :],
-                               atol=self.match_atol, rtol=0.0),
-                   axis=-1)  # [121, 121]
-      counts = jnp.sum(eq, axis=-1)           # [121]
-      weights = 1.0 / (counts + self.eps)     # [121]
-      attn = jax.nn.softmax(weights, axis=-1) # [121]
-      guidance = attn.reshape(1, 1, 11, 11)   # [1, 1, 11, 11]
+      def pair_eq(a):  # a: [M, D] or [B, M, D] with vmap
+          # L∞ distance <= atol is equivalent to isclose with rtol=0
+          return (jnp.max(jnp.abs(a[..., None, :, :] - a[..., :, None, :]), axis=-1) <= self.match_atol)
 
-    return jax.lax.stop_gradient(guidance)
+      def guidance_from_counts(counts):
+          # counts: [M] or [B, M], integer >= 1
+          M = counts.shape[-1]
+
+          # Per-(batch) histogram with vmap over rows
+          if counts.ndim == 2:
+              hist = jax.vmap(lambda c: jnp.bincount(c, length=M + 1))(counts)   # [B, M+1]
+              cum  = jnp.cumsum(hist, axis=-1)                                   # [B, M+1]
+              K    = int(0.3 * M)
+              allow_freq = cum <= K                                              # [B, M+1]
+              kmin = jnp.min(counts, axis=-1)                                   # [B]
+              allow_freq = jnp.logical_or(allow_freq, (jnp.arange(M+1)[None, :] == kmin[:, None]))
+              mask_keep = jnp.take_along_axis(allow_freq[:, None, :], counts[..., None], axis=-1)[..., 0]  # [B, M]
+
+          else:
+              hist = jnp.bincount(counts, length=M + 1)                           # [M+1]
+              cum  = jnp.cumsum(hist)                                             # [M+1]
+              K    = int(0.3 * M)
+              allow_freq = cum <= K   
+              kmin = jnp.min(counts)
+              allow_freq = jnp.logical_or(allow_freq, (jnp.arange(M+1) == kmin))                                            # [M+1]
+              mask_keep  = allow_freq[counts]                                     # [M]
+
+          fcounts = counts.astype(jnp.result_type(x, jnp.float32))
+          logits  = jnp.where(mask_keep, -jnp.log(fcounts), -jnp.inf)             # same ordering as 1/freq
+          return jax.nn.softmax(logits, axis=-1)
+
+      if batched:
+          # x: [B, 121, 64]
+          eq = pair_eq(x)                         # [B, M, M]
+          counts = jnp.sum(eq, axis=-1)           # [B, M]
+          attn = guidance_from_counts(counts)     # [B, M]
+          guidance = attn.reshape(attn.shape[0], 1, 11, 11)   # [B, 1, 11, 11]
+      else:
+          # x: [121, 64]
+          eq = pair_eq(x)                         # [M, M]
+          counts = jnp.sum(eq, axis=-1)           # [M]
+          attn = guidance_from_counts(counts)     # [M]
+          guidance = attn.reshape(1, 1, 11, 11)   # [1, 1, 11, 11]
+          #jax.debug.print("Guidance coverage: {}/121", jnp.sum(guidance > 0.01))
+      return jax.lax.stop_gradient(guidance)
+
 
   
 class Discriminator(hk.Module):
