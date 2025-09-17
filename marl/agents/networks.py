@@ -431,8 +431,14 @@ class VisualFeatures_attention_selfsupervise(hk.Module):
               mask_keep  = allow_freq[counts]                                     # [M]
 
           fcounts = counts.astype(jnp.result_type(x, jnp.float32))
+
+          # use soft max 
           logits  = jnp.where(mask_keep, -jnp.log(fcounts), -jnp.inf)             # same ordering as 1/freq
           return jax.nn.softmax(logits, axis=-1)
+      
+          # use one hot for mask_keep 
+          #attn = jnp.where(mask_keep, 1.0, 0.0)
+          #return attn / (jnp.sum(attn, axis=-1, keepdims=True) + 1e-8)
 
       if batched:
           # x: [B, 121, 64]
