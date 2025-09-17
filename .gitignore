@@ -141,3 +141,6 @@ examples
 # logs
 data
 logs
+
+.vscode/
+cross_eval_results/

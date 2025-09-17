@@ -25,6 +25,27 @@ _PMAP_AXIS_NAME = "data"
 In the memory-efficient version, each device holds only 1 agent’s state at a time — repeated across all chunks — not all agents at once.
 Only the master controller (self._combined_states) logically holds all agents — but on-device, only one chunk is materialized at a time.
 '''
+def make_freeze_mask(params) -> hk.Params:
+    """Build a tree-structured mask (0/1) with 1 for trainable, 0 for frozen.
+    
+    Only LSTM, policy, and value_layer are trainable.
+    Everything else (encoder, attention, conv, etc.) is frozen.
+    """
+    def should_train(module_name: str) -> bool:
+        # Train only LSTM, policy, and value_layer
+        return any([
+            "lstm/linear" in module_name,
+            "policy" in module_name,
+            "value_layer" in module_name,
+        ])
+    
+    mask = {}
+    for module_name, param_dict in params.items():
+        train = 1.0 if should_train(module_name) else 0.0
+        mask[module_name] = {}
+        for param_name, param_value in param_dict.items():
+            mask[module_name][param_name] = jnp.ones_like(param_value) * train
+    return mask
 
 class MALearner(acme.Learner):
 
@@ -40,6 +61,7 @@ class MALearner(acme.Learner):
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       frozen_agents: Optional[set] = None,
+      freeze_encoder: Optional[bool] = False,
   ):
     local_devices = jax.local_devices()
     process_id = jax.process_index()
@@ -88,10 +110,10 @@ class MALearner(acme.Learner):
         agent_state, key = make_initial_state(key)
         states.append(agent_state)
       return states
-
+        
     @jax.jit
     def sgd_step(
-        state: types.TrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray
+        state: types.TrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray, mask
     ) -> tuple[types.TrainingState, dict[str, jnp.ndarray]]:
       """Computes an SGD step, returning new state and metrics for logging."""
 
@@ -99,10 +121,11 @@ class MALearner(acme.Learner):
       grad_fn = jax.grad(self._loss_fn, has_aux=True)
       gradients, metrics = grad_fn(state.params, sample)
 
-      # Create a mask where 0 means frozen, and 1 means not frozen.
-      mask = jnp.where(is_frozen, 0.0, 1.0)
-
       # Apply the mask to the gradients.
+      gradients = jax.tree_map(lambda g, m: g * m, gradients, mask)
+      
+      # Create a mask where 0 means frozen, and 1 means not frozen agents
+      mask = jnp.where(is_frozen, 0.0, 1.0)
       gradients = jax.tree_map(lambda g: g * mask, gradients)
 
       # Apply updates.
@@ -124,7 +147,7 @@ class MALearner(acme.Learner):
     # Initialise training state (parameters and optimiser state).
     self._states = make_initial_states(next(self._rng))
     self._combined_states = ma_utils.merge_data(self._states)
-
+    self._mask = make_freeze_mask(self._states[0].params) if freeze_encoder else jax.tree_util.tree_map(lambda _: 1.0, self._states[0].params)
     self._loss_fn = loss_fn(network=network)
 
     self._sgd_step = jax.pmap(
@@ -196,7 +219,7 @@ class MALearner(acme.Learner):
           agent_idx in self.frozen_agents for agent_idx in range(i, min(i + self.n_devices, self.n_agents))
       ])
 
-      new_state, result = self._sgd_step(cur_state, cur_sample, is_frozen_chunk)
+      new_state, result = self._sgd_step(cur_state, cur_sample, is_frozen_chunk, self._mask)
 
       new_states.append(jax.device_get(new_state))
       results.append(jax.device_get(result))
@@ -248,6 +271,7 @@ class MALearnerPopArt(MALearner):
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       frozen_agents: Optional[set] = None,
+      freeze_encoder: Optional[bool] = False,
   ):
     local_devices = jax.local_devices()
     process_id = jax.process_index()
@@ -302,7 +326,7 @@ class MALearnerPopArt(MALearner):
 
     @jax.jit
     def sgd_step(
-        state: types.PopArtTrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray
+        state: types.PopArtTrainingState, sample: types.TrainingData, is_frozen: jnp.ndarray, mask,
     ) -> tuple[types.PopArtTrainingState, dict[str, jnp.ndarray]]:
       """Computes an SGD step, returning new state and metrics for logging."""
 
@@ -312,10 +336,12 @@ class MALearnerPopArt(MALearner):
                                                        state.popart_state,
                                                        sample)
       
-      # Create a mask where 0 means frozen, and 1 means not frozen.
-      mask = jnp.where(is_frozen, 0.0, 1.0)
-
       # Apply the mask to the gradients.
+      #breakpoint()
+      gradients = jax.tree_map(lambda g, m: g * m, gradients, mask)
+      
+      # Create a mask where 0 means frozen, and 1 means not frozen agents
+      mask = jnp.where(is_frozen, 0.0, 1.0)
       gradients = jax.tree_map(lambda g: g * mask, gradients)
 
       # Apply updates.
@@ -341,8 +367,10 @@ class MALearnerPopArt(MALearner):
 
     self._loss_fn = loss_fn(network=network, popart_update_fn=popart.update_fn)
 
+    self._mask = make_freeze_mask(self._states[0].params) if freeze_encoder else jax.tree_util.tree_map(lambda _: 1.0, self._states[0].params)
+    
     self._sgd_step = jax.pmap(
-        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0))
+        sgd_step, axis_name=_PMAP_AXIS_NAME, in_axes=(0, 2, 0, None))
 
     # Set up logging/counting.
     self._counter = counter or counting.Counter()

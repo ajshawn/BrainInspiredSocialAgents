@@ -1,0 +1,648 @@
+import os
+
+os.environ.pop("http_proxy", None)
+os.environ.pop("https_proxy", None)
+
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
+    "0.4"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+)
+os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+
+import datetime
+import functools
+
+from absl import app
+from absl import flags
+import jax
+import launchpad as lp
+
+from marl import experiments
+from marl import specs as ma_specs
+from marl.agents import impala
+from marl.agents import opre
+from marl.agents.networks import ArrayFE
+from marl.agents.networks import ImageFE
+from marl.agents.networks import MeltingpotFE, MeltingpotFECNNVis
+from marl.agents.networks import AttentionCNN_FE, AttentionSpatialCNN_FE
+from marl.experiments import config as ma_config
+from marl.experiments import inference_server
+from marl.utils import helpers
+from marl.utils import lp_utils as ma_lp_utils
+from marl.utils.experiment_utils import make_experiment_logger
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_bool(
+    "async_distributed",
+    False,
+    "Should an agent be executed in an off-policy distributed way",
+)
+flags.DEFINE_bool("run_eval", False, "Whether to run evaluation.")
+flags.DEFINE_bool(
+    "all_parallel",
+    False,
+    "Flag to run all agents in parallel using vmap. Only use if GPU with large memory is available.",
+)
+flags.DEFINE_enum(
+    "env_name",
+    "overcooked",
+    ["meltingpot", "overcooked"],
+    "Environment to train on",
+)
+flags.DEFINE_string(
+    "map_name",
+    "cramped_room",
+    "Meltingpot/Overcooked Map to train on. Only used when 'env_name' is 'meltingpot' or 'overcooked'",
+)
+flags.DEFINE_enum(
+    "algo_name",
+    "IMPALA",
+    [
+        "IMPALA", 
+        "PopArtIMPALA",
+        "PopArtIMPALA_CNN_visualization", 
+        "OPRE", 
+        "PopArtOPRE", 
+        "PopArtIMPALA_attention",
+        "PopArtIMPALA_attention_tanh",
+        "PopArtIMPALA_attention_spatial",
+        "PopArtIMPALA_attention_item_aware",
+        "PopArtIMPALA_attention_multihead",
+        "PopArtIMPALA_attention_multihead_disturb",
+        "PopArtIMPALA_attention_multihead_enhance",
+        "PopArtIMPALA_attention_multihead_item_aware",
+    ],
+    "Algorithm to train",
+)
+flags.DEFINE_bool(
+    "record_video", False, "Whether to record videos. (Only use during evaluation)"
+)
+flags.DEFINE_integer("reward_scale", 1, "Reward scale factor.")
+flags.DEFINE_bool(
+    "prosocial", False, "Whether to use shared reward for prosocial training."
+)
+flags.DEFINE_integer("seed", 0, "Random seed.")
+flags.DEFINE_integer("num_steps", None, "Number of env steps to run.")
+flags.DEFINE_integer("max_episode_length", None, "Max Number of steps per episode.")
+
+flags.DEFINE_bool("use_tb", False, "Flag to enable tensorboard logging.")
+flags.DEFINE_bool("use_wandb", False, "Flag to enable wandb.ai logging.")
+flags.DEFINE_string("wandb_entity", "linfangu-ucla", "Entity name for wandb account.")
+flags.DEFINE_string("wandb_project", "marl-jax", "Project name for wandb logging.")
+flags.DEFINE_string("wandb_tags", "", "Comma separated list of tags for wandb.")
+flags.DEFINE_string("available_gpus", "0", "Comma separated list of GPU ids.")
+flags.DEFINE_integer(
+    "num_actors",
+    2,
+    "Number of actors to use (should be less than total number of CPU cores).",
+)
+flags.DEFINE_integer("actors_per_node", 1, "Number of actors per thread.")
+flags.DEFINE_bool("inference_server", False, "Whether to run inference server.")
+flags.DEFINE_string("experiment_dir", None, "Directory to resume experiment from.")
+flags.DEFINE_string("frozen_agents", None, "Comma separated list of frozen agents.")
+flags.DEFINE_string("agent_roles", None, "Comma separated list of agent roles.")
+
+# Custom flag for map selection
+flags.DEFINE_string("map_layout", None, "Custom map layout for meltingpot maps")
+
+# Coop-Mining specific flags
+flags.DEFINE_bool(
+    "conservative_mine_beam",
+    False,
+    "Whether to use conservative mining beam that penalizes mining",
+)
+flags.DEFINE_float("mining_reward", 0, "negative reward for mining")
+flags.DEFINE_float("iron_reward", 1, "reward for iron")
+flags.DEFINE_float("gold_reward", 4, "reward for gold")
+flags.DEFINE_bool(
+    "dense_ore_regrow", False, "Whether to use a larger ore regrowth rate"
+)
+flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
+flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
+
+# Attention network flags
+flags.DEFINE_string("positional_embedding", None, "Whether to use positional embedding for attention")
+flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
+flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
+flags.DEFINE_string("attn_enhance_head_indices", "0", "Comma separated list of attention heads to enhance.")
+flags.DEFINE_string("attn_enhance_agent_skip_indices", "", "Comma separated list of agent indices to skip for attention enhancement.")
+flags.DEFINE_integer("attn_enhance_item_idx", 0, "Index of the item to enhance attention on.")
+flags.DEFINE_integer("attn_key_size", 64, "Size of the attention key vector.")
+flags.DEFINE_string(
+    "disturb_heads", "0",
+    "Comma separated list of attention heads to disturb.",
+)
+flags.DEFINE_integer(
+    "num_heads", 4, "Number of attention heads to use in the attention network."
+)
+
+# Observation logging flags
+flags.DEFINE_bool("log_obs", False, "Whether to log observations.")
+flags.DEFINE_string("log_filename", "temp/observations.jsonl", "Filename to log observations.")
+flags.DEFINE_string(
+    "log_img_dir", "agent_view_images", "Directory to save agent view images."
+)
+flags.DEFINE_integer("log_interval", 1, "Interval to log observations.")
+
+# Loss selection flags
+flags.DEFINE_float(
+    "head_entropy_cost", 0.0, "Head entropy cost for attention networks."
+)
+flags.DEFINE_float(
+    "head_cross_entropy_cost", 0.0, "Head cross entropy cost for attention networks."
+)
+flags.DEFINE_float(
+    "head_mse_cost", 0.0, "Head MSE cost for attention networks."
+)
+
+flags.DEFINE_string(
+    "exp_log_dir", "./results/", "Directory to store experiment logs in, in sequence, encoder network, lstm network"
+) 
+flags.DEFINE_string(
+    "ckp_map", None, "which checkpoint from each dir to load"
+) 
+flags.DEFINE_bool("freeze_encoder", True, "only train the lstm part")
+
+
+def _get_custom_env_configs():
+    result = {}
+    if FLAGS.env_name == "meltingpot" and FLAGS.map_name == "coop_mining":
+        if FLAGS.conservative_mine_beam:
+            result["conservative_mine_beam"] = True
+            result["mining_reward"] = FLAGS.mining_reward
+            result["iron_reward"] = FLAGS.iron_reward
+            result["gold_reward"] = FLAGS.gold_reward
+        if FLAGS.dense_ore_regrow:
+            result["dense_ore_regrow"] = True
+            result["iron_rate"] = FLAGS.iron_rate
+            result["gold_rate"] = FLAGS.gold_rate
+    if FLAGS.map_layout:
+        result[FLAGS.map_layout] = True
+    if FLAGS.max_episode_length:
+        result["max_episode_length"] = FLAGS.max_episode_length
+    return result
+
+
+def build_experiment_config():
+    """Builds experiment config which can be executed in different ways."""
+    # Create an environment, grab the spec, and use it to create networks.
+
+    # creating the following values so that FLAGS doesn't need to be pickled
+    map_name = FLAGS.map_name
+    reward_scale = FLAGS.reward_scale
+    autoreset = False
+    prosocial = FLAGS.prosocial
+    record = FLAGS.record_video
+    memory_efficient = not FLAGS.all_parallel
+    log_obs = FLAGS.log_obs
+    log_filename = FLAGS.log_filename
+    log_img_dir = FLAGS.log_img_dir
+    log_interval = FLAGS.log_interval
+    positional_embedding = FLAGS.positional_embedding
+    add_selection_vector = True if FLAGS.add_selection_vector=="True" else False
+    attn_enhance_multiplier = FLAGS.attn_enhance_multiplier
+    attn_enhance_head_indices = [int(head) for head in FLAGS.attn_enhance_head_indices.split(",")]
+    attn_enhance_agent_skip_indices = (
+        [int(agent) for agent in FLAGS.attn_enhance_agent_skip_indices.split(",")]
+        if FLAGS.attn_enhance_agent_skip_indices
+        else []
+    )
+    attn_enhance_item_idx = FLAGS.attn_enhance_item_idx
+    disturb_heads = [int(head) for head in FLAGS.disturb_heads.split(",")]
+    n_heads = FLAGS.num_heads
+    head_entropy_cost = FLAGS.head_entropy_cost
+    head_cross_entropy_cost = FLAGS.head_cross_entropy_cost
+    head_mse_cost = FLAGS.head_mse_cost
+    attn_key_size = FLAGS.attn_key_size
+    
+    # For now, assert only one of the attention head auxiliary losses is used
+    assert(sum([
+            head_entropy_cost > 0.0,
+            head_cross_entropy_cost > 0.0,
+            head_mse_cost > 0.0,
+        ]) <= 1)
+        
+
+    frozen_agents = set(
+        [int(agent) for agent in FLAGS.frozen_agents.split(",")]
+        if FLAGS.frozen_agents
+        else []
+    )
+    agent_roles = (
+        [role.strip() for role in FLAGS.agent_roles.split(",")]
+        if FLAGS.agent_roles
+        else None
+    )
+
+    #agent_param_indices = [int(idx) for idx in FLAGS.agent_param_indices.split(",")]
+    #config.agent_param_indices = agent_param_indices
+
+    if FLAGS.experiment_dir:
+        assert (
+            FLAGS.algo_name in FLAGS.experiment_dir or \
+                "disturb" in FLAGS.algo_name or \
+                "visualization" in FLAGS.algo_name or \
+                "enhance" in FLAGS.algo_name
+        ), f"experiment_dir must be a {FLAGS.algo_name} experiment"
+        assert (
+            FLAGS.env_name in FLAGS.experiment_dir
+        ), f"experiment_dir must be a {FLAGS.env_name} experiment"
+        assert (
+            FLAGS.map_name in FLAGS.experiment_dir
+        ), f"experiment_dir must be a {FLAGS.env_name} experiment with map_name {FLAGS.map_name}"
+        experiment_dir = FLAGS.experiment_dir
+        experiment_name = experiment_dir.split("/")[-1]
+    else:
+        experiment_name = f"{FLAGS.algo_name}_{FLAGS.seed}_{FLAGS.env_name}"
+        experiment_name += f"_{FLAGS.map_name}"
+        experiment_name += f"_{datetime.datetime.now()}"
+        experiment_name = experiment_name.replace(" ", "_")
+        experiment_dir = os.path.join(FLAGS.exp_log_dir, experiment_name)
+
+    wandb_config = {
+        "project": FLAGS.wandb_project,
+        "entity": FLAGS.wandb_entity,
+        "name": experiment_name,
+        "group": experiment_name,
+        "resume": True if FLAGS.experiment_dir else False,
+        "tags": [st for st in FLAGS.wandb_tags.split(",") if st],
+    }
+
+    feature_extractor = ArrayFE
+
+    # Create environment factory
+    if FLAGS.env_name == "overcooked":
+        env_factory = lambda seed: helpers.make_overcooked_environment(
+            seed,
+            map_name,
+            autoreset=autoreset,
+            reward_scale=reward_scale,
+            global_observation_sharing=True,
+            record=record,
+        )
+        num_options = 8
+    elif FLAGS.env_name == "ssd":
+        env_factory = lambda seed: helpers.make_ssd_environment(
+            seed,
+            map_name,
+            autoreset=autoreset,
+            reward_scale=reward_scale,
+            team_reward=prosocial,
+            global_observation_sharing=True,
+            record=record,
+        )
+        feature_extractor = ImageFE
+        num_options = 8
+    elif FLAGS.env_name == "meltingpot":
+        custom_env_configs = _get_custom_env_configs()
+        env_factory = lambda seed: helpers.env_factory(
+            seed,
+            map_name,
+            autoreset=autoreset,
+            shared_reward=prosocial,
+            reward_scale=reward_scale,
+            shared_obs=False,
+            record=record,
+            agent_roles=agent_roles,
+            log_obs=log_obs,
+            log_filename=log_filename,
+            log_img_dir=log_img_dir,
+            log_interval=log_interval,    
+            attn_enhance_agent_skip_indices=attn_enhance_agent_skip_indices,    
+            **custom_env_configs,
+        )
+        feature_extractor = MeltingpotFE
+        #feature_extractor = AttentionCNN_FE
+        num_options = 16
+    else:
+        raise ValueError(f"Unknown env_name {FLAGS.env_name}")
+
+    environment_specs = ma_specs.MAEnvironmentSpec(env_factory(0))
+
+    if FLAGS.algo_name == "IMPALA":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network, feature_extractor=feature_extractor
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.IMPALABuilder(config, core_state_spec=core_spec)
+    
+    elif FLAGS.algo_name == "PopArtIMPALA":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_2, feature_extractor=feature_extractor
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_CNN_visualization":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_impala_cnn_visualization, feature_extractor=MeltingpotFECNNVis
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, 
+            memory_efficient=memory_efficient,
+            head_cross_entropy_cost=head_cross_entropy_cost, 
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+    
+    elif FLAGS.algo_name == "PopArtIMPALA_attention":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding, add_selection_vec = add_selection_vector
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+        
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_spatial":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_spatial, feature_extractor=AttentionSpatialCNN_FE, add_selection_vec = add_selection_vector
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_item_aware":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_item_aware, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            attn_enhance_multiplier=attn_enhance_multiplier,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_tanh":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_tanh, feature_extractor=AttentionCNN_FE, positional_embedding=positional_embedding
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,
+            attn_enhance_multiplier=attn_enhance_multiplier,
+            num_heads=n_heads,
+            key_size=attn_key_size,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=head_entropy_cost,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_disturb":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_disturb, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,
+            attn_enhance_multiplier=attn_enhance_multiplier,
+            num_heads=n_heads,
+            disturb_heads=disturb_heads,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=head_entropy_cost,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+        
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_enhance":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_enhance, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,            
+            num_heads=n_heads,
+            key_size=attn_key_size,
+            attn_enhance_multiplier=attn_enhance_multiplier,
+            attn_enhance_head_indices=attn_enhance_head_indices,
+            attn_enhance_item_idx=attn_enhance_item_idx,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, 
+            memory_efficient=memory_efficient, 
+            head_entropy_cost=head_entropy_cost,
+            head_cross_entropy_cost=head_cross_entropy_cost, 
+            head_mse_cost=head_mse_cost
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+                
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_item_aware":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_item_aware, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
+            add_selection_vec=add_selection_vector,
+            num_heads=n_heads,
+            key_size=attn_key_size,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, 
+            memory_efficient=memory_efficient, 
+            head_entropy_cost=head_entropy_cost,
+            head_cross_entropy_cost=head_cross_entropy_cost,
+            head_mse_cost=head_mse_cost,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+
+    elif FLAGS.algo_name == "OPRE":
+        # Create network
+        network_factory = functools.partial(
+            opre.make_network,
+            num_options=num_options,
+            feature_extractor=feature_extractor,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = opre.OPREConfig(
+            n_agents=environment_specs.num_agents,
+            num_options=num_options,
+            memory_efficient=memory_efficient,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = opre.OPREBuilder(config, core_state_spec=core_spec)
+    
+    elif FLAGS.algo_name == "PopArtOPRE":
+        # Create network
+        network_factory = functools.partial(
+            opre.make_network_2,
+            num_options=num_options,
+            feature_extractor=feature_extractor,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = opre.OPREConfig(
+            n_agents=environment_specs.num_agents,
+            num_options=num_options,
+            memory_efficient=memory_efficient,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = opre.PopArtOPREBuilder(config, core_state_spec=core_spec)
+    
+    else:
+        raise ValueError(f"Unknown algo_name {FLAGS.algo_name}")
+
+    # Add frozen agents
+    builder._config.frozen_agents = frozen_agents
+    print(f"Frozen agents: {frozen_agents}") if frozen_agents else print("No frozen agents.")
+    builder._config.freeze_encoder = True if FLAGS.freeze_encoder else False
+    print(f"freeze encoder: {builder._config.freeze_encoder}") 
+
+    return (
+        experiments.MAExperimentConfig(
+            builder=builder,
+            environment_factory=env_factory,
+            network_factory=network_factory,
+            logger_factory=functools.partial(
+                make_experiment_logger,
+                log_dir=experiment_dir,
+                use_tb=FLAGS.use_tb,
+                use_wandb=FLAGS.use_wandb,
+                wandb_config=wandb_config,
+            ),
+            environment_spec=environment_specs,
+            evaluator_env_factories=None,
+            seed=FLAGS.seed,
+            max_num_actor_steps=FLAGS.num_steps,
+            resume_training=True if FLAGS.experiment_dir else False,
+        ),
+        experiment_dir,
+    )
+
+
+def main(_):
+    assert not FLAGS.record_video, "Video recording is not supported during training"
+    config, experiment_dir = build_experiment_config()
+    ckpt_config = ma_config.CheckpointingConfig(
+        max_to_keep=500, directory=experiment_dir, add_uid=False
+    )
+    if FLAGS.ckp_map is not None:
+        #print(FLAGS.ckp_map)
+        ckp_map = FLAGS.ckp_map.split(",")
+
+    else:
+        ckp_map = None
+
+
+    if FLAGS.async_distributed:
+
+        nodes_on_gpu = helpers.node_allocation(
+            FLAGS.available_gpus, FLAGS.inference_server
+        )
+        program = experiments.make_distributed_experiment_cross_architecture(
+            experiment=config,
+            num_actors=FLAGS.num_actors * FLAGS.actors_per_node,
+            inference_server_config=(
+                inference_server.InferenceServerConfig(
+                    batch_size=min(8, FLAGS.num_actors // 2),
+                    update_period=1,
+                    timeout=datetime.timedelta(
+                        seconds=1, milliseconds=0, microseconds=0
+                    ),
+                )
+                if FLAGS.inference_server
+                else None
+            ),
+            num_actors_per_node=FLAGS.actors_per_node,
+            checkpointing_config=ckpt_config,
+            ckp_map = ckp_map
+        )
+        local_resources = ma_lp_utils.to_device(
+            program_nodes=program.groups.keys(), nodes_on_gpu=nodes_on_gpu
+        )
+
+        lp.launch(
+            program,
+            launch_type="local_mp",
+            terminal="current_terminal",
+            local_resources=local_resources,
+        )
+    else:
+        experiments.run_experiment(
+            experiment=config, checkpointing_config=ckpt_config, num_eval_episodes=0
+        )
+
+
+if __name__ == "__main__":
+    app.run(main)

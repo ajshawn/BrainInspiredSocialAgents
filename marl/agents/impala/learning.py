@@ -147,6 +147,7 @@ class IMPALALearnerME(learning_memory_efficient.MALearner):
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       frozen_agents: Optional[set] = None,
+      freeze_encoder: Optional[bool] = False,
   ):
     loss_fn = functools.partial(
         impala_loss,
@@ -156,7 +157,7 @@ class IMPALALearnerME(learning_memory_efficient.MALearner):
         max_abs_reward=max_abs_reward,
     )
     super().__init__(network, iterator, optimizer, n_agents, random_key,
-                     loss_fn, counter, logger, devices, frozen_agents)
+                     loss_fn, counter, logger, devices, frozen_agents, freeze_encoder)
 
 
 class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
@@ -180,6 +181,7 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
       logger: Optional[loggers.Logger] = None,
       devices: Optional[Sequence[jax.xla.Device]] = None,
       frozen_agents: Optional[set] = None,
+      freeze_encoder: Optional[bool] = False,
   ):
 
     if popart[1]:  # ART
@@ -237,4 +239,4 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
         )
 
     super().__init__(network, popart[0], iterator, optimizer, n_agents,
-                     random_key, loss_fn, counter, logger, devices, frozen_agents)
+                     random_key, loss_fn, counter, logger, devices, frozen_agents, freeze_encoder)
