@@ -42,6 +42,7 @@ class MABuilder(builders.ActorLearnerBuilder[types.RecurrentNetworks,
     core_state_spec = {
         "hidden": getattr(core_state_spec, "hidden", np.array([0])),
         "cell": getattr(core_state_spec, "cell", np.array([0])),
+        "buffer": getattr(core_state_spec, "buffer", np.array([0])),
     }
     self._core_state_spec = core_state_spec
     self._sequence_length = self._config.sequence_length

@@ -15,6 +15,7 @@ import numpy as np
 import rlax
 from distrax._src.utils import math
 from marl import types
+from marl.agents.impala.simpletr import ContextState
 
 # from marl.modules.debug import db
 
@@ -64,10 +65,12 @@ def batched_art_impala_loss(
     )
 
     initial_state = extra["core_state"]
-    initial_state = hk.LSTMState(
-        hidden=initial_state["hidden"][:, 0], cell=initial_state["cell"][:, 0])
+    # buffer: (bsz 32, time seq 40, transformer context 20, 1, hidden dim 74)
+    # -> (bsz 32, transformer context 20, 1, hidden dim 74) as unroll should write its own subsequent contexts
+    initial_state = ContextState(
+        hidden=initial_state["hidden"][:, 0], cell=initial_state["cell"][:, 0], buffer=initial_state["buffer"][:, 0])
     behaviour_logits = extra["logits"]
-
+    
     # Apply reward clipping
     rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
 

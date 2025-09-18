@@ -1,4 +1,4 @@
-"""
+["""
 SimpleTransformerCore: Haiku RNNCore-compatible Transformer
 ----------------------------------------------------------
 
@@ -26,6 +26,7 @@ import haiku as hk
 import jax.numpy as jnp
 import jax
 import numpy as np
+from einops import rearrange
 from marl.agents.networks import make_haiku_networks_2
 
 class ContextState(NamedTuple):
@@ -198,7 +199,7 @@ class SimpleTransformerCore(hk.Module):
         feature_extractor,
         input_dim: int = 74,
         num_heads: int = 2,
-        mlp_hidden_dim: int = 256,
+        mlp_hidden_dim: int = 128,
         num_layers: int = 1,
         max_context_len: int = 20,
         dropout_rate: float = 0.0,
@@ -259,6 +260,7 @@ class SimpleTransformerCore(hk.Module):
 
     def unroll(self, inputs, state: ContextState):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
+        # vmap in loss function removes batch dimension
         emb_seq = self._embed(inputs)  # [T,B,D]
 
         def step(x_t, st):
@@ -273,9 +275,13 @@ class SimpleTransformerCore(hk.Module):
             return op, new_state
 
         op, new_state = hk.static_unroll(step, emb_seq, state)
-        logits = self._policy_layer(op)
-        value = jnp.squeeze(self._value_layer(op), axis=-1)
+        op = jnp.squeeze(op, axis=-2) # Remove the sequence length dim [T B seq hidden_dim]
+        logits = self._policy_layer(op) # [T B action_dim]
+        value = self._value_layer(op) # [T B 1]
+        value = jnp.squeeze(value, axis=-1) # [T B]
+   
         return (logits, value, op, emb_seq), new_state # logits [T,B,A], value [T,B], op [T,B,D], emb [T,B,D]
 
     def critic(self, inputs):
         return jnp.squeeze(self._value_layer(inputs), axis=-1)
+]

@@ -9,6 +9,7 @@ import dm_env
 import haiku as hk
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from marl import types
 from marl.utils import experiment_utils as ma_utils
@@ -82,7 +83,8 @@ class MAActor(core.Actor):
         "logits": self._prev_logits,
         "core_state": {
             "hidden": self._prev_states.hidden,
-            "cell": self._prev_states.cell
+            "cell": self._prev_states.cell,
+            "buffer": getattr(self._prev_states, "buffer", np.array([0])),
         },
     }
     self._adder.add(ma_utils.merge_data(action), next_timestep, extras)

@@ -12,3 +12,4 @@ class IMPALAConfig(MAConfig):
   # Loss configuration.
   baseline_cost: float = 0.5
   entropy_cost: float = 0.006
+  freeze_encoder: bool = False

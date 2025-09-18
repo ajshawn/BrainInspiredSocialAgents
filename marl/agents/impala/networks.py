@@ -6,6 +6,7 @@ import jax
 import numpy as np
 from marl.agents.networks import make_haiku_networks
 from marl.agents.networks import make_haiku_networks_2
+from marl.agents.impala.simpletr import ContextState
 
 from typing import Optional, List
 
@@ -1656,6 +1657,11 @@ class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=0)
     
+  def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
+    lstm_state = self._lstm_core.initial_state(batch_size)
+    dummy_buffer = jnp.array([1], dtype=jnp.int32)
+    return ContextState(cell=lstm_state.cell, hidden=lstm_state.hidden, buffer=dummy_buffer)
+    
   def __call__(self, inputs, state: hk.LSTMState):
   
     embedding, self_guidance_attn_map = self._embed(inputs) # [B, 121, F]
@@ -1673,6 +1679,7 @@ class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention
     # Combine attention output and other observations
     combined = jnp.concatenate([attended, ready_to_shoot, inventory, action], axis=-1)
     op, new_state = self._recurrent(combined, state)
+    new_state = ContextState(cell=new_state.cell, hidden=new_state.hidden, buffer=jnp.array([1], dtype=jnp.int32))
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
     #return (logits, value, op, attn_weights), new_state
@@ -1722,6 +1729,7 @@ class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention
       combined_input = jnp.concatenate([attended, rest_input], axis=-1)
       # Go through the recurrent layer
       output, new_state = self._recurrent(combined_input, state)
+      new_state = ContextState(cell=new_state.cell, hidden=new_state.hidden, buffer=jnp.array([1], dtype=jnp.int32))
       return (output, attn_weights), new_state
 
     # Unroll through time
