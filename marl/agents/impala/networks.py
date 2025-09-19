@@ -1204,12 +1204,17 @@ class IMPALANetwork_attention(hk.RNNCore):
     # Combine attention output and other observations
     combined = jnp.concatenate([attended, ready_to_shoot, inventory, action], axis=-1)
     op, new_state = self._recurrent(combined, state)
+    new_state = ContextState(cell=new_state.cell, hidden=new_state.hidden, buffer=jnp.array([1], dtype=jnp.int32))
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
     return (logits, value, op, attn_weights), new_state
 
+  # def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
+  #   return self._lstm_core.initial_state(batch_size)
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
-    return self._lstm_core.initial_state(batch_size)
+    lstm_state = self._lstm_core.initial_state(batch_size)
+    dummy_buffer = jnp.array([1], dtype=jnp.int32)
+    return ContextState(cell=lstm_state.cell, hidden=lstm_state.hidden, buffer=dummy_buffer)
 
   def unroll(self, inputs, state: hk.LSTMState):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
@@ -1250,6 +1255,7 @@ class IMPALANetwork_attention(hk.RNNCore):
       combined_input = jnp.concatenate([attended, rest_input], axis=-1)
       # Go through the recurrent layer    
       output, new_state = self._recurrent(combined_input, state)
+      new_state = ContextState(cell=new_state.cell, hidden=new_state.hidden, buffer=jnp.array([1], dtype=jnp.int32))
       return (output,attn_weights), new_state
 
     # Unroll through time

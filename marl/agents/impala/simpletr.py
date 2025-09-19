@@ -1,4 +1,4 @@
-["""
+"""
 SimpleTransformerCore: Haiku RNNCore-compatible Transformer
 ----------------------------------------------------------
 
@@ -28,6 +28,7 @@ import jax
 import numpy as np
 from einops import rearrange
 from marl.agents.networks import make_haiku_networks_2
+
 
 class ContextState(NamedTuple):
     buffer: jnp.ndarray  # [C,B,D]
@@ -103,6 +104,102 @@ def make_network_simple_transformer(
         unroll_fn=unroll_fn,
         critic_fn=critic_fn,
     )
+
+def make_network_transformer_attention(
+    environment_spec: EnvironmentSpec,
+    feature_extractor: hk.Module,
+    model_dim: int = 74,
+    num_heads: int = 2,
+    mlp_hidden_dim: int = 128,
+    num_layers: int = 1,
+    max_context_len: int = 20,
+    dropout_rate: float = 0.0,
+    num_heads_vis: int =1,
+    key_size: int =64,
+    positional_embedding: str =None, 
+    add_selection_vec: bool = False, 
+    attn_enhance_multiplier: float =0.0,
+):
+    def forward_fn(inputs, states: ContextState):
+        core = SimpleTransformer_attention(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+            num_heads_vis=num_heads_vis,
+            key_size=key_size,
+            positional_embedding=positional_embedding, 
+            add_selection_vec=add_selection_vec, 
+            attn_enhance_multiplier=attn_enhance_multiplier,
+        )
+        return core(inputs, states)
+    
+    def initial_state_fn(batch_size=None) -> ContextState:
+        core = SimpleTransformer_attention(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+            num_heads_vis=num_heads_vis,
+            key_size=key_size,
+            positional_embedding=positional_embedding, 
+            add_selection_vec=add_selection_vec, 
+            attn_enhance_multiplier=attn_enhance_multiplier,
+        )
+        return core.initial_state(batch_size=batch_size or 1)
+    
+    def unroll_fn(inputs, states: ContextState):
+        core = SimpleTransformer_attention(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+            num_heads_vis=num_heads_vis,
+            key_size=key_size,
+            positional_embedding=positional_embedding, 
+            add_selection_vec=add_selection_vec, 
+            attn_enhance_multiplier=attn_enhance_multiplier,
+        )
+        return core.unroll(inputs, states)
+    
+    def critic_fn(inputs):
+        core = SimpleTransformer_attention(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+            num_heads_vis=num_heads_vis,
+            key_size=key_size,
+            positional_embedding=positional_embedding, 
+            add_selection_vec=add_selection_vec, 
+            attn_enhance_multiplier=attn_enhance_multiplier,
+        )
+        return core.critic(inputs)
+    
+    return make_haiku_networks_2(
+        env_spec=environment_spec,
+        forward_fn=forward_fn,
+        initial_state_fn=initial_state_fn,
+        unroll_fn=unroll_fn,
+        critic_fn=critic_fn,
+    )
+
 
 # -----------------------------
 # Absolute Positional Embedding
@@ -284,4 +381,125 @@ class SimpleTransformerCore(hk.Module):
 
     def critic(self, inputs):
         return jnp.squeeze(self._value_layer(inputs), axis=-1)
-]
+
+
+class SimpleTransformer_attention(SimpleTransformerCore):
+    def __init__(
+        self,
+        num_actions: int,
+        model_dim: int,
+        feature_extractor,
+        input_dim: int = 74,
+        num_heads: int = 2,
+        mlp_hidden_dim: int = 128,
+        num_layers: int = 1,
+        max_context_len: int = 20,
+        dropout_rate: float = 0.0,
+        name: Optional[str] = None,
+        num_heads_vis=1,
+        key_size=64,
+        positional_embedding=None, 
+        add_selection_vec=False, 
+        attn_enhance_multiplier=0.0,
+    ):
+        super().__init__(
+            num_actions=num_actions,
+            model_dim=model_dim,
+            feature_extractor=feature_extractor,
+            input_dim=input_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            dropout_rate=dropout_rate,
+            name=name or "simple_transformer_core")
+        from marl.agents.impala import MultiHeadAttentionLayer
+        self._attention = MultiHeadAttentionLayer(
+        num_heads=num_heads_vis,
+        key_size_per_head=key_size // num_heads_vis,
+        positional_embedding=positional_embedding,
+        add_selection_vec=add_selection_vec,
+        attn_enhance_multiplier=attn_enhance_multiplier)
+        
+    def __call__(self, inputs, state: ContextState):
+        # inputs expected [B, D_in]; run feature extractor if provided
+        embedding = self._embed(inputs) # [B, 121, F]
+        # Apply attention between CNN features and LSTM hidden state
+        attended, attn_weights = self._attention(state.buffer[-1], embedding, embedding)
+        obs = inputs["observation"]
+        inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+        # Do a one-hot embedding of the actions.
+        action = jax.nn.one_hot(
+            inputs["action"], num_classes=self.num_actions)  # [B, A]
+        # Add dummy trailing dimensions to rewards if necessary.
+        while ready_to_shoot.ndim < inventory.ndim:
+            ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+        if ready_to_shoot.ndim < attended.ndim:
+            attended = jnp.squeeze(attended, axis=0)
+        # Combine attention output and other observations
+        combined = jnp.concatenate([attended, ready_to_shoot, inventory, action], axis=-1)
+
+        x = jnp.expand_dims(combined, axis=0)  # [T=1,B=1,D]
+        full, new_buf = self._concat_and_crop(state.buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
+        enc = self._encode_window(full, is_training=True)
+        op = enc[-1]  # [B=1,D] representation for current step
+
+        logits = self._policy_layer(op)             # [B=1, num_actions]
+        logits = logits.reshape((self.num_actions,))
+        value = jnp.squeeze(self._value_layer(op), axis=-1)  # [B]
+        new_state = ContextState(buffer=new_buf, hidden=jnp.array([0]), cell=jnp.array([0]))
+        return (logits, value, op, attn_weights), new_state
+
+    def unroll(self, inputs, state: ContextState):
+        """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
+        # vmap in loss function removes batch dimension
+        op = self._embed(inputs) # [B, 121, F]
+        flatten_op = jnp.reshape(op, (op.shape[0], -1))  # [B, ...]
+        self.op_shape = op.shape  # save the original shape for later use
+        self.flatten_op_dim = flatten_op.shape[-1]  # save the flattened dimension for later use
+        # extract other observations
+        obs = inputs["observation"]
+        inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+        # Do a one-hot embedding of the actions.
+        action = jax.nn.one_hot(
+            inputs["action"], num_classes=self.num_actions)  # [B, A]
+        # Add dummy trailing dimensions to rewards if necessary.
+        while ready_to_shoot.ndim < inventory.ndim:
+            ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+        # fix for dynamic_unroll with reverb sampled data
+        # state = hk.LSTMState(state.hidden, state.cell)
+        combined = jnp.concatenate(
+            [flatten_op, ready_to_shoot, inventory, action], 
+            axis=-1
+        ) 
+        def step(input_t, st):
+            # Slice out the flattened input for the current time step
+            attn_input = input_t[:self.flatten_op_dim]
+            # Reshape it back to the original shape
+            attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
+            # Apply attention
+            attended, attn_weights = self._attention(state.buffer[-1], attn_input, attn_input)
+            # Combine with the rest of the input
+            rest_input = input_t[self.flatten_op_dim:]
+            if rest_input.ndim < attended.ndim:
+                attended = jnp.squeeze(attended, axis=0)
+            combined_input = jnp.concatenate([attended, rest_input], axis=-1)
+            x = jnp.expand_dims(combined_input, axis=0)  # [1,B,D]
+            buffer = getattr(st, "buffer", self.initial_state(batch_size=1).buffer) 
+            full, new_buf = self._concat_and_crop(buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
+            enc = self._encode_window(full, is_training=True)
+            op = enc[-1]  # [B,D] representation for current step
+            new_state = ContextState(buffer=new_buf, hidden=jnp.array([0]), cell=jnp.array([0]))
+
+            return (op,attn_weights), new_state
+
+        optuple, new_state = hk.static_unroll(step, combined, state)
+        op, attn_weights = optuple
+        op = jnp.squeeze(op, axis=-2) # Remove the sequence length dim [T B seq hidden_dim]
+        logits = self._policy_layer(op) # [T B action_dim]
+        value = self._value_layer(op) # [T B 1]
+        value = jnp.squeeze(value, axis=-1) # [T B]
+   
+        return (logits, value, op, attn_weights), new_state # logits [T,B,A], value [T,B], op [T,B,D], emb [T,B,D]
+
+    
