@@ -474,18 +474,18 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         ) 
         def step(input_t, st):
             # Slice out the flattened input for the current time step
+            buffer = getattr(st, "buffer", self.initial_state(batch_size=1).buffer) 
             attn_input = input_t[:self.flatten_op_dim]
             # Reshape it back to the original shape
             attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
             # Apply attention
-            attended, attn_weights = self._attention(state.buffer[-1], attn_input, attn_input)
+            attended, attn_weights = self._attention(buffer[-1], attn_input, attn_input)
             # Combine with the rest of the input
             rest_input = input_t[self.flatten_op_dim:]
             if rest_input.ndim < attended.ndim:
                 attended = jnp.squeeze(attended, axis=0)
             combined_input = jnp.concatenate([attended, rest_input], axis=-1)
             x = jnp.expand_dims(combined_input, axis=0)  # [1,B,D]
-            buffer = getattr(st, "buffer", self.initial_state(batch_size=1).buffer) 
             full, new_buf = self._concat_and_crop(buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
             enc = self._encode_window(full, is_training=True)
             op = enc[-1]  # [B,D] representation for current step
