@@ -143,6 +143,7 @@ class PopArtIMPALABuilder(MABuilder):
         discount=self._config.discount,
         entropy_cost=self._config.entropy_cost,
         head_entropy_cost=self._config.head_entropy_cost,
+        attn_entropy_cost=self._config.attn_entropy_cost,
         head_cross_entropy_cost= self._config.head_cross_entropy_cost,
         head_mse_cost=self._config.head_mse_cost,
         baseline_cost=self._config.baseline_cost,

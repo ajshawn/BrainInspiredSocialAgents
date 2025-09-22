@@ -176,6 +176,7 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
       baseline_cost: float = 1.0,
       entropy_cost: float = 0.0,
       head_entropy_cost: float = 0.0,
+      attn_entropy_cost: float = 0.0,
       head_cross_entropy_cost: float = 0.0,
       head_mse_cost: float = 0.0,
       max_abs_reward: float = np.inf,
@@ -187,13 +188,14 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
   ):
 
     if popart[1]:  # ART
-        if head_entropy_cost != 0.0:
+        if head_entropy_cost != 0.0 or attn_entropy_cost != 0.0:
             loss_fn = functools.partial(
                 batched_art_impala_loss_head_entropy,
                 discount=discount,
                 baseline_cost=baseline_cost,
                 entropy_cost=entropy_cost,
                 head_entropy_cost=head_entropy_cost,
+                attn_entropy_cost=attn_entropy_cost,
                 max_abs_reward=max_abs_reward,
             )
         elif head_cross_entropy_cost != 0.0:

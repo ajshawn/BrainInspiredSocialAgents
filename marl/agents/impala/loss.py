@@ -924,10 +924,9 @@ def batched_art_impala_loss_head_entropy(
     pi_entropy = jnp.mean(pi_entropy)
 
     # attention entropy loss, compute on the last dimension (N), attn_weights = [T, B, ..., H, N]
-    flat_attn_weights = attn_weights.reshape(-1, attn_weights.shape[-1])  # [*, N]
-    attn_entropy = entropy_loss(attn_weights.reshape(-1, attn_weights.shape[-1]), jnp.ones(attn_weights.shape[:-1]).reshape(-1))  # [T*B*...,]
-    attn_entropy = jnp.mean(attn_entropy) * attn_entropy_cost
-
+    attn_weights_flat = attn_weights.reshape(-1, attn_weights.shape[-1])  # [T*B*..., N]
+    entropy = -jnp.sum(attn_weights_flat * jnp.log(attn_weights_flat + 1e-8), axis=-1)
+    attn_entropy = jnp.mean(entropy) * attn_entropy_cost
     # cross head attention entropy loss - Flatten temporal dimensions if present: [T, B, ..., H, N] -> [-1, H, N]
     flat_attn_weights = attn_weights.reshape(-1, attn_weights.shape[-2], attn_weights.shape[-1])  # [*, H, N]
     attn1 = flat_attn_weights[:, :, None, :]  # [B, H, 1, N]

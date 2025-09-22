@@ -660,6 +660,9 @@ class MultiHeadAttentionLayer(hk.Module):
       add_selection_vec=False,
       attn_enhance_multiplier: float = 0.0,
       attn_enhance_head_indices: List[int] = [],
+      dropout_rate: float = 0.0,
+      temperature: float = 1.5,
+      is_training: bool = True,
   ):
     super().__init__(name="multihead_attention_layer")
     self.num_heads = num_heads
@@ -669,6 +672,9 @@ class MultiHeadAttentionLayer(hk.Module):
     self.add_selection_vec = add_selection_vec
     self.model_dim = num_heads * key_size_per_head
     self.attn_enhance_head_indices = np.array(attn_enhance_head_indices, dtype=int)
+    self.dropout_rate = dropout_rate
+    self.is_training = is_training
+    self.temperature = temperature
 
   def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
     if jnp.ndim(query) == 1:
@@ -764,8 +770,10 @@ class MultiHeadAttentionLayer(hk.Module):
     #       scores
     #   )
 
-    scores = scores / jnp.sqrt(self.key_size_per_head * self.num_heads)  # Scale scores
-    weights = jax.nn.softmax(scores, axis=-1)  # [B, H, N]
+    scores = scores / jnp.sqrt(self.key_size_per_head)  # Scale scores
+    weights = jax.nn.softmax(scores / self.temperature, axis=-1)  # [B, H, N]
+    # if self.dropout_rate > 0.0 and self.is_training:
+    #   weights = hk.dropout(hk.next_rng_key(), self.dropout_rate, weights)
 
     # Weighted sum
     output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
