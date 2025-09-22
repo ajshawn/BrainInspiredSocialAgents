@@ -51,6 +51,7 @@ class MAConfig:
   baseline_cost: float = 1.0
   entropy_cost: float = 0.003
   head_entropy_cost: float = 0.0
+  attn_entropy_cost: float = 0.0
   head_cross_entropy_cost: float = 0.0
   head_mse_cost: float = 0.0
   max_abs_reward: float = np.inf

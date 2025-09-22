@@ -774,6 +774,7 @@ def batched_art_impala_loss_head_entropy(
     baseline_cost: float = 1.0,
     entropy_cost: float = 0.0,
     head_entropy_cost: float = 0.0,
+    attn_entropy_cost: float = 0.0,
 ) -> Callable[[hk.Params, types.TrainingData], jnp.DeviceArray]:
   """Builds the standard entropy-regularised IMPALA loss function.
 
@@ -784,6 +785,7 @@ def batched_art_impala_loss_head_entropy(
       max_abs_reward: Optional symmetric reward clipping to apply.
       baseline_cost: Weighting of the critic loss relative to the policy loss.
       entropy_cost: Weighting of the entropy regulariser relative to policy loss.
+      attn_entropy_cost: Weighting of the attention entropy regulariser.
 
     Returns:
       A loss function with signature (params, data) -> loss_scalar.
@@ -921,7 +923,12 @@ def batched_art_impala_loss_head_entropy(
     pi_entropy = entropy_loss(logits[:, :-1], w_t)
     pi_entropy = jnp.mean(pi_entropy)
 
-    # Attention loss - Flatten temporal dimensions if present: [T, B, ..., H, N] -> [-1, H, N]
+    # attention entropy loss, compute on the last dimension (N), attn_weights = [T, B, ..., H, N]
+    flat_attn_weights = attn_weights.reshape(-1, attn_weights.shape[-1])  # [*, N]
+    attn_entropy = entropy_loss(attn_weights.reshape(-1, attn_weights.shape[-1]), jnp.ones(attn_weights.shape[:-1]).reshape(-1))  # [T*B*...,]
+    attn_entropy = jnp.mean(attn_entropy) * attn_entropy_cost
+
+    # cross head attention entropy loss - Flatten temporal dimensions if present: [T, B, ..., H, N] -> [-1, H, N]
     flat_attn_weights = attn_weights.reshape(-1, attn_weights.shape[-2], attn_weights.shape[-1])  # [*, H, N]
     attn1 = flat_attn_weights[:, :, None, :]  # [B, H, 1, N]
     attn2 = flat_attn_weights[:, None, :, :]  # [B, 1, H, N]
@@ -937,7 +944,7 @@ def batched_art_impala_loss_head_entropy(
     # Combine weighted sum of actor & critic losses, averaged over the sequence
     critic_loss *= baseline_cost
     pi_entropy *= entropy_cost
-    mean_loss = pg_loss + critic_loss + pi_entropy + head_entropy_loss  # []
+    mean_loss = pg_loss + critic_loss + pi_entropy + head_entropy_loss + attn_entropy # []
 
     metrics = {
         "total_loss": mean_loss,
@@ -945,6 +952,7 @@ def batched_art_impala_loss_head_entropy(
         "critic_loss": critic_loss,
         "pi_entropy_loss": pi_entropy,
         "head_entropy_loss": head_entropy_loss,
+        "attn_entropy_loss": attn_entropy,
         "extrinsic_reward": jnp.mean(rewards),
     }
 

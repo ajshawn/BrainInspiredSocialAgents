@@ -1,15 +1,15 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_self_supervision_1_meltingpot_coop_mining_2025-09-14_11:15:56.921430"
+EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-18_22:58:44.781447" 
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention_multihead_self_supervision"
-TIME_STAMP="2025-09-14_11:15:56.921430"
+ALGORITHM_NAME="simple_transformer_attention"
+TIME_STAMP="2025-09-18_22:58:44.781447"
 LOG_INTERVAL=1
 N_AGENTS=3
-GPUS="0"
+GPUS="1"
 N_HEADS=1
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 127 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 50 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
 
     obs_out_dir="data_log_obs/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"

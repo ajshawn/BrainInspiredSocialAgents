@@ -154,6 +154,9 @@ flags.DEFINE_float(
     "head_entropy_cost", 0.0, "Head entropy cost for attention networks."
 )
 flags.DEFINE_float(
+    "attn_entropy_cost", 0.0, "attention entropy cost within each head."
+)
+flags.DEFINE_float(
     "head_cross_entropy_cost", 0.0, "Head cross entropy cost for attention networks."
 )
 flags.DEFINE_float(
@@ -207,6 +210,7 @@ def build_experiment_config():
     disturb_heads = [int(head) for head in FLAGS.disturb_heads.split(",")]
     n_heads = FLAGS.num_heads
     head_entropy_cost = FLAGS.head_entropy_cost
+    attn_entropy_cost = FLAGS.attn_entropy_cost
     head_cross_entropy_cost = FLAGS.head_cross_entropy_cost
     head_mse_cost = FLAGS.head_mse_cost
     attn_key_size = FLAGS.attn_key_size
@@ -438,7 +442,7 @@ def build_experiment_config():
         )
         # Construct the agent.
         config = impala.IMPALAConfig(
-            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=head_entropy_cost,
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=head_entropy_cost, attn_entropy_cost=attn_entropy_cost,
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
@@ -564,6 +568,7 @@ def build_experiment_config():
         network_factory = functools.partial(
             impala.make_network_transformer_attention,
             feature_extractor=AttentionCNN_FE,
+            positional_embedding=positional_embedding,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
@@ -574,6 +579,7 @@ def build_experiment_config():
             memory_efficient=memory_efficient, 
             head_entropy_cost=head_entropy_cost,
             head_cross_entropy_cost=head_cross_entropy_cost,
+            attn_entropy_cost=attn_entropy_cost,
             head_mse_cost=head_mse_cost,
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
