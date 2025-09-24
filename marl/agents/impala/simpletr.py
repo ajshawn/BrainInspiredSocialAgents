@@ -320,7 +320,8 @@ class SimpleTransformerCore(hk.Module):
 
     def initial_state(self, batch_size: int, **kwargs) -> ContextState:
         buf = jnp.zeros((self.max_context_len, batch_size, self.input_dim), dtype=jnp.float32)
-        return ContextState(buffer=buf, hidden=jnp.array([0]), cell=jnp.array([0]))
+        hidden = jnp.zeros((batch_size, self.model_dim), dtype=jnp.float32)
+        return ContextState(buffer=buf, hidden=hidden, cell=jnp.array([0]))
 
     @staticmethod
     def _concat_and_crop(context: jnp.ndarray, x: jnp.ndarray, max_len: int) -> Tuple[jnp.ndarray, jnp.ndarray]:
@@ -352,7 +353,7 @@ class SimpleTransformerCore(hk.Module):
         logits = self._policy_layer(op)             # [B=1, num_actions]
         logits = logits.reshape((self.num_actions,))
         value = jnp.squeeze(self._value_layer(op), axis=-1)  # [B]
-        new_state = ContextState(buffer=new_buf, hidden=jnp.array([0]), cell=jnp.array([0]))
+        new_state = ContextState(buffer=new_buf, hidden=state.hidden, cell=jnp.array([0]))
         return (logits, value, op, emb), new_state
 
     def unroll(self, inputs, state: ContextState):
@@ -367,7 +368,7 @@ class SimpleTransformerCore(hk.Module):
             full, new_buf = self._concat_and_crop(buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
             enc = self._encode_window(full, is_training=True)
             op = enc[-1]  # [B,D] representation for current step
-            new_state = ContextState(buffer=new_buf, hidden=jnp.array([0]), cell=jnp.array([0]))
+            new_state = ContextState(buffer=new_buf, hidden=state.hidden, cell=jnp.array([0]))
 
             return op, new_state
 
@@ -425,7 +426,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         # inputs expected [B, D_in]; run feature extractor if provided
         embedding = self._embed(inputs) # [B, 121, F]
         # Apply attention between CNN features and LSTM hidden state
-        attended, attn_weights = self._attention(state.buffer[-1], embedding, embedding)
+        attended, attn_weights = self._attention(state.hidden, embedding, embedding)
         obs = inputs["observation"]
         inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
         # Do a one-hot embedding of the actions.
@@ -443,11 +444,10 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         full, new_buf = self._concat_and_crop(state.buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
         enc = self._encode_window(full, is_training=True)
         op = enc[-1]  # [B=1,D] representation for current step
-
         logits = self._policy_layer(op)             # [B=1, num_actions]
         logits = logits.reshape((self.num_actions,))
         value = jnp.squeeze(self._value_layer(op), axis=-1)  # [B]
-        new_state = ContextState(buffer=new_buf, hidden=jnp.array([0]), cell=jnp.array([0]))
+        new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
         return (logits, value, op, attn_weights), new_state
 
     def unroll(self, inputs, state: ContextState):
@@ -474,22 +474,22 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         ) 
         def step(input_t, st):
             # Slice out the flattened input for the current time step
-            buffer = getattr(st, "buffer", self.initial_state(batch_size=1).buffer) 
             attn_input = input_t[:self.flatten_op_dim]
             # Reshape it back to the original shape
             attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
             # Apply attention
-            attended, attn_weights = self._attention(buffer[-1], attn_input, attn_input)
+            attended, attn_weights = self._attention(st.hidden, attn_input, attn_input)
             # Combine with the rest of the input
             rest_input = input_t[self.flatten_op_dim:]
             if rest_input.ndim < attended.ndim:
                 attended = jnp.squeeze(attended, axis=0)
             combined_input = jnp.concatenate([attended, rest_input], axis=-1)
             x = jnp.expand_dims(combined_input, axis=0)  # [1,B,D]
+            buffer = getattr(st, "buffer", self.initial_state(batch_size=1).buffer) 
             full, new_buf = self._concat_and_crop(buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
             enc = self._encode_window(full, is_training=True)
             op = enc[-1]  # [B,D] representation for current step
-            new_state = ContextState(buffer=new_buf, hidden=jnp.array([0]), cell=jnp.array([0]))
+            new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
 
             return (op,attn_weights), new_state
 

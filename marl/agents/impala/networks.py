@@ -656,12 +656,12 @@ class MultiHeadAttentionLayer(hk.Module):
       self,
       num_heads: int,
       key_size_per_head: int,
-      positional_embedding=None,
+      positional_embedding='learnable',
       add_selection_vec=False,
       attn_enhance_multiplier: float = 0.0,
       attn_enhance_head_indices: List[int] = [],
       dropout_rate: float = 0.0,
-      temperature: float = 1.5,
+      temperature: float = 1.0,
       is_training: bool = True,
   ):
     super().__init__(name="multihead_attention_layer")
