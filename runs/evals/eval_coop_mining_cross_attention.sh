@@ -9,6 +9,14 @@
 # TIME_STAMP="2025-06-10_21:32:15.740274"
 # GPUS="0"
 
+# save_dir="./cross_eval_results/attention-2coop3single"
+# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-05-28_00:34:00.259639,./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274"
+# ckp_map="0:180-1,1:60-1,2:60-2,3:60-3,4:180-0"
+# EVN_NAME="coop_mining"
+# ALGORITHM_NAME="PopArtIMPALA_attention"
+# TIME_STAMP="2025-06-10_21:32:15.740274"
+# GPUS="0"
+
 # save_dir="./cross_eval_results/new-attention-alone"
 # EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_self_supervision_1_meltingpot_coop_mining_2025-09-14_11:15:56.921430"
 # ckp_map="0:99-2"
@@ -17,15 +25,30 @@
 # TIME_STAMP="2025-06-10_21:32:15.740274"
 # GPUS="0"
 
-# the baseline agents that were finetuned with attention afterwards
-save_dir="./cross_eval_results/baseline-attention-alone"
-EXP_DIR_PREFIX=".,results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274,./results/baseline_trained_3ag"
-ckp_map="0:19-0"
+save_dir="./cross_eval_results/enhance-attention-alone"
+EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
+ckp_map="0:100-0"
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention"
-TIME_STAMP="2025-06-10_21:32:15.740274"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
+TIME_STAMP="2025-07-23_16:43:20.078198"
 GPUS="0"
 
+# save_dir="./cross_eval_results/enhance-attention-2coop3single"
+# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
+# ckp_map="0:100-0,1:50-0,2:50-1,3:50-2,4:100-1"
+# EVN_NAME="coop_mining"
+# ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
+# TIME_STAMP="2025-07-23_16:43:20.078198"
+# GPUS="0"
+
+# save_dir="./cross_eval_results/enhance-attention-2coop"
+# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
+# #ckp_map="0:74-0,1:74-1"
+# ckp_map="0:100-0,1:100-1"
+# EVN_NAME="coop_mining"
+# ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
+# TIME_STAMP="2025-07-23_16:43:20.078198"
+# GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 

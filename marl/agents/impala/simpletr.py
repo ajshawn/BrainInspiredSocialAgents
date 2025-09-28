@@ -28,7 +28,7 @@ import jax
 import numpy as np
 from einops import rearrange
 from marl.agents.networks import make_haiku_networks_2
-
+from typing import Optional, List
 
 class ContextState(NamedTuple):
     buffer: jnp.ndarray  # [C,B,D]
@@ -114,13 +114,13 @@ def make_network_transformer_attention(
     num_layers: int = 1,
     max_context_len: int = 20,
     dropout_rate: float = 0.0,
-    num_heads_vis: int =1,
+    num_heads_vis: int =2,
     key_size: int =64,
     positional_embedding: str =None, 
     add_selection_vec: bool = False, 
     attn_enhance_multiplier: float =0.0,
 ):
-    def forward_fn(inputs, states: ContextState):
+    def forward_fn(inputs, states: ContextState,mrng=None):
         core = SimpleTransformer_attention(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -136,7 +136,7 @@ def make_network_transformer_attention(
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
         )
-        return core(inputs, states)
+        return core(inputs, states, mrng=mrng)
     
     def initial_state_fn(batch_size=None) -> ContextState:
         core = SimpleTransformer_attention(
@@ -156,7 +156,7 @@ def make_network_transformer_attention(
         )
         return core.initial_state(batch_size=batch_size or 1)
     
-    def unroll_fn(inputs, states: ContextState):
+    def unroll_fn(inputs, states: ContextState, mrng = None):
         core = SimpleTransformer_attention(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -172,7 +172,7 @@ def make_network_transformer_attention(
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
         )
-        return core.unroll(inputs, states)
+        return core.unroll(inputs, states, mrng = mrng)
     
     def critic_fn(inputs):
         core = SimpleTransformer_attention(
@@ -384,6 +384,147 @@ class SimpleTransformerCore(hk.Module):
         return jnp.squeeze(self._value_layer(inputs), axis=-1)
 
 
+class MultiHeadAttentionLayer_1selfattention(hk.Module):
+  def __init__(
+      self,
+      num_heads: int,
+      key_size_per_head: int,
+      positional_embedding='learnable',
+      add_selection_vec=False,
+      attn_enhance_multiplier: float = 0.0,
+      attn_enhance_head_indices: List[int] = [],
+      dropout_rate: float = 0.25,
+      temperature: float = 1.0,
+      is_training: bool = True,
+  ):
+    super().__init__(name="multihead_attention_layer")
+    self.num_heads = num_heads
+    self.key_size_per_head = key_size_per_head  # per head
+    self.positional_embedding = positional_embedding
+    self.attn_enhance_multiplier = attn_enhance_multiplier
+    self.add_selection_vec = add_selection_vec
+    self.model_dim = num_heads * key_size_per_head
+    self.attn_enhance_head_indices = np.array(attn_enhance_head_indices, dtype=int)
+    self.dropout_rate = dropout_rate
+    self.is_training = is_training
+    self.temperature = temperature
+
+  def __call__(self, query, key, value, mrng = None):
+    if jnp.ndim(query) == 1:
+      query = jnp.expand_dims(query, axis=0)
+    if jnp.ndim(key) == 2:
+      key = jnp.expand_dims(key, axis=0)
+      value = jnp.expand_dims(value, axis=0)
+
+    B, N, _ = key.shape
+
+    # Positional embedding
+    if self.positional_embedding == 'fixed':
+      H = 11
+      y = jnp.linspace(-1.0, 1.0, H)
+      x = jnp.linspace(-1.0, 1.0, H)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")
+      coords = jnp.stack([yy, xx], axis=-1).reshape([N, 2])
+      coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])
+      key = jnp.concatenate([key, coords], axis=-1)
+      value = jnp.concatenate([value, coords], axis=-1)
+    elif self.positional_embedding == 'learnable':
+      pos_emb = hk.get_parameter("pos_embedding", shape=[N, self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      key += pos_emb[None, :, :]
+      value += pos_emb[None, :, :]
+    elif self.positional_embedding == 'frequency':
+      # Linear projections
+      # NOTE: Frequency positional embedding now only works for single head due to the concatenation
+      
+      H = W = 11  # assume inputs arranged as HxW grid
+
+      # Create spatial coordinates
+      y = jnp.linspace(0, 1, H)
+      x = jnp.linspace(0, 1, W)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")  # [H, W]
+
+      # Define frequency basis size
+      U = V = 8
+      u = jnp.arange(1, U + 1)[None, None, :]  # [1,1,U]
+      v = jnp.arange(1, V + 1)[None, None, :]  # [1,1,V]
+
+      a = yy[:, :, None] * u * jnp.pi  # [H,W,U]
+      b = xx[:, :, None] * v * jnp.pi  # [H,W,V]
+
+      # Outer product of cosines across frequencies
+      freq_basis = jnp.einsum("hwu,hwv->hwuv", jnp.cos(a), jnp.cos(b))
+      freq_basis = freq_basis.reshape(H, W, -1)  # [H,W,U*V]
+
+      # Tile for batch
+      freq_basis = jnp.broadcast_to(freq_basis[None, ...], (B, H, W, U * V))
+      freq_basis = freq_basis.reshape(B, N, -1)  # [B,N,U*V]
+
+      # # Add frequency basis to projected keys and values
+      key += freq_basis
+      value += freq_basis
+      # Concat frequency basis to projected keys and values
+      # key = jnp.concatenate([key, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
+      # value = jnp.concatenate([value, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
+      
+    q_proj_cross = hk.Linear(self.model_dim)(query)   # [B, model_dim]
+    k_proj_cross = hk.Linear(self.model_dim)(key)     # [B, N, model_dim]
+    v_proj_cross = hk.Linear(self.model_dim)(value)   # [B, N, model_dim]
+
+    # --- Self-attention projections (all from key) ---
+    q_proj_self = hk.Linear(self.key_size_per_head)(key)   # [B, N, K]
+    k_proj_self = hk.Linear(self.key_size_per_head)(key)   # [B, N, K]
+    v_proj_self = hk.Linear(self.key_size_per_head)(key)   # [B, N, K]
+
+    grid_dim = k_proj_cross.shape[-2]
+
+    # ----- Cross-attention heads (H-1 heads) -----
+    q_cross = q_proj_cross.reshape(-1, self.num_heads, self.key_size_per_head)[:, 1:, :]  # [B, H-1, K]
+    q_cross = q_cross[:, :, None, :]  # [B, H-1, 1, K]
+
+    k_cross = k_proj_cross.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)[:, :, 1:, :]
+    k_cross = jnp.transpose(k_cross, (0, 2, 1, 3))  # [B, H-1, N, K]
+
+    v_cross = v_proj_cross.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)[:, :, 1:, :]
+    v_cross = jnp.transpose(v_cross, (0, 2, 1, 3))  # [B, H-1, N, K]
+
+    # ----- Self-attention head (head 0) -----
+    q_self = q_proj_self.mean(axis=1)  # [B, K]
+    q_self = q_self[:, None, None, :]  # [B, 1, 1, K]
+
+    k_self = k_proj_self.reshape(-1, grid_dim, 1, self.key_size_per_head)
+    k_self = jnp.transpose(k_self, (0, 2, 1, 3))  # [B, 1, N, K]
+
+    v_self = v_proj_self.reshape(-1, grid_dim, 1, self.key_size_per_head)
+    v_self = jnp.transpose(v_self, (0, 2, 1, 3))  # [B, 1, N, K]
+
+    # ----- Concatenate into full multi-head tensors -----
+
+    q = jnp.concatenate([q_self, q_cross], axis=1)  # [B, H, 1, K]
+    k = jnp.concatenate([k_self, k_cross], axis=1)  # [B, H, N, K]
+    v = jnp.concatenate([v_self, v_cross], axis=1)  # [B, H, N, K]
+
+    # Scaled dot-product attention
+    scores = jnp.einsum("bhqd,bhkd->bhqk", q, k).squeeze(2)  # [B, H, N]
+
+    scores = scores / jnp.sqrt(self.key_size_per_head)  # Scale scores
+    weights = jax.nn.softmax(scores / self.temperature, axis=-1)  # [B, H, N]
+
+    # Weighted sum
+    output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
+
+    output = output.reshape(output.shape[0], -1)  # [B, model_dim]
+
+    #breakpoint()
+    if self.dropout_rate > 0.0 and self.is_training and mrng is not None:
+        keep_prob = 1.0 - self.dropout_rate
+        mask = jax.random.bernoulli(mrng, keep_prob, output.shape)
+        mask = mask.astype(output.dtype)
+        output = output * mask / keep_prob
+
+    return output, weights
+
+
+
 class SimpleTransformer_attention(SimpleTransformerCore):
     def __init__(
         self,
@@ -397,7 +538,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         max_context_len: int = 20,
         dropout_rate: float = 0.0,
         name: Optional[str] = None,
-        num_heads_vis=1,
+        num_heads_vis=2,
         key_size=64,
         positional_embedding=None, 
         add_selection_vec=False, 
@@ -414,19 +555,30 @@ class SimpleTransformer_attention(SimpleTransformerCore):
             max_context_len=max_context_len,
             dropout_rate=dropout_rate,
             name=name or "simple_transformer_core")
-        from marl.agents.impala import MultiHeadAttentionLayer
-        self._attention = MultiHeadAttentionLayer(
+        #from marl.agents.impala import MultiHeadAttentionLayer
+        #self._attention = MultiHeadAttentionLayer(
+        # num_heads=num_heads_vis,
+        # key_size_per_head=key_size // num_heads_vis,
+        # positional_embedding=positional_embedding,
+        # add_selection_vec=add_selection_vec,
+        # attn_enhance_multiplier=attn_enhance_multiplier)
+        self._attention = MultiHeadAttentionLayer_1selfattention(
         num_heads=num_heads_vis,
         key_size_per_head=key_size // num_heads_vis,
         positional_embedding=positional_embedding,
         add_selection_vec=add_selection_vec,
-        attn_enhance_multiplier=attn_enhance_multiplier)
+        attn_enhance_multiplier=attn_enhance_multiplier 
+        )
         
-    def __call__(self, inputs, state: ContextState):
+    def __call__(self, inputs, state: ContextState, mrng=None):
         # inputs expected [B, D_in]; run feature extractor if provided
         embedding = self._embed(inputs) # [B, 121, F]
         # Apply attention between CNN features and LSTM hidden state
-        attended, attn_weights = self._attention(state.hidden, embedding, embedding)
+        attn_rng = None
+        if mrng is not None:
+            mrng, attn_rng = jax.random.split(mrng)
+
+        attended, attn_weights = self._attention(state.hidden, embedding, embedding, mrng=attn_rng)
         obs = inputs["observation"]
         inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
         # Do a one-hot embedding of the actions.
@@ -450,7 +602,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
         return (logits, value, op, attn_weights), new_state
 
-    def unroll(self, inputs, state: ContextState):
+    def unroll(self, inputs, state: ContextState, mrng = None):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
         # vmap in loss function removes batch dimension
         op = self._embed(inputs) # [B, 121, F]
@@ -472,13 +624,21 @@ class SimpleTransformer_attention(SimpleTransformerCore):
             [flatten_op, ready_to_shoot, inventory, action], 
             axis=-1
         ) 
-        def step(input_t, st):
+        
+        T = inputs["action"].shape[0]
+        step_rngs = None
+        if mrng is not None:
+            step_rngs = jax.random.split(mrng, T)  # one mrng per time step
+
+        def step(input_t_tp, st):
+            input_t, attn_rng = input_t_tp
+            #breakpoint()
             # Slice out the flattened input for the current time step
             attn_input = input_t[:self.flatten_op_dim]
             # Reshape it back to the original shape
             attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
             # Apply attention
-            attended, attn_weights = self._attention(st.hidden, attn_input, attn_input)
+            attended, attn_weights = self._attention(st.hidden, attn_input, attn_input, mrng = attn_rng)
             # Combine with the rest of the input
             rest_input = input_t[self.flatten_op_dim:]
             if rest_input.ndim < attended.ndim:
@@ -493,7 +653,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
 
             return (op,attn_weights), new_state
 
-        optuple, new_state = hk.static_unroll(step, combined, state)
+        optuple, new_state = hk.static_unroll(step, (combined,step_rngs), state)
         op, attn_weights = optuple
         op = jnp.squeeze(op, axis=-2) # Remove the sequence length dim [T B seq hidden_dim]
         logits = self._policy_layer(op) # [T B action_dim]

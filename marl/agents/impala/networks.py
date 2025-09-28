@@ -777,6 +777,9 @@ class MultiHeadAttentionLayer(hk.Module):
 
     # Weighted sum
     output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
+
+    #output += jnp.mean(v,axis = 2) # residue connection 
+
     output = output.reshape(output.shape[0], -1)  # [B, model_dim]
     return output, weights
 

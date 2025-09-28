@@ -54,8 +54,9 @@ class MAActor(core.Actor):
 
     observations = jax.tree_util.tree_map(lambda x: jnp.array(x), observations)
     # breakpoint()
+    rngs = jax.random.split(next(self._rng), self.n_agents)
     (logits, _, _,_), new_states = self._forward(self._params, observations,
-                                            self._states)
+                                            self._states, mrng = rngs)
 
     actions = jax.random.categorical(next(self._rng), logits)
 

@@ -1,21 +1,13 @@
 #EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-14_14:39:21.229188,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572" 
 #ckp_map="0:120-2,1:40-1,2:40-2,3:40-3,4:30-0"
 
-# save_dir="./cross_eval_results/impala-crlm-alone"
-# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-06-13_11:31:14.677056"
-# ckp_map="0:50-1"
-# EVN_NAME="coop_mining"
-# ALGORITHM_NAME="PopArtIMPALA"
-# TIME_STAMP="2025-06-13_11:31:14.677056"
-# GPUS="0"
-
-save_dir="./cross_eval_results/impala-2coop"
-EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572"
-ckp_map="0:120-0,1:120-2"
+save_dir="./cross_eval_results/attn-transformer-alone"
+EXP_DIR_PREFIX=".,./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-22_14:58:38.778330"
+ckp_map="0:46-0,1:46-2"
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2025-03-17_14:26:51.204572"
-GPUS="0"
+ALGORITHM_NAME="simple_transformer_attention"
+TIME_STAMP="2025-09-22_14:58:38.778330"
+GPUS="1"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
@@ -44,6 +36,8 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --ckp_map ${ckp_map} \
     --n_episodes 10 \
     --agent_param_indices '0,1'\
+    --num_heads 1 \
+    --positional_embedding learnable \
     #--record_video True \
     #--log_timesteps True \
     #--add_selection_vector True \

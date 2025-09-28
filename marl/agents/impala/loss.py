@@ -51,7 +51,7 @@ def batched_art_impala_loss(
   entropy_loss = jax.vmap(rlax.entropy_loss)
 
   def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
-              sample: types.TrainingData) -> jnp.DeviceArray:
+              sample: types.TrainingData,mrng = None) -> jnp.DeviceArray:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data
@@ -75,8 +75,14 @@ def batched_art_impala_loss(
     rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
 
     # Unroll current policy over observations
-    (logits, norm_values,
-     hidden_features,_), _ = unroll_fn(params, observations, initial_state)
+    # (logits, norm_values,
+    #  hidden_features,_), _ = unroll_fn(params, observations, initial_state)
+
+    #breakpoint()
+    batch_size = rewards.shape[0]
+    rngs = jax.random.split(mrng, batch_size)  # one rng per batch element
+
+    (logits, norm_values, hidden_features, _), _ = unroll_fn(params, observations, initial_state, mrng=rngs)
 
     # Compute importance sampling weights: current policy / behavior policy
     rhos = categorical_importance_sampling_ratios(logits[:, :-1],
@@ -597,6 +603,7 @@ def batched_popart_impala_loss_head_entropy(
     baseline_cost: float = 1.0,
     entropy_cost: float = 0.0,
     head_entropy_cost: float = 0.0,
+    rng: None
 ) -> Callable[[hk.Params, types.TrainingData], jnp.DeviceArray]:
   """Builds the standard entropy-regularised IMPALA loss function.
 
@@ -799,7 +806,7 @@ def batched_art_impala_loss_head_entropy(
   entropy_loss = jax.vmap(rlax.entropy_loss)
 
   def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
-              sample: types.TrainingData) -> jnp.DeviceArray:
+              sample: types.TrainingData,mrng = None) -> jnp.DeviceArray:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data
@@ -923,11 +930,15 @@ def batched_art_impala_loss_head_entropy(
     pi_entropy = entropy_loss(logits[:, :-1], w_t)
     pi_entropy = jnp.mean(pi_entropy)
 
-    # attention entropy loss, compute on the last dimension (N), attn_weights = [T, B, ..., H, N]
+    # attention entropy loss, compute on the last dimension (N), attn_weights = [B, T, ..., H, N]
     attn_weights_flat = attn_weights.reshape(-1, attn_weights.shape[-1])  # [T*B*..., N]
     entropy = -jnp.sum(attn_weights_flat * jnp.log(attn_weights_flat + 1e-8), axis=-1)
-    attn_entropy = jnp.mean(entropy) * attn_entropy_cost
-    # cross head attention entropy loss - Flatten temporal dimensions if present: [T, B, ..., H, N] -> [-1, H, N]
+    scale = attn_entropy_cost / (1.0 + jnp.mean(rewards[:,:-1])*10)
+    attn_entropy =  - jnp.mean(entropy) * scale  # adding 
+
+
+
+    # cross head attention entropy loss - Flatten temporal dimensions if present: [B, T, ..., H, N] -> [-1, H, N]
     flat_attn_weights = attn_weights.reshape(-1, attn_weights.shape[-2], attn_weights.shape[-1])  # [*, H, N]
     attn1 = flat_attn_weights[:, :, None, :]  # [B, H, 1, N]
     attn2 = flat_attn_weights[:, None, :, :]  # [B, 1, H, N]
@@ -993,7 +1004,7 @@ def batched_art_impala_loss_head_cross_entropy(
   entropy_loss = jax.vmap(rlax.entropy_loss)
 
   def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
-              sample: types.TrainingData) -> jnp.DeviceArray:
+              sample: types.TrainingData,mrng = None) -> jnp.DeviceArray:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data
@@ -1150,6 +1161,7 @@ def batched_art_impala_loss_head_mse(
     baseline_cost: float = 1.0,
     entropy_cost: float = 0.0,
     head_mse_cost: float = 0.0,
+    rng: None
 ) -> Callable[[hk.Params, types.TrainingData], jnp.DeviceArray]:
   """Builds the standard entropy-regularised IMPALA loss function.
 
