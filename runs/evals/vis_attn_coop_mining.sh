@@ -1,10 +1,10 @@
-EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-27_12:48:32.067510" 
+EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-29_13:02:18.340053" 
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="simple_transformer_attention"
-TIME_STAMP="2025-09-27_12:48:32.067510"
+TIME_STAMP="2025-09-29_13:02:18.340053"
 LOG_INTERVAL=1
-N_AGENTS=3
-GPUS="0"
+N_AGENTS=5
+GPUS="1"
 N_HEADS=2
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
@@ -25,7 +25,7 @@ for ckp in 24 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --map_layout original \
         --max_episode_length 500 \
         --experiment_dir ${EXP_DIR_PREFIX} \
-        --agent_roles 'default,default,default' \
+        --agent_roles 'default,default,default,default,default' \
         --dense_ore_regrow True \
         --iron_rate 0.00012 \
         --gold_rate 0.00008 \
@@ -37,7 +37,7 @@ for ckp in 24 ;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --n_episodes 1 \
         --record_video True \
         --positional_embedding learnable \
-        --agent_param_indices '0,1,2' \
+        --agent_param_indices '0,1,2,3,4' \
         --log_filename ${log_filename} \
         --log_img_dir ${log_img_dir} \
         --log_interval ${LOG_INTERVAL} \

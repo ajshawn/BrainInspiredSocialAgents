@@ -21,7 +21,7 @@ def make_network(environment_spec: EnvironmentSpec,
                  feature_extractor: hk.Module,
                  recurrent_dim: int = 128):
 
-  def forward_fn(inputs, state: hk.LSTMState):
+  def forward_fn(inputs, state: hk.LSTMState,mrng = None):
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
@@ -35,7 +35,7 @@ def make_network(environment_spec: EnvironmentSpec,
         feature_extractor=feature_extractor)
     return model.initial_state(batch_size)
 
-  def unroll_fn(inputs, state: hk.LSTMState):
+  def unroll_fn(inputs, state: hk.LSTMState,mrng = None):
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
@@ -54,7 +54,7 @@ def make_network_2(environment_spec: EnvironmentSpec,
                    recurrent_dim: int = 128,
                    ):
 
-  def forward_fn(inputs, state: hk.LSTMState):
+  def forward_fn(inputs, state: hk.LSTMState,mrng = None):
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
@@ -70,7 +70,7 @@ def make_network_2(environment_spec: EnvironmentSpec,
         )
     return model.initial_state(batch_size)
 
-  def unroll_fn(inputs, state: hk.LSTMState):
+  def unroll_fn(inputs, state: hk.LSTMState,mrng = None):
     model = IMPALANetwork(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
@@ -289,8 +289,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
                                 add_selection_vec: bool = False,
                                 attn_enhance_multiplier: float = 0.0,
                                 num_heads: int = 4,
-                                key_size: int = 64):   
-  def forward_fn(inputs, state: hk.LSTMState):
+                                key_size: int = 64,):   
+  def forward_fn(inputs, state: hk.LSTMState, mrng = None):
     model = IMPALANetwork_multihead_attention(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
@@ -299,8 +299,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
-        key_size=key_size)
-    return model(inputs, state) 
+        key_size=key_size,)
+    return model(inputs, state, mrng = mrng) 
 
   def initial_state_fn(batch_size=None) -> hk.LSTMState:
     model = IMPALANetwork_multihead_attention(
@@ -314,7 +314,7 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         key_size=key_size)
     return model.initial_state(batch_size)
 
-  def unroll_fn(inputs, state: hk.LSTMState):
+  def unroll_fn(inputs, state: hk.LSTMState, mrng = None):
     model = IMPALANetwork_multihead_attention(
         environment_spec.actions.num_values,
         recurrent_dim=recurrent_dim,
@@ -323,8 +323,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
-        key_size=key_size)
-    return model.unroll(inputs, state)
+        key_size=key_size,)
+    return model.unroll(inputs, state, mrng = mrng)
 
   def critic_fn(inputs):
     model = IMPALANetwork_multihead_attention(
@@ -1194,7 +1194,7 @@ class IMPALANetwork_attention(hk.RNNCore):
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
     
-  def __call__(self, inputs, state: hk.LSTMState):
+  def __call__(self, inputs, state: hk.LSTMState, mrng = None):
     embedding = self._embed(inputs) # [B, 121, F]
     # Apply attention between CNN features and LSTM hidden state
     attended, attn_weights = self._attention(state.hidden, embedding, embedding)
@@ -1227,7 +1227,7 @@ class IMPALANetwork_attention(hk.RNNCore):
     dummy_buffer = jnp.array([1], dtype=jnp.int32)
     return ContextState(cell=lstm_state.cell, hidden=lstm_state.hidden, buffer=dummy_buffer)
 
-  def unroll(self, inputs, state: hk.LSTMState):
+  def unroll(self, inputs, state: hk.LSTMState, mrng = None):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     op = self._embed(inputs)
     flatten_op = jnp.reshape(op, (op.shape[0], -1))  # [B, ...]
@@ -1503,7 +1503,7 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       positional_embedding, 
       add_selection_vec, 
       attn_enhance_multiplier,
-      use_layer_norm)
+      use_layer_norm,)
     self._attention = MultiHeadAttentionLayer(
         num_heads=num_heads,
         key_size_per_head=key_size // num_heads,
@@ -1828,17 +1828,20 @@ class IMPALANetwork(hk.RNNCore):
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
 
-  def __call__(self, inputs, state: hk.LSTMState):
+  def __call__(self, inputs, state: hk.LSTMState, mrng = None):
     emb = self._embed(inputs)
     op, new_state = self._recurrent(emb, state)
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
+    new_state = ContextState(cell=new_state.cell, hidden=new_state.hidden, buffer=jnp.array([1], dtype=jnp.int32))
     return (logits, value, op, emb), new_state
 
   def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
-    return self._recurrent.initial_state(batch_size)
+    lstm_state = self._recurrent.initial_state(batch_size)
+    dummy_buffer = jnp.array([1], dtype=jnp.int32)
+    return ContextState(cell=lstm_state.cell, hidden=lstm_state.hidden, buffer=dummy_buffer)
 
-  def unroll(self, inputs, state: hk.LSTMState):
+  def unroll(self, inputs, state: hk.LSTMState, mrng = None):
     """Efficient unroll that applies embeddings, MLP, & convnet in one pass."""
     emb = self._embed(inputs)
 
@@ -1851,6 +1854,7 @@ class IMPALANetwork(hk.RNNCore):
 
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
+    new_states = ContextState(cell=new_states.cell, hidden=new_states.hidden, buffer=jnp.array([1], dtype=jnp.int32))
     return (logits, value, op, emb), new_states
 
   def critic(self, inputs):

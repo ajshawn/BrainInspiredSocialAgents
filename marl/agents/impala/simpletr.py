@@ -393,7 +393,7 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
       add_selection_vec=False,
       attn_enhance_multiplier: float = 0.0,
       attn_enhance_head_indices: List[int] = [],
-      dropout_rate: float = 0.25,
+      dropout_rate: float = 0,
       temperature: float = 1.0,
       is_training: bool = True,
   ):
