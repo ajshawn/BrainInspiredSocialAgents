@@ -23,7 +23,7 @@ ckp_map="0:49-0"
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA"
 TIME_STAMP="2025-10-01_11:16:18.051802"
-GPUS="1"
+GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
@@ -51,9 +51,9 @@ for i in {0..4}; do
         --gold_reward 6 \
         --mining_reward 0 \
         --ckp_map ${ckp_map} \
-        --n_episodes 10 \
+        --n_episodes 2 \
         --agent_param_indices '0'\
-        #--record_video True \
+        --record_video True \
         #--log_timesteps True \
         #--add_selection_vector True \
         

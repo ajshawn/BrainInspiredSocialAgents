@@ -3,11 +3,11 @@
 
 save_dir="./cross_eval_results/attn-transformer-alone-5ag"
 EXP_DIR_PREFIX=".,./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-29_13:02:18.340053"
-ckp_map="0:59-0"
+ckp_map="0:130-0"
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="simple_transformer_attention"
 TIME_STAMP="2025-09-29_13:02:18.340053"
-GPUS="1"
+GPUS="0"
 
 # save_dir="./cross_eval_results/attn-transformer-2in5"
 # EXP_DIR_PREFIX=".,./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-29_13:02:18.340053,./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-29_13:02:18.340053"
@@ -31,7 +31,7 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --log_timesteps to suppress timestep log 
 
 for i in {0..4}; do 
-    ckp_map="0:59-$i"
+    ckp_map="0:130-$i"
     CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -40,7 +40,7 @@ for i in {0..4}; do
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
         --map_layout original \
-        --max_episode_length 500 \
+        --max_episode_length 300 \
         --experiment_dir ${EXP_DIR_PREFIX} \
         --save_dir ${save_dir} \
         --agent_roles 'default' \
@@ -55,9 +55,8 @@ for i in {0..4}; do
         --n_episodes 10 \
         --agent_param_indices '0'\
         --positional_embedding learnable \
-        --record_video True \
+        #--record_video True \
         #--log_timesteps True \
-        #--add_selection_vector True \
                 
         recording_dir="recordings/meltingpot/${EVN_NAME}"
         new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp_map}"

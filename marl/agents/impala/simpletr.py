@@ -119,6 +119,7 @@ def make_network_transformer_attention(
     positional_embedding: str =None, 
     add_selection_vec: bool = False, 
     attn_enhance_multiplier: float =0.0,
+    combine_heads = 'concat'
 ):
     def forward_fn(inputs, states: ContextState,mrng=None):
         core = SimpleTransformer_attention(
@@ -135,6 +136,7 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
+            combine_heads=combine_heads
         )
         return core(inputs, states, mrng=mrng)
     
@@ -153,6 +155,7 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
+            combine_heads=combine_heads
         )
         return core.initial_state(batch_size=batch_size or 1)
     
@@ -171,6 +174,7 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
+            combine_heads=combine_heads
         )
         return core.unroll(inputs, states, mrng = mrng)
     
@@ -189,6 +193,7 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
+            combine_heads=combine_heads
         )
         return core.critic(inputs)
     
@@ -388,7 +393,7 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
   def __init__(
       self,
       num_heads: int,
-      key_size_per_head: int,
+      key_size: int,
       positional_embedding='learnable',
       add_selection_vec=False,
       attn_enhance_multiplier: float = 0.0,
@@ -396,14 +401,19 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
       dropout_rate: float = 0,
       temperature: float = 1.0,
       is_training: bool = True,
+      combine_heads: str = 'sum'
   ):
     super().__init__(name="multihead_attention_layer")
     self.num_heads = num_heads
-    self.key_size_per_head = key_size_per_head  # per head
+    self.model_dim = key_size
+    self.combine_heads = combine_heads
+    if combine_heads == 'sum':
+        self.key_size_per_head = key_size
+    elif combine_heads == 'concat':
+        self.key_size_per_head = key_size // num_heads
     self.positional_embedding = positional_embedding
     self.attn_enhance_multiplier = attn_enhance_multiplier
     self.add_selection_vec = add_selection_vec
-    self.model_dim = num_heads * key_size_per_head
     self.attn_enhance_head_indices = np.array(attn_enhance_head_indices, dtype=int)
     self.dropout_rate = dropout_rate
     self.is_training = is_training
@@ -465,10 +475,10 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
       # Concat frequency basis to projected keys and values
       # key = jnp.concatenate([key, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
       # value = jnp.concatenate([value, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
-      
-    q_proj_cross = hk.Linear(self.model_dim)(query)   # [B, model_dim]
-    k_proj_cross = hk.Linear(self.model_dim)(key)     # [B, N, model_dim]
-    v_proj_cross = hk.Linear(self.model_dim)(value)   # [B, N, model_dim]
+    tot_key = self.key_size_per_head * self.num_heads
+    q_proj_cross = hk.Linear(tot_key)(query)   # [B, model_dim]
+    k_proj_cross = hk.Linear(tot_key)(key)     # [B, N, model_dim]
+    v_proj_cross = hk.Linear(tot_key)(value)   # [B, N, model_dim]
 
     # --- Self-attention projections (all from key) ---
     q_proj_self = hk.Linear(self.key_size_per_head)(key)   # [B, N, K]
@@ -512,7 +522,11 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
     # Weighted sum
     output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
 
-    output = output.reshape(output.shape[0], -1)  # [B, model_dim]
+    # head concatenated 
+    if self.combine_heads == 'concat':
+        output = output.reshape(output.shape[0], -1)  # [B, model_dim]
+    elif self.combine_heads == 'sum':
+        output = jnp.sum(output,axis=-2) # [B, model_dim]
 
     #breakpoint()
     if self.dropout_rate > 0.0 and self.is_training and mrng is not None:
@@ -521,6 +535,108 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
         mask = mask.astype(output.dtype)
         output = output * mask / keep_prob
 
+    return output, weights
+
+class MultiHeadAttentionLayer_blend(hk.Module):
+  def __init__(
+      self,
+      num_heads: int,
+      key_size_per_head: int,
+      positional_embedding='learnable',
+      temperature: float = 1.0,
+      is_training: bool = True,
+      hidden_scale: float = 0.0,
+  ):
+    super().__init__(name="multihead_attention_layer")
+    self.num_heads = num_heads
+    self.key_size_per_head = key_size_per_head  # per head
+    self.positional_embedding = positional_embedding
+    self.model_dim = num_heads * key_size_per_head
+    self.is_training = is_training
+    self.temperature = temperature
+    self.hidden_scale = hidden_scale
+
+  def __call__(self, query, key, value, mrng = None):
+    if jnp.ndim(query) == 1:
+      query = jnp.expand_dims(query, axis=0)
+    if jnp.ndim(key) == 2:
+      key = jnp.expand_dims(key, axis=0)
+      value = jnp.expand_dims(value, axis=0)
+
+    B, N, _ = key.shape
+
+    # Positional embedding
+    if self.positional_embedding == 'fixed':
+      H = 11
+      y = jnp.linspace(-1.0, 1.0, H)
+      x = jnp.linspace(-1.0, 1.0, H)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")
+      coords = jnp.stack([yy, xx], axis=-1).reshape([N, 2])
+      coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])
+      key = jnp.concatenate([key, coords], axis=-1)
+      value = jnp.concatenate([value, coords], axis=-1)
+    elif self.positional_embedding == 'learnable':
+      pos_emb = hk.get_parameter("pos_embedding", shape=[N, self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      key += pos_emb[None, :, :]
+      value += pos_emb[None, :, :]
+    elif self.positional_embedding == 'frequency':
+      # Linear projections
+      # NOTE: Frequency positional embedding now only works for single head due to the concatenation
+      
+      H = W = 11  # assume inputs arranged as HxW grid
+
+      # Create spatial coordinates
+      y = jnp.linspace(0, 1, H)
+      x = jnp.linspace(0, 1, W)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")  # [H, W]
+
+      # Define frequency basis size
+      U = V = 8
+      u = jnp.arange(1, U + 1)[None, None, :]  # [1,1,U]
+      v = jnp.arange(1, V + 1)[None, None, :]  # [1,1,V]
+
+      a = yy[:, :, None] * u * jnp.pi  # [H,W,U]
+      b = xx[:, :, None] * v * jnp.pi  # [H,W,V]
+
+      # Outer product of cosines across frequencies
+      freq_basis = jnp.einsum("hwu,hwv->hwuv", jnp.cos(a), jnp.cos(b))
+      freq_basis = freq_basis.reshape(H, W, -1)  # [H,W,U*V]
+
+      # Tile for batch
+      freq_basis = jnp.broadcast_to(freq_basis[None, ...], (B, H, W, U * V))
+      freq_basis = freq_basis.reshape(B, N, -1)  # [B,N,U*V]
+
+      # # Add frequency basis to projected keys and values
+      key += freq_basis
+      value += freq_basis
+      # Concat frequency basis to projected keys and values
+      # key = jnp.concatenate([key, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
+      # value = jnp.concatenate([value, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
+      
+    q_proj_cross = hk.Linear(self.model_dim)(query)  # [B, model_dim]
+    q_proj_self = hk.Linear(self.model_dim)(key) # [B, N, model_dim]
+    q_proj_self = jnp.mean(q_proj_self, axis = -2) # [B, model_dim]
+    q_proj = self.hidden_scale * q_proj_cross + (1-self.hidden_scale) * q_proj_self
+    k_proj = hk.Linear(self.model_dim)(key)    # [B, N, model_dim]
+    v_proj = hk.Linear(self.model_dim)(value)  # [B, N, model_dim]
+
+    # Split into heads
+    grid_dim, embed_dim = k_proj.shape[-2], k_proj.shape[-1]
+    q = q_proj.reshape(-1, self.num_heads, self.key_size_per_head)  # [B, H, K]
+    q = q[:, :, None, :] # [B, H, 1, K]
+    k = k_proj.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)  # [B, N, H, K]
+    k = jnp.transpose(k, (0, 2, 1, 3))  # [B, H, N, K]
+    v = v_proj.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)  # [B, N, H, K]
+    v = jnp.transpose(v, (0, 2, 1, 3))  # [B, H, N, K]
+
+    # Scaled dot-product attention
+    scores = jnp.einsum("bhqd,bhkd->bhqk", q, k).squeeze(2)  # [B, H, N]
+
+    scores = scores / jnp.sqrt(self.key_size_per_head)  # Scale scores
+    weights = jax.nn.softmax(scores / self.temperature, axis=-1)  # [B, H, N]
+    # Weighted sum
+    output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
+    output = output.reshape(output.shape[0], -1)  # [B, model_dim]
     return output, weights
 
 
@@ -543,6 +659,8 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         positional_embedding=None, 
         add_selection_vec=False, 
         attn_enhance_multiplier=0.0,
+        combine_heads='sum',
+        hidden_scale = 0.0,
     ):
         super().__init__(
             num_actions=num_actions,
@@ -562,12 +680,19 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         # positional_embedding=positional_embedding,
         # add_selection_vec=add_selection_vec,
         # attn_enhance_multiplier=attn_enhance_multiplier)
-        self._attention = MultiHeadAttentionLayer_1selfattention(
+        # self._attention = MultiHeadAttentionLayer_1selfattention(
+        # num_heads=num_heads_vis,
+        # key_size=key_size,
+        # positional_embedding=positional_embedding,
+        # add_selection_vec=add_selection_vec,
+        # attn_enhance_multiplier=attn_enhance_multiplier,
+        # combine_heads=combine_heads
+        # )
+        self._attention = MultiHeadAttentionLayer_blend(
         num_heads=num_heads_vis,
         key_size_per_head=key_size // num_heads_vis,
         positional_embedding=positional_embedding,
-        add_selection_vec=add_selection_vec,
-        attn_enhance_multiplier=attn_enhance_multiplier 
+        hidden_scale=hidden_scale
         )
         
     def __call__(self, inputs, state: ContextState, mrng=None):
