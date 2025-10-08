@@ -45,7 +45,7 @@ def make_network_simple_transformer(
     max_context_len: int = 20,
     dropout_rate: float = 0.0,
 ):
-    def forward_fn(inputs, states: ContextState):
+    def forward_fn(inputs, states: ContextState, mrng = None):
         core = SimpleTransformerCore(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -71,7 +71,7 @@ def make_network_simple_transformer(
         )
         return core.initial_state(batch_size=batch_size or 1)
     
-    def unroll_fn(inputs, states: ContextState):
+    def unroll_fn(inputs, states: ContextState, mrng = None):
         core = SimpleTransformerCore(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -114,7 +114,7 @@ def make_network_transformer_attention(
     num_layers: int = 1,
     max_context_len: int = 20,
     dropout_rate: float = 0.0,
-    num_heads_vis: int =2,
+    num_heads_vis: int = 1,
     key_size: int =64,
     positional_embedding: str =None, 
     add_selection_vec: bool = False, 
@@ -205,6 +205,75 @@ def make_network_transformer_attention(
         critic_fn=critic_fn,
     )
 
+def make_network_transformer_cnnfeedback(
+    environment_spec: EnvironmentSpec,
+    feature_extractor: hk.Module,
+    model_dim: int = 74,
+    num_heads: int = 2,
+    mlp_hidden_dim: int = 128,
+    num_layers: int = 1,
+    max_context_len: int = 20,
+    dropout_rate: float = 0.0,
+):
+    def forward_fn(inputs, states: ContextState,mrng=None):
+        core = SimpleTransformer_cnnfeedback(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+        )
+        return core(inputs, states, mrng = mrng)
+    
+    def initial_state_fn(batch_size=None) -> ContextState:
+        core = SimpleTransformer_cnnfeedback(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+        )
+        return core.initial_state(batch_size=batch_size or 1)
+    
+    def unroll_fn(inputs, states: ContextState,mrng=None):
+        core = SimpleTransformer_cnnfeedback(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+        )
+        return core.unroll(inputs, states, mrng = mrng)
+    
+    def critic_fn(inputs):
+        core = SimpleTransformer_cnnfeedback(
+            num_actions=environment_spec.actions.num_values,
+            model_dim=model_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            feature_extractor=feature_extractor,
+            dropout_rate=dropout_rate,
+        )
+        return core.critic(inputs)
+    
+    return make_haiku_networks_2(
+        env_spec=environment_spec,
+        forward_fn=forward_fn,
+        initial_state_fn=initial_state_fn,
+        unroll_fn=unroll_fn,
+        critic_fn=critic_fn,
+    )
 
 # -----------------------------
 # Absolute Positional Embedding
@@ -347,7 +416,7 @@ class SimpleTransformerCore(hk.Module):
             h = layer(h, mask=None, is_training=is_training)
         return h  # [S,B,D]
 
-    def __call__(self, inputs, state: ContextState):
+    def __call__(self, inputs, state: ContextState, mrng=None):
         # inputs expected [B, D_in]; run feature extractor if provided
         emb = self._embed(inputs)
         x = jnp.expand_dims(emb, axis=0)  # [T=1,B=1,D]
@@ -361,7 +430,7 @@ class SimpleTransformerCore(hk.Module):
         new_state = ContextState(buffer=new_buf, hidden=state.hidden, cell=jnp.array([0]))
         return (logits, value, op, emb), new_state
 
-    def unroll(self, inputs, state: ContextState):
+    def unroll(self, inputs, state: ContextState, mrng=None):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
         # vmap in loss function removes batch dimension
         emb_seq = self._embed(inputs)  # [T,B,D]
@@ -387,6 +456,70 @@ class SimpleTransformerCore(hk.Module):
 
     def critic(self, inputs):
         return jnp.squeeze(self._value_layer(inputs), axis=-1)
+
+
+class SimpleTransformer_cnnfeedback(SimpleTransformerCore):
+    def __init__(
+        self,
+        num_actions: int,
+        model_dim: int,
+        feature_extractor,
+        input_dim: int = 74,
+        num_heads: int = 2,
+        mlp_hidden_dim: int = 128,
+        num_layers: int = 1,
+        max_context_len: int = 20,
+        dropout_rate: float = 0.0,
+        name: Optional[str] = None,
+    ):
+        super().__init__(
+            num_actions=num_actions,
+            model_dim=model_dim,
+            feature_extractor=feature_extractor,
+            input_dim=input_dim,
+            num_heads=num_heads,
+            mlp_hidden_dim=mlp_hidden_dim,
+            num_layers=num_layers,
+            max_context_len=max_context_len,
+            dropout_rate=dropout_rate,
+            name=name or "simple_transformer_core")
+
+    def __call__(self, inputs, state: ContextState, mrng=None):
+        # inputs expected [B, D_in]; run feature extractor if provided
+        emb, score = self._embed(inputs, state.hidden)
+        x = jnp.expand_dims(emb, axis=0)  # [T=1,B=1,D]
+        full, new_buf = self._concat_and_crop(state.buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
+        enc = self._encode_window(full, is_training=True)
+        op = enc[-1]  # [B=1,D] representation for current step
+        logits = self._policy_layer(op)             # [B=1, num_actions]
+        logits = logits.reshape((self.num_actions,))
+        value = jnp.squeeze(self._value_layer(op), axis=-1)  # [B]
+        new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
+        return (logits, value, op, score), new_state
+
+    def unroll(self, inputs, state: ContextState, mrng=None):
+        """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
+        # vmap in loss function removes batch dimension
+          # [T,B,D]
+
+        def step(x_t, st):
+            emb, score = self._embed(x_t, state.hidden)
+            x = jnp.expand_dims(emb, axis=0)  # [1,B,D]
+            buffer = getattr(st, "buffer", self.initial_state(batch_size=1).buffer)
+            full, new_buf = self._concat_and_crop(buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
+            enc = self._encode_window(full, is_training=True)
+            op = enc[-1]  # [B,D] representation for current step
+            new_state = ContextState(buffer=new_buf, hidden=state.hidden, cell=jnp.array([0]))
+            return (op,score), new_state
+
+        op_tup, new_state = hk.static_unroll(step, inputs, state)
+        op, score = op_tup
+        op = jnp.squeeze(op, axis=-2) # Remove the sequence length dim [T B seq hidden_dim]
+        logits = self._policy_layer(op) # [T B action_dim]
+        value = self._value_layer(op) # [T B 1]
+        value = jnp.squeeze(value, axis=-1) # [T B]
+   
+        return (logits, value, op, score), new_state # logits [T,B,A], value [T,B], op [T,B,D], emb [T,B,D]
 
 
 class MultiHeadAttentionLayer_1selfattention(hk.Module):
@@ -555,6 +688,10 @@ class MultiHeadAttentionLayer_blend(hk.Module):
     self.is_training = is_training
     self.temperature = temperature
     self.hidden_scale = hidden_scale
+    self.mlp = hk.Sequential([hk.Linear(self.model_dim),jax.nn.relu,
+                              hk.Linear(self.model_dim),jax.nn.relu,
+    ])
+                             
 
   def __call__(self, query, key, value, mrng = None):
     if jnp.ndim(query) == 1:
@@ -637,9 +774,8 @@ class MultiHeadAttentionLayer_blend(hk.Module):
     # Weighted sum
     output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
     output = output.reshape(output.shape[0], -1)  # [B, model_dim]
+    output = self.mlp(output)
     return output, weights
-
-
 
 class SimpleTransformer_attention(SimpleTransformerCore):
     def __init__(
@@ -654,7 +790,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         max_context_len: int = 20,
         dropout_rate: float = 0.0,
         name: Optional[str] = None,
-        num_heads_vis=2,
+        num_heads_vis=1,
         key_size=64,
         positional_embedding=None, 
         add_selection_vec=False, 

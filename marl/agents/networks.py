@@ -233,6 +233,79 @@ class VisualFeatures(hk.Module):
 
     outputs = self._ff(outputs)
     return outputs
+  
+class MeltingpotFE_feedback(hk.Module):
+
+  def __init__(self, num_actions):
+    super().__init__("meltingpot_features")
+    self.num_actions = num_actions
+    self._visual_torso = VisualFeatures_feedback()
+
+  def __call__(self, inputs, feedback):
+    # extract environment observation from the full observation object
+    obs = inputs["observation"]
+
+    # extract visual features form RGB observation
+    ip_img = obs["RGB"].astype(jnp.float32) / 255
+    vis_op, score = self._visual_torso(ip_img,feedback)
+
+    # extract other observations
+    inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
+
+    # Do a one-hot embedding of the actions.
+    action = jax.nn.one_hot(
+        inputs["action"], num_classes=self.num_actions)  # [B, A]
+
+    # Add dummy trailing dimensions to rewards if necessary.
+    while ready_to_shoot.ndim < inventory.ndim:
+      ready_to_shoot = jnp.expand_dims(ready_to_shoot, axis=-1)
+
+    # check if the dimensions of all the tensors match
+    # assert vis_op.ndim==inventory.ndim==ready_to_shoot.ndim==action.ndim
+
+    # concatenate all the results
+    combined_op = jnp.concatenate([vis_op, ready_to_shoot, inventory, action],
+                                  axis=-1)
+
+    return combined_op, score
+  
+class VisualFeatures_feedback(hk.Module):
+  """convolutional stack + feedback."""
+
+  def __init__(self):
+    super().__init__(name="meltingpot_visual_features")
+    self._cnn = hk.Sequential([
+        hk.Conv2D(16, [8, 8], 8, padding="VALID"),
+        jax.nn.relu])
+    self._cnn2 = hk.Sequential([
+        hk.Conv2D(32, [4, 4], 1, padding="VALID"),
+        jax.nn.relu])
+    self._ff = hk.Sequential([
+        hk.Linear(64),
+        jax.nn.relu,
+        hk.Linear(64),
+        jax.nn.relu,
+    ])
+
+  def __call__(self, inputs: Images, feedback) -> jnp.ndarray:
+    inputs_rank = jnp.ndim(inputs)
+    batched = inputs_rank == 4
+    if not batched:
+      inputs = inputs[None, ...]
+    if jnp.ndim(feedback) == 1:
+      feedback = feedback[None, ...]
+
+    x = self._cnn(inputs)
+    score = jax.nn.sigmoid(hk.Linear(x.shape[-1])(feedback))  # [B, C]
+    x_score = jnp.einsum('bwhc,bc->bwhc', x, score)
+    # residual connection 
+    x += x_score
+    x = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True)(x)
+    x = self._cnn2(x)
+    x = x.reshape(x.shape[0], -1)
+    x = self._ff(x)
+    op = x if batched else x[0]
+    return op, jnp.mean(x_score,axis = -1)
 
 class VisualFeaturesCNNVis(hk.Module):
   """Simple convolutional stack from MeltingPot paper."""

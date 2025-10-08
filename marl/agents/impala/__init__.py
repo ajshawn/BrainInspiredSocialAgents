@@ -22,3 +22,4 @@ from marl.agents.impala.networks import make_network_impala_cnn_visualization
 from marl.agents.impala.networks import make_network_attention_multihead_self_supervision
 from marl.agents.impala.simpletr import make_network_simple_transformer
 from marl.agents.impala.simpletr import make_network_transformer_attention
+from marl.agents.impala.simpletr import make_network_transformer_cnnfeedback

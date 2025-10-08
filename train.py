@@ -23,7 +23,7 @@ from marl.agents import opre
 from marl.agents.networks import ArrayFE
 from marl.agents.networks import ImageFE
 from marl.agents.networks import MeltingpotFE, MeltingpotFECNNVis
-from marl.agents.networks import AttentionCNN_FE, AttentionSpatialCNN_FE, AttentionCNN_FE_SelfSupervise
+from marl.agents.networks import AttentionCNN_FE, AttentionSpatialCNN_FE, AttentionCNN_FE_SelfSupervise, MeltingpotFE_feedback
 from marl.experiments import config as ma_config
 from marl.experiments import inference_server
 from marl.utils import helpers
@@ -74,6 +74,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_multihead_self_supervision",
         "simple_transformer",
         "simple_transformer_attention",
+        "simple_transformer_cnnfeedback"
     ],
     "Algorithm to train",
 )
@@ -569,6 +570,26 @@ def build_experiment_config():
             impala.make_network_transformer_attention,
             feature_extractor=AttentionCNN_FE,
             positional_embedding=positional_embedding,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, 
+            memory_efficient=memory_efficient, 
+            head_entropy_cost=head_entropy_cost,
+            head_cross_entropy_cost=head_cross_entropy_cost,
+            attn_entropy_cost=attn_entropy_cost,
+            head_mse_cost=head_mse_cost,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+    elif FLAGS.algo_name == "simple_transformer_cnnfeedback":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_transformer_cnnfeedback,
+            feature_extractor=MeltingpotFE_feedback,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
