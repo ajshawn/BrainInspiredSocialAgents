@@ -163,6 +163,9 @@ flags.DEFINE_float(
 flags.DEFINE_float(
     "head_mse_cost", 0.0, "Head MSE cost for attention networks."
 )
+flags.DEFINE_float(
+    "reward_pred_cost", 0.0, "reward prediction cost for attention output."
+)
 
 def _get_custom_env_configs():
     result = {}
@@ -214,6 +217,7 @@ def build_experiment_config():
     attn_entropy_cost = FLAGS.attn_entropy_cost
     head_cross_entropy_cost = FLAGS.head_cross_entropy_cost
     head_mse_cost = FLAGS.head_mse_cost
+    reward_pred_cost = FLAGS.reward_pred_cost
     attn_key_size = FLAGS.attn_key_size
     
     # For now, assert only one of the attention head auxiliary losses is used
@@ -582,6 +586,7 @@ def build_experiment_config():
             head_cross_entropy_cost=head_cross_entropy_cost,
             attn_entropy_cost=attn_entropy_cost,
             head_mse_cost=head_mse_cost,
+            reward_pred_cost = reward_pred_cost
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
@@ -602,6 +607,7 @@ def build_experiment_config():
             head_cross_entropy_cost=head_cross_entropy_cost,
             attn_entropy_cost=attn_entropy_cost,
             head_mse_cost=head_mse_cost,
+            reward_pred_cost = reward_pred_cost
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)

@@ -483,6 +483,7 @@ class SimpleTransformer_cnnfeedback(SimpleTransformerCore):
             max_context_len=max_context_len,
             dropout_rate=dropout_rate,
             name=name or "simple_transformer_core")
+        self.reward_pred = hk.Linear(1)
 
     def __call__(self, inputs, state: ContextState, mrng=None):
         # inputs expected [B, D_in]; run feature extractor if provided
@@ -494,8 +495,10 @@ class SimpleTransformer_cnnfeedback(SimpleTransformerCore):
         logits = self._policy_layer(op)             # [B=1, num_actions]
         logits = logits.reshape((self.num_actions,))
         value = jnp.squeeze(self._value_layer(op), axis=-1)  # [B]
-        new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
-        return (logits, value, op, score), new_state
+        #breakpoint()
+        #rew_pred = self.reward_pred(jnp.concatenate([emb,logits],axis = -1))
+        new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0])) 
+        return (logits, value, op, (score,None)), new_state
 
     def unroll(self, inputs, state: ContextState, mrng=None):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
@@ -510,17 +513,16 @@ class SimpleTransformer_cnnfeedback(SimpleTransformerCore):
             enc = self._encode_window(full, is_training=True)
             op = enc[-1]  # [B,D] representation for current step
             new_state = ContextState(buffer=new_buf, hidden=state.hidden, cell=jnp.array([0]))
-            return (op,score), new_state
+            return (op,emb,score), new_state
 
         op_tup, new_state = hk.static_unroll(step, inputs, state)
-        op, score = op_tup
+        op, emb, score = op_tup
         op = jnp.squeeze(op, axis=-2) # Remove the sequence length dim [T B seq hidden_dim]
         logits = self._policy_layer(op) # [T B action_dim]
         value = self._value_layer(op) # [T B 1]
         value = jnp.squeeze(value, axis=-1) # [T B]
-   
-        return (logits, value, op, score), new_state # logits [T,B,A], value [T,B], op [T,B,D], emb [T,B,D]
-
+        rew_pred = self.reward_pred(jnp.concatenate([emb,logits],axis = -1))
+        return (logits, value, op, (score,rew_pred)), new_state # logits [T,B,A], value [T,B], op [T,B,D], emb [T,B,D]
 
 class MultiHeadAttentionLayer_1selfattention(hk.Module):
   def __init__(
@@ -678,7 +680,7 @@ class MultiHeadAttentionLayer_blend(hk.Module):
       positional_embedding='learnable',
       temperature: float = 1.0,
       is_training: bool = True,
-      hidden_scale: float = 0.0,
+      hidden_scale: float = 0.2,
   ):
     super().__init__(name="multihead_attention_layer")
     self.num_heads = num_heads
@@ -795,7 +797,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         positional_embedding=None, 
         add_selection_vec=False, 
         attn_enhance_multiplier=0.0,
-        combine_heads='sum',
+        combine_heads='concat',
         hidden_scale = 0.0,
     ):
         super().__init__(
@@ -830,7 +832,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         positional_embedding=positional_embedding,
         hidden_scale=hidden_scale
         )
-        
+        self.reward_pred = hk.Linear(1)
     def __call__(self, inputs, state: ContextState, mrng=None):
         # inputs expected [B, D_in]; run feature extractor if provided
         embedding = self._embed(inputs) # [B, 121, F]
@@ -858,10 +860,11 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         enc = self._encode_window(full, is_training=True)
         op = enc[-1]  # [B=1,D] representation for current step
         logits = self._policy_layer(op)             # [B=1, num_actions]
+        rew_pred = self.reward_pred(jnp.concatenate([attended,jnp.squeeze(logits, axis=-2)],axis = -1))
         logits = logits.reshape((self.num_actions,))
         value = jnp.squeeze(self._value_layer(op), axis=-1)  # [B]
-        new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
-        return (logits, value, op, attn_weights), new_state
+        new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0])) 
+        return (logits, value, op, (attn_weights,rew_pred)), new_state
 
     def unroll(self, inputs, state: ContextState, mrng = None):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
@@ -912,15 +915,16 @@ class SimpleTransformer_attention(SimpleTransformerCore):
             op = enc[-1]  # [B,D] representation for current step
             new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
 
-            return (op,attn_weights), new_state
+            return (op,attn_weights,attended), new_state
 
         optuple, new_state = hk.static_unroll(step, (combined,step_rngs), state)
-        op, attn_weights = optuple
+        op, attn_weights,attended = optuple
         op = jnp.squeeze(op, axis=-2) # Remove the sequence length dim [T B seq hidden_dim]
         logits = self._policy_layer(op) # [T B action_dim]
+        rew_pred = self.reward_pred(jnp.concatenate([attended,logits],axis = -1))
         value = self._value_layer(op) # [T B 1]
         value = jnp.squeeze(value, axis=-1) # [T B]
    
-        return (logits, value, op, attn_weights), new_state # logits [T,B,A], value [T,B], op [T,B,D], emb [T,B,D]
+        return (logits, value, op, (attn_weights, rew_pred)), new_state # logits [T,B,A], value [T,B], op [T,B,D], emb [T,B,D]
 
     

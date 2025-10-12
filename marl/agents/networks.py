@@ -299,8 +299,8 @@ class VisualFeatures_feedback(hk.Module):
     score = jax.nn.sigmoid(hk.Linear(x.shape[-1])(feedback))  # [B, C]
     x_score = jnp.einsum('bwhc,bc->bwhc', x, score)
     # residual connection 
-    x += x_score
-    x = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True)(x)
+    x += x_score 
+    #x = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True)(x)
     x = self._cnn2(x)
     x = x.reshape(x.shape[0], -1)
     x = self._ff(x)

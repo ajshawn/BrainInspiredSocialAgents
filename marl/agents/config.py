@@ -54,6 +54,7 @@ class MAConfig:
   attn_entropy_cost: float = 0.0
   head_cross_entropy_cost: float = 0.0
   head_mse_cost: float = 0.0
+  reward_pred_cost: float = 0.0
   max_abs_reward: float = np.inf
 
   # Replay options

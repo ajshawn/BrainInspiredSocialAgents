@@ -17,7 +17,7 @@ from marl import types
 from marl.agents import learning
 from marl.agents import learning_memory_efficient
 from marl.agents.impala.loss import batched_art_impala_loss, batched_art_impala_loss_head_entropy, \
-    batched_art_impala_loss_head_cross_entropy, batched_art_impala_loss_head_mse
+    batched_art_impala_loss_head_cross_entropy, batched_art_impala_loss_head_mse, batched_art_impala_loss_reward_predict
 from marl.agents.impala.loss import batched_popart_impala_loss, batched_popart_impala_loss_head_entropy
 from marl.agents.impala.loss import impala_loss
 
@@ -179,6 +179,7 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
       attn_entropy_cost: float = 0.0,
       head_cross_entropy_cost: float = 0.0,
       head_mse_cost: float = 0.0,
+      reward_pred_cost = 0.0,
       max_abs_reward: float = np.inf,
       counter: Optional[counting.Counter] = None,
       logger: Optional[loggers.Logger] = None,
@@ -216,6 +217,15 @@ class PopArtIMPALALearnerME(learning_memory_efficient.MALearnerPopArt):
                 head_mse_cost=head_mse_cost,
                 max_abs_reward=max_abs_reward,
             )
+        elif reward_pred_cost != 0.0:
+           loss_fn = functools.partial(
+                batched_art_impala_loss_reward_predict,
+                discount=discount,
+                baseline_cost=baseline_cost,
+                entropy_cost=entropy_cost,
+                reward_pred_cost=reward_pred_cost,
+                max_abs_reward=max_abs_reward,
+           )
         else:
             loss_fn = functools.partial(
                 batched_art_impala_loss,

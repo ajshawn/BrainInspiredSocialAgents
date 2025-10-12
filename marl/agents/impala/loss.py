@@ -1344,3 +1344,158 @@ def batched_art_impala_loss_head_mse(
     return mean_loss, (new_popart_state, metrics)
 
   return loss_fn
+
+def batched_art_impala_loss_reward_predict(
+    network: types.RecurrentNetworks,
+    popart_update_fn,
+    *,
+    discount: float,
+    max_abs_reward: float = np.inf,
+    baseline_cost: float = 1.0,
+    entropy_cost: float = 0.0,
+    reward_pred_cost: float = 0.0,
+    mrng = None,
+) -> Callable[[hk.Params, types.TrainingData], jnp.DeviceArray]:
+  """Builds the standard entropy-regularised IMPALA loss function.
+
+    Args:
+      network: An IMPALANetworks object containing a callable which maps
+        (params, observations_sequence, initial_state) -> ((logits, value), state)
+      discount: The standard geometric discount rate to apply.
+      max_abs_reward: Optional symmetric reward clipping to apply.
+      baseline_cost: Weighting of the critic loss relative to the policy loss.
+      entropy_cost: Weighting of the entropy regulariser relative to policy loss.
+      head_entropy_cost: Weighting of the head entropy regulariser relative to policy loss.
+
+    Returns:
+      A loss function with signature (params, data) -> loss_scalar.
+    """
+  unroll_fn = jax.vmap(network.unroll_fn, in_axes=(None, 0, 0))
+  critic_fn = jax.vmap(network.critic_fn, in_axes=(None, 0))
+  categorical_importance_sampling_ratios = jax.vmap(
+      rlax.categorical_importance_sampling_ratios)
+  vtrace = jax.vmap(rlax.vtrace)
+  policy_gradient_loss = jax.vmap(rlax.policy_gradient_loss)
+  entropy_loss = jax.vmap(rlax.entropy_loss)
+
+  def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
+              sample: types.TrainingData, mrng = None) -> jnp.DeviceArray:
+    """Batched, entropy-regularised actor-critic loss with V-trace."""
+
+    # Extract the data
+    data = sample
+    observations, actions, rewards, discounts, extra = (
+        data.observation,
+        data.action,
+        data.reward,
+        data.discount,
+        data.extras,
+    )
+
+    initial_state = extra["core_state"]
+    initial_state = hk.LSTMState(
+        hidden=initial_state["hidden"][:, 0], cell=initial_state["cell"][:, 0])
+    behaviour_logits = extra["logits"]
+
+    # Apply reward clipping
+    rewards = jnp.clip(rewards, -max_abs_reward, max_abs_reward)
+
+    # Unroll current policy over observations
+    (logits, norm_values,
+     hidden_features,attn_weights), _ = unroll_fn(params, observations, initial_state)
+    _, rew_pred = attn_weights
+
+    # Compute importance sampling weights: current policy / behavior policy
+    rhos = categorical_importance_sampling_ratios(logits[:, :-1],
+                                                  behaviour_logits[:, :-1],
+                                                  actions[:, :-1])
+
+    # V-trace Returns
+    indices = jnp.zeros_like(
+        norm_values, dtype=jnp.int32)  # Only one output for normalization
+
+    values = rlax.unnormalize(popart_state, norm_values, indices)
+    stop_gradients_bool = jnp.zeros(values.shape[:-1], dtype=bool)
+    discount_t = discounts[:, :-1] * discount
+
+    vtrace_errors = vtrace(
+        v_tm1=values[:, :-1],
+        v_t=values[:, 1:],
+        r_t=rewards[:, :-1],
+        discount_t=discount_t,
+        rho_tm1=rhos,
+        stop_target_gradients=stop_gradients_bool,
+    )
+    vtrace_targets = vtrace_errors + values[:, :-1]
+
+    # PopArt statistics update
+    new_popart_state = popart_update_fn(popart_state, vtrace_targets,
+                                        indices[:, :-1])
+
+    # Critic loss using V-trace with updated PopArt parameters
+    new_values = rlax.unnormalize(new_popart_state, norm_values, indices)
+    new_vtrace_errors = vtrace(
+        v_tm1=new_values[:, :-1],
+        v_t=new_values[:, 1:],
+        r_t=rewards[:, :-1],
+        discount_t=discount_t,
+        rho_tm1=rhos,
+        stop_target_gradients=stop_gradients_bool,
+    )
+    new_vtrace_targets = new_vtrace_errors + new_values[:, :-1]
+    new_vtrace_targets_norm = rlax.normalize(new_popart_state,
+                                             new_vtrace_targets,
+                                             indices[:, :-1])
+    new_vtrace_targets_norm = jax.lax.stop_gradient(new_vtrace_targets_norm)
+    critic_loss = new_vtrace_targets_norm - norm_values[:, :-1]
+    critic_loss = jnp.mean(jnp.square(critic_loss))
+
+    # V-trace Advantage
+    q_bootstrap = jnp.concatenate(
+        [
+            new_vtrace_targets[:, 1:],
+            new_values[:, -1:],
+        ],
+        axis=1,
+    )
+    q_estimate = rewards[:, :-1] + discount_t * q_bootstrap
+    q_estimate_norm = rlax.normalize(new_popart_state, q_estimate,
+                                     indices[:, :-1])
+    clipped_pg_rho_tm1 = jnp.minimum(1.0, rhos)
+    pg_advantages = clipped_pg_rho_tm1 * (q_estimate_norm - norm_values[:, :-1])
+
+    # Policy gradient loss
+    w_t = jnp.ones_like(rewards[:, :-1])
+    pg_loss = policy_gradient_loss(
+        logits_t=logits[:, :-1],
+        a_t=actions[:, :-1],
+        adv_t=pg_advantages,
+        w_t=w_t,
+    )
+    pg_loss = jnp.mean(pg_loss)
+
+    # Entropy regulariser
+    pi_entropy = entropy_loss(logits[:, :-1], w_t)
+    pi_entropy = jnp.mean(pi_entropy)
+
+    # rew prediction error
+    pred_loss = jnp.mean((rewards-rew_pred.squeeze(-1))**2)# [B*T]
+    pred_loss *= reward_pred_cost
+    
+    # Combine weighted sum of actor & critic losses, averaged over the sequence
+    critic_loss *= baseline_cost
+    pi_entropy *= entropy_cost
+    mean_loss = pg_loss + critic_loss + pi_entropy + pred_loss 
+
+    metrics = {
+        "total_loss": mean_loss,
+        "policy_loss": pg_loss,
+        "critic_loss": critic_loss,
+        "pi_entropy_loss": pi_entropy,
+        "rew_pred_loss": pred_loss,
+        "extrinsic_reward": jnp.mean(rewards),
+    }
+
+    return mean_loss, (new_popart_state, metrics)
+
+  return loss_fn
