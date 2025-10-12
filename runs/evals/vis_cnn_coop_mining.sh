@@ -1,4 +1,4 @@
-EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-08_13:36:13.677366"
+EXP_DIR_PREFIX="results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-08_13:36:13.677366"
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="simple_transformer_attention"
 TIME_STAMP="2025-10-08_13:36:13.677366"
@@ -9,41 +9,30 @@ N_HEADS=1
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 24;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 20 ;do # {2..195}
 
-    obs_out_dir="data_log_obs/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
+    obs_out_dir="data/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"
     log_img_dir="${obs_out_dir}/agent_view_images"
 
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
-        --num_actors 16 \
+        --num_actors 1 \
         --algo_name ${ALGORITHM_NAME} \
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
-        --map_layout original \
-        --max_episode_length 500 \
         --experiment_dir ${EXP_DIR_PREFIX} \
-        --agent_roles 'default,default,default' \
-        --dense_ore_regrow True \
-        --iron_rate 0.00012 \
-        --gold_rate 0.00008 \
-        --conservative_mine_beam True \
-        --iron_reward 1 \
-        --gold_reward 6 \
-        --mining_reward 0 \
         --ckp ${ckp} \
         --n_episodes 1 \
         --record_video True \
-        --positional_embedding learnable \
-        --agent_param_indices '0,1,2' \
+        --log_timesteps True \
+        --log_obs True \
         --log_filename ${log_filename} \
         --log_img_dir ${log_img_dir} \
         --log_interval ${LOG_INTERVAL} \
-        --log_timesteps True \
-        --log_obs True \
-     
+        --agent_param_indices "0,1"
+        
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
 
@@ -68,7 +57,7 @@ for ckp in 24;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     echo "Visualizing attention for checkpoint ${ckp}..."
     
     attn_vis_out_dir="${obs_out_dir}/attention_vis"
-    attn_src_csv="${EXP_DIR_PREFIX}/csv_logs/coop_mining${ckp}-timesteps.csv"
+    attn_src_csv="${EXP_DIR_PREFIX}/csv_logs/${EVN_NAME}${ckp}-timesteps.csv"
     attn_src_img_dir="${log_img_dir}"
 
     python marl/utils/visualize_attention.py \
@@ -78,6 +67,6 @@ for ckp in 24;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --n_agents ${N_AGENTS} \
         --n_heads ${N_HEADS}
 
-    echo "Attention visualization saved to ${attn_vis_out_dir}"
+    echo "CNN visualization saved to ${attn_vis_out_dir}"
 
 done

@@ -9,28 +9,33 @@
 # TIME_STAMP="2025-06-13_11:31:14.677056"
 # GPUS="0"
 
-# save_dir="./cross_eval_results/impala-2coop"
-# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-03-17_14:26:51.204572"
-# ckp_map="0:120-0,1:120-2"
-# EVN_NAME="coop_mining"
-# ALGORITHM_NAME="PopArtIMPALA"
-# TIME_STAMP="2025-03-17_14:26:51.204572"
-# GPUS="0"
-
-save_dir="./cross_eval_results/impala-5ag-alone"
-EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-10-01_11:16:18.051802"
-ckp_map="0:49-0"
+save_dir="./cross_eval_results/envstep300/baseline-2in5"
+EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-10-01_11:16:18.051802,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-10-01_11:16:18.051802"
+ckp_maps=(
+    "0:49-0,1:49-1"
+    "0:49-2,1:49-3"
+    "0:49-4,1:45-0"
+)
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA"
 TIME_STAMP="2025-10-01_11:16:18.051802"
-GPUS="0"
+GPUS="1"
+
+# save_dir="./cross_eval_results/envstep300/baseline-alone"
+# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-10-01_11:16:18.051802"
+# EVN_NAME="coop_mining"
+# ALGORITHM_NAME="PopArtIMPALA"
+# TIME_STAMP="2025-10-01_11:16:18.051802"
+# GPUS="1"
+
+
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
-
-for i in {0..4}; do
-    ckp_map="0:49-$i"
+for ckp_map in "${ckp_maps[@]}"; do
+# for i in {0..4}; do
+#     ckp_map="0:49-$i"
     CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -39,10 +44,10 @@ for i in {0..4}; do
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
         --map_layout original \
-        --max_episode_length 500 \
+        --max_episode_length 300 \
         --experiment_dir ${EXP_DIR_PREFIX} \
         --save_dir ${save_dir} \
-        --agent_roles 'default' \
+        --agent_roles 'default,default' \
         --dense_ore_regrow True \
         --iron_rate 0.0002 \
         --gold_rate 0.0001 \
@@ -51,9 +56,9 @@ for i in {0..4}; do
         --gold_reward 6 \
         --mining_reward 0 \
         --ckp_map ${ckp_map} \
-        --n_episodes 2 \
-        --agent_param_indices '0'\
-        --record_video True \
+        --n_episodes 10 \
+        --agent_param_indices '0,1'\
+        #--record_video True \
         #--log_timesteps True \
         #--add_selection_vector True \
         
