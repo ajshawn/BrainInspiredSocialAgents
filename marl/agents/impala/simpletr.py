@@ -122,7 +122,7 @@ def make_network_transformer_attention(
     combine_heads = 'concat',
     hidden_scale: float = 0.2,
 ):
-    def forward_fn(inputs, states: ContextState,mrng=None):
+    def forward_fn(inputs, states: ContextState,):
         core = SimpleTransformer_attention(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -140,7 +140,7 @@ def make_network_transformer_attention(
             combine_heads=combine_heads,
             hidden_scale=hidden_scale
         )
-        return core(inputs, states, mrng=mrng)
+        return core(inputs, states, )
     
     def initial_state_fn(batch_size=None) -> ContextState:
         core = SimpleTransformer_attention(
@@ -220,7 +220,7 @@ def make_network_transformer_cnnfeedback(
     max_context_len: int = 20,
     dropout_rate: float = 0.0,
 ):
-    def forward_fn(inputs, states: ContextState,mrng=None):
+    def forward_fn(inputs, states: ContextState,):
         core = SimpleTransformer_cnnfeedback(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -246,7 +246,7 @@ def make_network_transformer_cnnfeedback(
         )
         return core.initial_state(batch_size=batch_size or 1)
     
-    def unroll_fn(inputs, states: ContextState,mrng=None):
+    def unroll_fn(inputs, states: ContextState,):
         core = SimpleTransformer_cnnfeedback(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -421,7 +421,7 @@ class SimpleTransformerCore(hk.Module):
             h = layer(h, mask=None, is_training=is_training)
         return h  # [S,B,D]
 
-    def __call__(self, inputs, state: ContextState, mrng=None):
+    def __call__(self, inputs, state: ContextState, ):
         # inputs expected [B, D_in]; run feature extractor if provided
         emb = self._embed(inputs)
         x = jnp.expand_dims(emb, axis=0)  # [T=1,B=1,D]
@@ -435,7 +435,7 @@ class SimpleTransformerCore(hk.Module):
         new_state = ContextState(buffer=new_buf, hidden=state.hidden, cell=jnp.array([0]))
         return (logits, value, op, emb), new_state
 
-    def unroll(self, inputs, state: ContextState, mrng=None):
+    def unroll(self, inputs, state: ContextState, ):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
         # vmap in loss function removes batch dimension
         emb_seq = self._embed(inputs)  # [T,B,D]
@@ -490,7 +490,7 @@ class SimpleTransformer_cnnfeedback(SimpleTransformerCore):
             name=name or "simple_transformer_core")
         self.reward_pred = hk.Linear(1)
 
-    def __call__(self, inputs, state: ContextState, mrng=None):
+    def __call__(self, inputs, state: ContextState, ):
         # inputs expected [B, D_in]; run feature extractor if provided
         emb, score = self._embed(inputs, state.hidden)
         x = jnp.expand_dims(emb, axis=0)  # [T=1,B=1,D]
@@ -505,7 +505,7 @@ class SimpleTransformer_cnnfeedback(SimpleTransformerCore):
         new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0])) 
         return (logits, value, op, (score,None)), new_state
 
-    def unroll(self, inputs, state: ContextState, mrng=None):
+    def unroll(self, inputs, state: ContextState, ):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
         # vmap in loss function removes batch dimension
           # [T,B,D]
@@ -841,7 +841,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
     def __call__(self, inputs, state: ContextState):
         # inputs expected [B, D_in]; run feature extractor if provided
         embedding = self._embed(inputs) # [B, 121, F]
-        attended, attn_weights = self._attention(state.hidden, embedding, embedding, mrng=attn_rng)
+        attended, attn_weights = self._attention(state.hidden, embedding, embedding)
         obs = inputs["observation"]
         inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
         # Do a one-hot embedding of the actions.
