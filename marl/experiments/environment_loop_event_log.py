@@ -183,7 +183,7 @@ class EnvironmentLoopEvents(core.Worker):
                 "orientation": orientation,
                 "obj_in_view": obj_in_view,
                 "hidden": self._actor._states.hidden.tolist(),
-                "embedding": self._actor._embedding.tolist(),
+                "embedding": self._actor._embedding[0].tolist() if isinstance(self._actor._embedding, tuple) else self._actor._embedding.tolist(),
                 "cell_states": self._actor._states.cell.tolist(),
                 })
 

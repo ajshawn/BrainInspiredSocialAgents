@@ -1,7 +1,7 @@
-EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-23_11:23:49.322191" 
+EXP_DIR_PREFIX="./results/simple_transformer_cnnfeedback_1_meltingpot_coop_mining_2025-10-12_09:06:28.875199" 
 EVN_NAME="coop_mining"
-ALGORITHM_NAME="simple_transformer_attention"
-TIME_STAMP="2025-09-23_11:23:49.322191"
+ALGORITHM_NAME="simple_transformer_cnnfeedback"
+TIME_STAMP="2025-10-12"
 
 # EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274" 
 # EVN_NAME="coop_mining"
@@ -19,7 +19,7 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in 27;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 61;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -30,7 +30,7 @@ for ckp in 27;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --map_name ${EVN_NAME} \
         --map_layout original \
         --experiment_dir ${EXP_DIR_PREFIX} \
-        --agent_roles 'default,default,default,default' \
+        --agent_roles 'default,default' \
         --dense_ore_regrow True \
         --iron_rate 0.0001 \
         --gold_rate 0.0001 \
@@ -41,9 +41,9 @@ for ckp in 27;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
         --ckp ${ckp} \
         --n_episodes 2 \
         --positional_embedding learnable \
-        --agent_param_indices '0,1,2,3'\
+        --agent_param_indices '0,2'\
         --record_video True \
-        #--max_episode_length 500 \
+        --max_episode_length 500 \
         #--log_timesteps True \
         #--add_selection_vector True \
         

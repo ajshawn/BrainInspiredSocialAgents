@@ -130,6 +130,7 @@ flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
 flags.DEFINE_string("positional_embedding", None, "Whether to use positional embedding for attention")
 flags.DEFINE_string("add_selection_vector", None, "Whether to add selection vector on the query in attention network")
 flags.DEFINE_float("attn_enhance_multiplier", 0, "Attention enhancement multiplier")
+flags.DEFINE_float("hidden_scale", 0, "ratio of cross attention")
 flags.DEFINE_string("attn_enhance_head_indices", "0", "Comma separated list of attention heads to enhance.")
 flags.DEFINE_string("attn_enhance_agent_skip_indices", "", "Comma separated list of agent indices to skip for attention enhancement.")
 flags.DEFINE_integer("attn_enhance_item_idx", 0, "Index of the item to enhance attention on.")
@@ -204,6 +205,7 @@ def build_experiment_config():
     positional_embedding = FLAGS.positional_embedding
     add_selection_vector = True if FLAGS.add_selection_vector=="True" else False
     attn_enhance_multiplier = FLAGS.attn_enhance_multiplier
+    hidden_scale = FLAGS.hidden_scale
     attn_enhance_head_indices = [int(head) for head in FLAGS.attn_enhance_head_indices.split(",")]
     attn_enhance_agent_skip_indices = (
         [int(agent) for agent in FLAGS.attn_enhance_agent_skip_indices.split(",")]
@@ -574,6 +576,7 @@ def build_experiment_config():
             impala.make_network_transformer_attention,
             feature_extractor=AttentionCNN_FE,
             positional_embedding=positional_embedding,
+            hidden_scale = hidden_scale
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
@@ -586,7 +589,7 @@ def build_experiment_config():
             head_cross_entropy_cost=head_cross_entropy_cost,
             attn_entropy_cost=attn_entropy_cost,
             head_mse_cost=head_mse_cost,
-            reward_pred_cost = reward_pred_cost
+            reward_pred_cost = reward_pred_cost,
         )
         core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
         builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)

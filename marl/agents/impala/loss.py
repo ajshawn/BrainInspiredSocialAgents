@@ -1479,9 +1479,11 @@ def batched_art_impala_loss_reward_predict(
     pi_entropy = jnp.mean(pi_entropy)
 
     # rew prediction error
-    pred_loss = jnp.mean((rewards-rew_pred.squeeze(-1))**2)# [B*T]
-    pred_loss *= reward_pred_cost
-    
+    squared_error = (rewards - rew_pred.squeeze(-1)) ** 2
+    #squared_error = squared_error * (rewards > 1)
+    #pred_loss = jnp.sum(squared_error) / jnp.maximum(jnp.sum(rewards > 1), 1)
+    pred_loss = jnp.mean(squared_error)
+
     # Combine weighted sum of actor & critic losses, averaged over the sequence
     critic_loss *= baseline_cost
     pi_entropy *= entropy_cost

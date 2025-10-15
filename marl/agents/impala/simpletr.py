@@ -115,11 +115,12 @@ def make_network_transformer_attention(
     max_context_len: int = 20,
     dropout_rate: float = 0.0,
     num_heads_vis: int = 1,
-    key_size: int =64,
+    key_size: int = 64,
     positional_embedding: str =None, 
     add_selection_vec: bool = False, 
     attn_enhance_multiplier: float =0.0,
-    combine_heads = 'concat'
+    combine_heads = 'concat',
+    hidden_scale: float = 0.2,
 ):
     def forward_fn(inputs, states: ContextState,mrng=None):
         core = SimpleTransformer_attention(
@@ -136,7 +137,8 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
-            combine_heads=combine_heads
+            combine_heads=combine_heads,
+            hidden_scale=hidden_scale
         )
         return core(inputs, states, mrng=mrng)
     
@@ -155,7 +157,8 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
-            combine_heads=combine_heads
+            combine_heads=combine_heads,
+            hidden_scale=hidden_scale
         )
         return core.initial_state(batch_size=batch_size or 1)
     
@@ -174,7 +177,8 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
-            combine_heads=combine_heads
+            combine_heads=combine_heads,
+            hidden_scale=hidden_scale
         )
         return core.unroll(inputs, states, mrng = mrng)
     
@@ -193,7 +197,8 @@ def make_network_transformer_attention(
             positional_embedding=positional_embedding, 
             add_selection_vec=add_selection_vec, 
             attn_enhance_multiplier=attn_enhance_multiplier,
-            combine_heads=combine_heads
+            combine_heads=combine_heads,
+            hidden_scale=hidden_scale
         )
         return core.critic(inputs)
     
@@ -680,7 +685,7 @@ class MultiHeadAttentionLayer_blend(hk.Module):
       positional_embedding='learnable',
       temperature: float = 1.0,
       is_training: bool = True,
-      hidden_scale: float = 0.2,
+      hidden_scale: float = 1,
   ):
     super().__init__(name="multihead_attention_layer")
     self.num_heads = num_heads
@@ -798,7 +803,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         add_selection_vec=False, 
         attn_enhance_multiplier=0.0,
         combine_heads='concat',
-        hidden_scale = 0.0,
+        hidden_scale = 0.2,
     ):
         super().__init__(
             num_actions=num_actions,

@@ -1,15 +1,15 @@
-EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-08_13:36:13.677366"
+EXP_DIR_PREFIX="results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-10_18:01:51.444848"
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="simple_transformer_attention"
-TIME_STAMP="2025-10-08_13:36:13.677366"
+TIME_STAMP="2025-10-10_18:01:51.444848"
 LOG_INTERVAL=1
 N_AGENTS=3
-GPUS="1"
+GPUS="0"
 N_HEADS=1
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 24;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 33;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
 
     obs_out_dir="data_log_obs/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"
