@@ -56,7 +56,7 @@ class MAActor(core.Actor):
     # breakpoint()
     rngs = jax.random.split(next(self._rng), self.n_agents)
     (logits, _, _,_), new_states = self._forward(self._params, observations,
-                                            self._states, mrng = rngs)
+                                            self._states, )
 
     actions = jax.random.categorical(next(self._rng), logits)
 

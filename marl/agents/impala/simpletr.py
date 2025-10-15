@@ -45,7 +45,7 @@ def make_network_simple_transformer(
     max_context_len: int = 20,
     dropout_rate: float = 0.0,
 ):
-    def forward_fn(inputs, states: ContextState, mrng = None):
+    def forward_fn(inputs, states: ContextState, ):
         core = SimpleTransformerCore(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -71,7 +71,7 @@ def make_network_simple_transformer(
         )
         return core.initial_state(batch_size=batch_size or 1)
     
-    def unroll_fn(inputs, states: ContextState, mrng = None):
+    def unroll_fn(inputs, states: ContextState, ):
         core = SimpleTransformerCore(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -162,7 +162,7 @@ def make_network_transformer_attention(
         )
         return core.initial_state(batch_size=batch_size or 1)
     
-    def unroll_fn(inputs, states: ContextState, mrng = None):
+    def unroll_fn(inputs, states: ContextState, ):
         core = SimpleTransformer_attention(
             num_actions=environment_spec.actions.num_values,
             model_dim=model_dim,
@@ -180,7 +180,7 @@ def make_network_transformer_attention(
             combine_heads=combine_heads,
             hidden_scale=hidden_scale
         )
-        return core.unroll(inputs, states, mrng = mrng)
+        return core.unroll(inputs, states, )
     
     def critic_fn(inputs):
         core = SimpleTransformer_attention(
@@ -231,7 +231,7 @@ def make_network_transformer_cnnfeedback(
             feature_extractor=feature_extractor,
             dropout_rate=dropout_rate,
         )
-        return core(inputs, states, mrng = mrng)
+        return core(inputs, states, )
     
     def initial_state_fn(batch_size=None) -> ContextState:
         core = SimpleTransformer_cnnfeedback(
@@ -257,7 +257,7 @@ def make_network_transformer_cnnfeedback(
             feature_extractor=feature_extractor,
             dropout_rate=dropout_rate,
         )
-        return core.unroll(inputs, states, mrng = mrng)
+        return core.unroll(inputs, states, )
     
     def critic_fn(inputs):
         core = SimpleTransformer_cnnfeedback(
@@ -559,7 +559,7 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
     self.is_training = is_training
     self.temperature = temperature
 
-  def __call__(self, query, key, value, mrng = None):
+  def __call__(self, query, key, value, ):
     if jnp.ndim(query) == 1:
       query = jnp.expand_dims(query, axis=0)
     if jnp.ndim(key) == 2:
@@ -669,11 +669,11 @@ class MultiHeadAttentionLayer_1selfattention(hk.Module):
         output = jnp.sum(output,axis=-2) # [B, model_dim]
 
     #breakpoint()
-    if self.dropout_rate > 0.0 and self.is_training and mrng is not None:
-        keep_prob = 1.0 - self.dropout_rate
-        mask = jax.random.bernoulli(mrng, keep_prob, output.shape)
-        mask = mask.astype(output.dtype)
-        output = output * mask / keep_prob
+    # if self.dropout_rate > 0.0 and self.is_training and mrng is not None:
+    #     keep_prob = 1.0 - self.dropout_rate
+    #     mask = jax.random.bernoulli(mrng, keep_prob, output.shape)
+    #     mask = mask.astype(output.dtype)
+    #     output = output * mask / keep_prob
 
     return output, weights
 
@@ -700,7 +700,7 @@ class MultiHeadAttentionLayer_blend(hk.Module):
     ])
                              
 
-  def __call__(self, query, key, value, mrng = None):
+  def __call__(self, query, key, value, ):
     if jnp.ndim(query) == 1:
       query = jnp.expand_dims(query, axis=0)
     if jnp.ndim(key) == 2:
@@ -838,14 +838,9 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         hidden_scale=hidden_scale
         )
         self.reward_pred = hk.Linear(1)
-    def __call__(self, inputs, state: ContextState, mrng=None):
+    def __call__(self, inputs, state: ContextState):
         # inputs expected [B, D_in]; run feature extractor if provided
         embedding = self._embed(inputs) # [B, 121, F]
-        # Apply attention between CNN features and LSTM hidden state
-        attn_rng = None
-        if mrng is not None:
-            mrng, attn_rng = jax.random.split(mrng)
-
         attended, attn_weights = self._attention(state.hidden, embedding, embedding, mrng=attn_rng)
         obs = inputs["observation"]
         inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
@@ -871,7 +866,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
         new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0])) 
         return (logits, value, op, (attn_weights,rew_pred)), new_state
 
-    def unroll(self, inputs, state: ContextState, mrng = None):
+    def unroll(self, inputs, state: ContextState, ):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
         # vmap in loss function removes batch dimension
         op = self._embed(inputs) # [B, 121, F]
@@ -893,21 +888,15 @@ class SimpleTransformer_attention(SimpleTransformerCore):
             [flatten_op, ready_to_shoot, inventory, action], 
             axis=-1
         ) 
-        
-        T = inputs["action"].shape[0]
-        step_rngs = None
-        if mrng is not None:
-            step_rngs = jax.random.split(mrng, T)  # one mrng per time step
 
-        def step(input_t_tp, st):
-            input_t, attn_rng = input_t_tp
+        def step(input_t, st):
             #breakpoint()
             # Slice out the flattened input for the current time step
             attn_input = input_t[:self.flatten_op_dim]
             # Reshape it back to the original shape
             attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
             # Apply attention
-            attended, attn_weights = self._attention(st.hidden, attn_input, attn_input, mrng = attn_rng)
+            attended, attn_weights = self._attention(st.hidden, attn_input, attn_input)
             # Combine with the rest of the input
             rest_input = input_t[self.flatten_op_dim:]
             if rest_input.ndim < attended.ndim:
@@ -921,8 +910,7 @@ class SimpleTransformer_attention(SimpleTransformerCore):
             new_state = ContextState(buffer=new_buf, hidden=op, cell=jnp.array([0]))
 
             return (op,attn_weights,attended), new_state
-
-        optuple, new_state = hk.static_unroll(step, (combined,step_rngs), state)
+        optuple, new_state = hk.static_unroll(step, combined, state)
         op, attn_weights,attended = optuple
         op = jnp.squeeze(op, axis=-2) # Remove the sequence length dim [T B seq hidden_dim]
         logits = self._policy_layer(op) # [T B action_dim]

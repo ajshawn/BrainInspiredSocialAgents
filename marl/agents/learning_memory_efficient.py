@@ -335,7 +335,7 @@ class MALearnerPopArt(MALearner):
       gradients, (new_popart_state, metrics) = grad_fn(state.params,
                                                        state.popart_state,
                                                        sample,
-                                                       mrng = next(self._rng))
+                                                       )
       
       # Apply the mask to the gradients.
       #breakpoint()

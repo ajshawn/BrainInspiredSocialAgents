@@ -51,7 +51,7 @@ def batched_art_impala_loss(
   entropy_loss = jax.vmap(rlax.entropy_loss)
 
   def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
-              sample: types.TrainingData,mrng = None) -> jnp.DeviceArray:
+              sample: types.TrainingData) -> jnp.DeviceArray:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data
@@ -80,9 +80,8 @@ def batched_art_impala_loss(
 
     #breakpoint()
     batch_size = rewards.shape[0]
-    rngs = jax.random.split(mrng, batch_size)  # one rng per batch element
 
-    (logits, norm_values, hidden_features, _), _ = unroll_fn(params, observations, initial_state, mrng=rngs)
+    (logits, norm_values, hidden_features, _), _ = unroll_fn(params, observations, initial_state)
 
     # Compute importance sampling weights: current policy / behavior policy
     rhos = categorical_importance_sampling_ratios(logits[:, :-1],
@@ -806,7 +805,7 @@ def batched_art_impala_loss_head_entropy(
   entropy_loss = jax.vmap(rlax.entropy_loss)
 
   def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
-              sample: types.TrainingData,mrng = None) -> jnp.DeviceArray:
+              sample: types.TrainingData) -> jnp.DeviceArray:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data
@@ -1004,7 +1003,7 @@ def batched_art_impala_loss_head_cross_entropy(
   entropy_loss = jax.vmap(rlax.entropy_loss)
 
   def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
-              sample: types.TrainingData,mrng = None) -> jnp.DeviceArray:
+              sample: types.TrainingData,) -> jnp.DeviceArray:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data
@@ -1354,7 +1353,6 @@ def batched_art_impala_loss_reward_predict(
     baseline_cost: float = 1.0,
     entropy_cost: float = 0.0,
     reward_pred_cost: float = 0.0,
-    mrng = None,
 ) -> Callable[[hk.Params, types.TrainingData], jnp.DeviceArray]:
   """Builds the standard entropy-regularised IMPALA loss function.
 
@@ -1379,7 +1377,7 @@ def batched_art_impala_loss_reward_predict(
   entropy_loss = jax.vmap(rlax.entropy_loss)
 
   def loss_fn(params: hk.Params, popart_state: rlax.PopArtState,
-              sample: types.TrainingData, mrng = None) -> jnp.DeviceArray:
+              sample: types.TrainingData,) -> jnp.DeviceArray:
     """Batched, entropy-regularised actor-critic loss with V-trace."""
 
     # Extract the data
