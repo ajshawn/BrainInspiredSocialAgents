@@ -289,7 +289,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
                                 add_selection_vec: bool = False,
                                 attn_enhance_multiplier: float = 0.0,
                                 num_heads: int = 4,
-                                key_size: int = 64,):   
+                                key_size: int = 64,
+                                hidden_scale: float = 1):   
   def forward_fn(inputs, state: hk.LSTMState, ):
     model = IMPALANetwork_multihead_attention(
         environment_spec.actions.num_values,
@@ -299,7 +300,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
-        key_size=key_size,)
+        key_size=key_size,
+        hidden_scale = hidden_scale)
     return model(inputs, state, ) 
 
   def initial_state_fn(batch_size=None) -> hk.LSTMState:
@@ -311,7 +313,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
-        key_size=key_size)
+        key_size=key_size,
+        hidden_scale = hidden_scale)
     return model.initial_state(batch_size)
 
   def unroll_fn(inputs, state: hk.LSTMState, ):
@@ -323,7 +326,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
-        key_size=key_size,)
+        key_size=key_size,
+        hidden_scale = hidden_scale)
     return model.unroll(inputs, state, )
 
   def critic_fn(inputs):
@@ -335,7 +339,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         add_selection_vec=add_selection_vec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
-        key_size=key_size)
+        key_size=key_size,
+        hidden_scale = hidden_scale)
     return model.critic(inputs)
 
   return make_haiku_networks_2(
@@ -1152,6 +1157,112 @@ class PostAttnCNN(hk.Module):
     outputs = self._ff(outputs)
     return outputs
   
+class MultiHeadAttentionLayer_blend(hk.Module):
+  def __init__(
+      self,
+      num_heads: int,
+      key_size_per_head: int,
+      positional_embedding='learnable',
+      temperature: float = 1.0,
+      is_training: bool = True,
+      hidden_scale: float = 1,
+  ):
+    super().__init__(name="multihead_attention_layer")
+    self.num_heads = num_heads
+    self.key_size_per_head = key_size_per_head  # per head
+    self.positional_embedding = positional_embedding
+    self.model_dim = num_heads * key_size_per_head
+    self.is_training = is_training
+    self.temperature = temperature
+    self.hidden_scale = hidden_scale
+    self.mlp = hk.Sequential([hk.Linear(self.model_dim),jax.nn.relu,
+                              hk.Linear(self.model_dim),jax.nn.relu,
+    ])
+                             
+
+  def __call__(self, query, key, value, ):
+    if jnp.ndim(query) == 1:
+      query = jnp.expand_dims(query, axis=0)
+    if jnp.ndim(key) == 2:
+      key = jnp.expand_dims(key, axis=0)
+      value = jnp.expand_dims(value, axis=0)
+
+    B, N, _ = key.shape
+
+    # Positional embedding
+    if self.positional_embedding == 'fixed':
+      H = 11
+      y = jnp.linspace(-1.0, 1.0, H)
+      x = jnp.linspace(-1.0, 1.0, H)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")
+      coords = jnp.stack([yy, xx], axis=-1).reshape([N, 2])
+      coords = jnp.broadcast_to(coords[None, ...], [B, N, 2])
+      key = jnp.concatenate([key, coords], axis=-1)
+      value = jnp.concatenate([value, coords], axis=-1)
+    elif self.positional_embedding == 'learnable':
+      pos_emb = hk.get_parameter("pos_embedding", shape=[N, self.model_dim], init=hk.initializers.TruncatedNormal(stddev=0.02))
+      key += pos_emb[None, :, :]
+      value += pos_emb[None, :, :]
+    elif self.positional_embedding == 'frequency':
+      # Linear projections
+      # NOTE: Frequency positional embedding now only works for single head due to the concatenation
+      
+      H = W = 11  # assume inputs arranged as HxW grid
+
+      # Create spatial coordinates
+      y = jnp.linspace(0, 1, H)
+      x = jnp.linspace(0, 1, W)
+      yy, xx = jnp.meshgrid(y, x, indexing="ij")  # [H, W]
+
+      # Define frequency basis size
+      U = V = 8
+      u = jnp.arange(1, U + 1)[None, None, :]  # [1,1,U]
+      v = jnp.arange(1, V + 1)[None, None, :]  # [1,1,V]
+
+      a = yy[:, :, None] * u * jnp.pi  # [H,W,U]
+      b = xx[:, :, None] * v * jnp.pi  # [H,W,V]
+
+      # Outer product of cosines across frequencies
+      freq_basis = jnp.einsum("hwu,hwv->hwuv", jnp.cos(a), jnp.cos(b))
+      freq_basis = freq_basis.reshape(H, W, -1)  # [H,W,U*V]
+
+      # Tile for batch
+      freq_basis = jnp.broadcast_to(freq_basis[None, ...], (B, H, W, U * V))
+      freq_basis = freq_basis.reshape(B, N, -1)  # [B,N,U*V]
+
+      # # Add frequency basis to projected keys and values
+      key += freq_basis
+      value += freq_basis
+      # Concat frequency basis to projected keys and values
+      # key = jnp.concatenate([key, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
+      # value = jnp.concatenate([value, freq_basis], axis=-1)  # [B, N, model_dim + U*V]
+      
+    q_proj_cross = hk.Linear(self.model_dim)(query)  # [B, model_dim]
+    q_proj_self = hk.Linear(self.model_dim)(key) # [B, N, model_dim]
+    q_proj_self = jnp.mean(q_proj_self, axis = -2) # [B, model_dim]
+    q_proj = self.hidden_scale * q_proj_cross + (1-self.hidden_scale) * q_proj_self
+    k_proj = hk.Linear(self.model_dim)(key)    # [B, N, model_dim]
+    v_proj = hk.Linear(self.model_dim)(value)  # [B, N, model_dim]
+
+    # Split into heads
+    grid_dim, embed_dim = k_proj.shape[-2], k_proj.shape[-1]
+    q = q_proj.reshape(-1, self.num_heads, self.key_size_per_head)  # [B, H, K]
+    q = q[:, :, None, :] # [B, H, 1, K]
+    k = k_proj.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)  # [B, N, H, K]
+    k = jnp.transpose(k, (0, 2, 1, 3))  # [B, H, N, K]
+    v = v_proj.reshape(-1, grid_dim, self.num_heads, self.key_size_per_head)  # [B, N, H, K]
+    v = jnp.transpose(v, (0, 2, 1, 3))  # [B, H, N, K]
+
+    # Scaled dot-product attention
+    scores = jnp.einsum("bhqd,bhkd->bhqk", q, k).squeeze(2)  # [B, H, N]
+
+    scores = scores / jnp.sqrt(self.key_size_per_head)  # Scale scores
+    weights = jax.nn.softmax(scores / self.temperature, axis=-1)  # [B, H, N]
+    # Weighted sum
+    output = jnp.einsum("bhn,bhnk->bhk", weights, v)  # [B, H, K]
+    output = output.reshape(output.shape[0], -1)  # [B, model_dim]
+    output = self.mlp(output)
+    return output, weights
 def zero_state_lstm(lstm: hk.LSTM):
     def wrapped(inputs, state):
         if inputs.ndim == 1:
@@ -1495,7 +1606,8 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       positional_embedding=None, 
       add_selection_vec=False, 
       attn_enhance_multiplier=0.0,
-      use_layer_norm=False,):
+      use_layer_norm=False,
+      hidden_scale = 0):
     super().__init__(
       num_actions, 
       recurrent_dim, 
@@ -1504,12 +1616,11 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       add_selection_vec, 
       attn_enhance_multiplier,
       use_layer_norm,)
-    self._attention = MultiHeadAttentionLayer(
+    self._attention = MultiHeadAttentionLayer_blend(
         num_heads=num_heads,
         key_size_per_head=key_size // num_heads,
         positional_embedding=positional_embedding,
-        add_selection_vec=add_selection_vec,
-        attn_enhance_multiplier=attn_enhance_multiplier)
+        hidden_scale = hidden_scale)
 
 class IMPALANetwork_multihead_attention_disturb(IMPALANetwork_attention):
   # TODO: Since call and unroll are not overridden, this class is

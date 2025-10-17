@@ -443,6 +443,7 @@ def build_experiment_config():
             attn_enhance_multiplier=attn_enhance_multiplier,
             num_heads=n_heads,
             key_size=attn_key_size,
+            hidden_scale = hidden_scale,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
