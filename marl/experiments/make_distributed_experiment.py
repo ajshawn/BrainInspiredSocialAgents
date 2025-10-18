@@ -120,7 +120,24 @@ def make_distributed_experiment(
       primary_learner: Optional[core.Learner] = None,
   ):
     """The Learning part of the agent."""
-
+    # --- Lazy TF import and safe TF setup (do this BEFORE creating any TF constants) ---
+    import os
+    # Option A: if you suspect TF/JAX GPU contention, force TF to CPU only:
+    # DO THIS BEFORE importing tensorflow. Uncomment if needed.
+    # os.environ[“CUDA_VISIBLE_DEVICES”] = “”
+    import tensorflow as tf  # local import to avoid early initialization
+    # Convert JAX PRNGKey to an integer seed for TF so TF ops are deterministic relative to jax key.
+    # If random_key is a jax PRNGKey, do:
+    try:
+      import jax
+      # draw a single random integer from the JAX key in [0, 2**31-1)
+      int_seed = int(jax.random.randint(random_key, (), 0, 2**31 - 1))
+    except Exception:
+      # fallback if random_key is already an int or if jax import fails
+      int_seed = 0
+    tf.random.set_seed(int_seed)
+    # Optionally hide TF GPUs (an alternative to setting CUDA_VISIBLE_DEVICES).
+    # tf.config.experimental.set_visible_devices([], “GPU”)
     dummy_seed = 1
     spec = experiment.environment_spec or ma_specs.MAEnvironmentSpec(
         experiment.environment_factory(dummy_seed))
