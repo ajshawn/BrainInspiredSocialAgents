@@ -1,9 +1,10 @@
-GPUS="0"
+GPUS="0,1"
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
+export LD_LIBRARY_PATH="/usr/local/cuda-12.4/lib/:/root/miniconda3/pkgs/cudatoolkit-11.8.0-h6a678d5_0/lib:$LD_LIBRARY_PATH"
 
 # baseline 
 CUDA_VISIBLE_DEVICES=${GPUS} python train.py  --async_distributed --available_gpus ${GPUS} --num_actors 16 \
-  --algo_name PopArtIMPALA_attention_multihead --num_heads 1 \
+  --algo_name PopArtIMPALA --num_heads 1 \
   --env_name meltingpot --map_name clean_up --seed 1 --agent_roles "default, default, default, default, default" \
   #--experiment_dir ${exp_dir} \
 
