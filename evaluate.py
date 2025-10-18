@@ -35,12 +35,15 @@ flags.DEFINE_integer(
     "n_episodes", 1, "The number of roll out episode to run"
 )
 flags.DEFINE_string("ckp", None, "Which checkpoint to load")
-
+flags.DEFINE_string(
+    "save_dir", None, "save directory for cross evaluation results"
+) 
 
 def main(_):
     if FLAGS.experiment_dir is None:
         raise ValueError("experiment_dir must be specified")
-
+    if FLAGS.save_dir is None:
+        FLAGS.save_dir = FLAGS.experiment_dir
     config, experiment_dir = train.build_experiment_config()
 
     ckpt_config = ma_config.CheckpointingConfig(
@@ -48,7 +51,7 @@ def main(_):
     )
 
     config.logger_factory = functools.partial(
-        make_experiment_logger, log_dir=experiment_dir, use_tb=False
+        make_experiment_logger, log_dir=FLAGS.save_dir, use_tb=False
     )
     if FLAGS.agent_param_indices is not None:
         agent_param_indices = [int(idx) for idx in FLAGS.agent_param_indices.split(",")]

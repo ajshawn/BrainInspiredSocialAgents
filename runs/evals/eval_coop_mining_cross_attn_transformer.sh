@@ -31,11 +31,11 @@
 # GPUS="1"
 
 save_dir="./cross_eval_results/attn-transformer-alone-hidden0.5"
-EXP_DIR_PREFIX=".,./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-15_04:32:48.824037"
+EXP_DIR_PREFIX=".,./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-15_04:32:45.743946"
 ckp_map="0:133-0"
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="simple_transformer_attention"
-TIME_STAMP="2025-10-15_04:32:48.824037"
+TIME_STAMP="2025-10-15_04:32:45.743946"
 GPUS="1"
 
 
@@ -44,7 +44,7 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --log_timesteps to suppress timestep log 
 #for ckp_map in "${ckp_maps[@]}"; do
 for i in {0..2}; do 
-   ckp_map="0:49-$i"
+   ckp_map="0:60-$i"
     CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \

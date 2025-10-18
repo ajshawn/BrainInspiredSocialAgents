@@ -1,7 +1,7 @@
 EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-15_04:32:45.743946" 
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="simple_transformer_attention"
-TIME_STAMP="2025-10-15_04:32:48.824037"
+TIME_STAMP="2025-10-15_04:32:45.743946"
 
 # EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274" 
 # EVN_NAME="coop_mining"
@@ -19,7 +19,7 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in 37;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
+for ckp in 61;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \

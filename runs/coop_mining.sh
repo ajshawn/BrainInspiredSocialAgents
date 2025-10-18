@@ -86,14 +86,14 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 #   --conservative_mine_beam True --iron_reward 1 --gold_reward 6 --mining_reward 0 \
   #--experiment_dir ${exp_dir}
 
-# #Simple Transformer with attention 
-CUDA_VISIBLE_DEVICES=${GPUS} python train.py  --async_distributed --available_gpus ${GPUS} --num_actors 16 \
-  --algo_name simple_transformer_attention \
-  --positional_embedding learnable --reward_pred_cost 10 \
-  --env_name meltingpot --map_name coop_mining --map_layout original --seed 1 --agent_roles "default, default, default" \
-  --dense_ore_regrow True --iron_rate 0.00012 --gold_rate 0.00008 \
-  --conservative_mine_beam True --iron_reward 1 --gold_reward 8 --mining_reward 0 \
-  #--experiment_dir ${exp_dir}
+# # #Simple Transformer with attention 
+# CUDA_VISIBLE_DEVICES=${GPUS} python train.py  --async_distributed --available_gpus ${GPUS} --num_actors 16 \
+#   --algo_name simple_transformer_attention \
+#   --positional_embedding learnable --reward_pred_cost 10 \
+#   --env_name meltingpot --map_name coop_mining --map_layout original --seed 1 --agent_roles "default, default, default" \
+#   --dense_ore_regrow True --iron_rate 0.00012 --gold_rate 0.00008 \
+#   --conservative_mine_beam True --iron_reward 1 --gold_reward 8 --mining_reward 0 \
+#   #--experiment_dir ${exp_dir}
 
 # # # Simple Transformer with cnn feedback
 # CUDA_VISIBLE_DEVICES=${GPUS} python train.py  --async_distributed --available_gpus ${GPUS} --num_actors 16 \

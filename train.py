@@ -251,9 +251,9 @@ def build_experiment_config():
         assert (
             FLAGS.env_name in FLAGS.experiment_dir
         ), f"experiment_dir must be a {FLAGS.env_name} experiment"
-        assert (
-            FLAGS.map_name in FLAGS.experiment_dir
-        ), f"experiment_dir must be a {FLAGS.env_name} experiment with map_name {FLAGS.map_name}"
+        # assert (
+        #     FLAGS.map_name in FLAGS.experiment_dir
+        # ), f"experiment_dir must be a {FLAGS.env_name} experiment with map_name {FLAGS.map_name}"
         experiment_dir = FLAGS.experiment_dir
         experiment_name = experiment_dir.split("/")[-1]
     else:
