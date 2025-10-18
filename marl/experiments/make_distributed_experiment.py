@@ -124,7 +124,7 @@ def make_distributed_experiment(
     import os
     # Option A: if you suspect TF/JAX GPU contention, force TF to CPU only:
     # DO THIS BEFORE importing tensorflow. Uncomment if needed.
-    # os.environ[“CUDA_VISIBLE_DEVICES”] = “”
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
     import tensorflow as tf  # local import to avoid early initialization
     # Convert JAX PRNGKey to an integer seed for TF so TF ops are deterministic relative to jax key.
     # If random_key is a jax PRNGKey, do:
