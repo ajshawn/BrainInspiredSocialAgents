@@ -1,6 +1,6 @@
-GPUS="1"
+GPUS="0,1"
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
-#export LD_LIBRARY_PATH="/usr/local/cuda-12.4/lib/:/root/miniconda3/pkgs/cudatoolkit-11.8.0-h6a678d5_0/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/local/cuda-12.4/lib/:/root/miniconda3/pkgs/cudatoolkit-11.8.0-h6a678d5_0/lib:$LD_LIBRARY_PATH"
 #exp_dir='results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-08_13:36:13.677366'
 
 
