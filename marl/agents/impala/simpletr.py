@@ -38,7 +38,7 @@ class ContextState(NamedTuple):
 def make_network_simple_transformer(
     environment_spec: EnvironmentSpec,
     feature_extractor: hk.Module,
-    model_dim: int = 74,
+    model_dim: int = 76,
     num_heads: int = 2,
     mlp_hidden_dim: int = 128,
     num_layers: int = 1,
@@ -373,7 +373,7 @@ class SimpleTransformerCore(hk.Module):
         num_actions: int,
         model_dim: int,
         feature_extractor,
-        input_dim: int = 74,
+        input_dim: int = 76,
         num_heads: int = 2,
         mlp_hidden_dim: int = 128,
         num_layers: int = 1,
@@ -424,6 +424,9 @@ class SimpleTransformerCore(hk.Module):
     def __call__(self, inputs, state: ContextState, ):
         # inputs expected [B, D_in]; run feature extractor if provided
         emb = self._embed(inputs)
+        if emb.shape[-1] < self.input_dim:
+            pad_width = [(0, 0)] * (emb.ndim - 1) + [(0, self.input_dim - emb.shape[-1])]
+            emb = jnp.pad(emb, pad_width, mode='constant', constant_values=0)
         x = jnp.expand_dims(emb, axis=0)  # [T=1,B=1,D]
         full, new_buf = self._concat_and_crop(state.buffer, x, self.max_context_len)  # [S,B,D], [C,B,D]
         enc = self._encode_window(full, is_training=True)
@@ -439,7 +442,9 @@ class SimpleTransformerCore(hk.Module):
         """Unroll over time dimension of inputs: [T,B,D_in] or feature-extracted directly."""
         # vmap in loss function removes batch dimension
         emb_seq = self._embed(inputs)  # [T,B,D]
-
+        if emb_seq.shape[-1] < self.input_dim:
+            pad_width = [(0, 0)] * (emb_seq.ndim - 1) + [(0, self.input_dim - emb_seq.shape[-1])]
+            emb_seq = jnp.pad(emb_seq, pad_width, mode='constant', constant_values=0)
         def step(x_t, st):
             emb = x_t
             x = jnp.expand_dims(emb, axis=0)  # [1,B,D]
