@@ -25,21 +25,21 @@
 # TIME_STAMP="2025-06-10_21:32:15.740274"
 # GPUS="0"
 
-save_dir="./cross_eval_results/enhance-attention-alone"
-EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
-ckp_map="0:100-0"
-EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
-TIME_STAMP="2025-07-23_16:43:20.078198"
-GPUS="0"
-
-# save_dir="./cross_eval_results/enhance-attention-2coop3single"
-# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
-# ckp_map="0:100-0,1:50-0,2:50-1,3:50-2,4:100-1"
+# save_dir="./cross_eval_results/enhance-attention-alone"
+# EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
+# ckp_map="0:100-0"
 # EVN_NAME="coop_mining"
 # ALGORITHM_NAME="PopArtIMPALA_attention_multihead_item_aware"
 # TIME_STAMP="2025-07-23_16:43:20.078198"
 # GPUS="0"
+
+save_dir="./cross_eval_results/test"
+EXP_DIR_PREFIX=".,./results/results/PopArtIMPALA_attention_multihead_self_supervision_3_meltingpot_coop_mining_2025-10-20_10:24:52.040748,./results/results/PopArtIMPALA_attention_multihead_self_supervision_3_meltingpot_coop_mining_2025-10-20_10:24:52.040748"
+ckp_map="0:131-0,1:131-2"
+EVN_NAME="coop_mining"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead_self_supervision"
+TIME_STAMP="2025-10-20_10:24:52.040748"
+GPUS="1"
 
 # save_dir="./cross_eval_results/enhance-attention-2coop"
 # EXP_DIR_PREFIX=".,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419,./results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
@@ -67,7 +67,7 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --max_episode_length 500 \
     --experiment_dir ${EXP_DIR_PREFIX} \
     --save_dir ${save_dir} \
-    --agent_roles 'default' \
+    --agent_roles 'default,default' \
     --dense_ore_regrow True \
     --iron_rate 0.0002 \
     --gold_rate 0.0001 \
@@ -76,8 +76,8 @@ CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --gold_reward 6 \
     --mining_reward 0 \
     --ckp_map ${ckp_map} \
-    --n_episodes 10 \
-    --agent_param_indices '0'\
+    --n_episodes 2 \
+    --agent_param_indices '0,1'\
     --num_heads 1 \
     #--record_video True \
     #--log_timesteps True \

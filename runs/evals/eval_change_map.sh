@@ -2,39 +2,88 @@ GPUS="1"
 EVN_NAME="coop_mining"
 
 # Define arrays for each experiment setting
+# save_dirs=(
+#     "./map_eval_results/attn-transformer-hidden0.5"
+#     "./map_eval_results/transformer"
+#     "./map_eval_results/baseline"
+#     "./map_eval_results/attn-lstm-supervised"
+#     "./map_eval_results/attn-lstm-self-supervised"
+# )
+
+# EXP_DIR_PREFIXES=(
+#     "./results/results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-15_04:32:45.743946"
+#     "./results/results/simple_transformer_1_meltingpot_coop_mining_2025-09-17_16:27:05.143749"
+#     "./results/results/PopArtIMPALA_1_meltingpot_coop_mining_2025-07-21_16:00:58.916298"
+#     "./results/results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
+#     "./results/results/PopArtIMPALA_attention_multihead_self_supervision_1_meltingpot_coop_mining_2025-09-14_11:15:56.921430"
+# )
+
+# ckps=(61 22 58 101 128)
+
+# ALGORITHM_NAMES=(
+#     "simple_transformer_attention"
+#     "simple_transformer"
+#     "PopArtIMPALA"
+#     "PopArtIMPALA_attention_multihead_item_aware"
+#     "PopArtIMPALA_attention_multihead_self_supervision"
+# )
+
+# TIME_STAMPS=(
+#     "2025-10-15_04:32:45.743946"
+#     "2025-09-17_16:27:05.143749"
+#     "2025-07-21_16:00:58.916298"
+#     "2025-07-23_16:38:01.516419"
+#     "2025-09-14_11:15:56.921430"
+# )
+
+TIME_STAMPS=(
+    # "2025-07-21_16:00:58.916298"
+    # "2025-08-18_20:07:21.933169"
+    # "2025-07-23_16:38:01.516419"
+    # "2025-08-14_16:19:12.187931"
+    # "2025-08-18_20:05:07.151340"
+    "2025-09-14_11:15:56.921430"
+    "2025-10-17_20:06:05.608232"
+    "2025-10-20_10:24:52.040748"
+)
+
 save_dirs=(
-    "./map_eval_results/attn-transformer-hidden0.5"
-    "./map_eval_results/transformer"
-    "./map_eval_results/baseline"
-    "./map_eval_results/attn-lstm-supervised"
-    "./map_eval_results/attn-lstm-self-supervised"
+    # "./map_eval_results/seeds/baseline"
+    # "./map_eval_results/seeds/baseline"
+    # "./map_eval_results/seeds/attn-lstm-supervised"
+    # "./map_eval_results/seeds/attn-lstm-supervised"
+    # "./map_eval_results/seeds/attn-lstm-supervised"
+    "./map_eval_results/seeds/attn-lstm-self-supervised"
+    "./map_eval_results/seeds/attn-lstm-self-supervised"
+    "./map_eval_results/seeds/attn-lstm-self-supervised"
 )
 
 EXP_DIR_PREFIXES=(
-    "./results/results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-15_04:32:45.743946"
-    "./results/results/simple_transformer_1_meltingpot_coop_mining_2025-09-17_16:27:05.143749"
-    "./results/results/PopArtIMPALA_1_meltingpot_coop_mining_2025-07-21_16:00:58.916298"
-    "./results/results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
+    # "./results/results/PopArtIMPALA_1_meltingpot_coop_mining_2025-07-21_16:00:58.916298"
+    # "./results/results/PopArtIMPALA_3_meltingpot_coop_mining_2025-08-18_20:07:21.933169"
+    # "./results/results/PopArtIMPALA_attention_multihead_item_aware_1_meltingpot_coop_mining_2025-07-23_16:38:01.516419"
+    # "./results/results/PopArtIMPALA_attention_multihead_item_aware_2_meltingpot_coop_mining_2025-08-14_16:19:12.187931"
+    # "./results/results/PopArtIMPALA_attention_multihead_item_aware_3_meltingpot_coop_mining_2025-08-18_20:05:07.151340"
     "./results/results/PopArtIMPALA_attention_multihead_self_supervision_1_meltingpot_coop_mining_2025-09-14_11:15:56.921430"
+    "./results/results/PopArtIMPALA_attention_multihead_self_supervision_2_meltingpot_coop_mining_2025-10-17_20:06:05.608232"
+    "./results/results/PopArtIMPALA_attention_multihead_self_supervision_3_meltingpot_coop_mining_2025-10-20_10:24:52.040748"
 )
 
-ckps=(61 22 58 101 128)
+#ckps=(58 62 101 101 92 128 141 99)
+ckps=(128 141 99)
 
 ALGORITHM_NAMES=(
-    "simple_transformer_attention"
-    "simple_transformer"
-    "PopArtIMPALA"
-    "PopArtIMPALA_attention_multihead_item_aware"
+    # "PopArtIMPALA"
+    # "PopArtIMPALA"
+    # "PopArtIMPALA_attention_multihead_item_aware"
+    # "PopArtIMPALA_attention_multihead_item_aware"
+    # "PopArtIMPALA_attention_multihead_item_aware"
+    "PopArtIMPALA_attention_multihead_self_supervision"
+    "PopArtIMPALA_attention_multihead_self_supervision"
     "PopArtIMPALA_attention_multihead_self_supervision"
 )
 
-TIME_STAMPS=(
-    "2025-10-15_04:32:45.743946"
-    "2025-09-17_16:27:05.143749"
-    "2025-07-21_16:00:58.916298"
-    "2025-07-23_16:38:01.516419"
-    "2025-09-14_11:15:56.921430"
-)
+
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
@@ -51,7 +100,7 @@ for i in {0..4}; do
     echo "=============================="
 
     # Inner loop: iterate over 5 map layouts
-    for map_layout in random1 random2 random3 random4 random5; do
+    for map_layout in random2 random3 random4 random5; do
         echo "========== Evaluating map layout: ${map_layout} =========="
 
         CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \

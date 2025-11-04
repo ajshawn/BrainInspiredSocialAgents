@@ -10,15 +10,14 @@
 # GPUS="0"
 
 save_dir="./cross_eval_results/envstep300/baseline-2in5"
-EXP_DIR_PREFIX=".,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-10-01_11:16:18.051802,./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-10-01_11:16:18.051802"
+#"./results/results/PopArtIMPALA_1_meltingpot_coop_mining_2025-07-21_16:00:58.916298"
+EXP_DIR_PREFIX=".,./results/results/PopArtIMPALA_1_meltingpot_coop_mining_2025-07-21_16:00:58.916298,./results/results/PopArtIMPALA_1_meltingpot_coop_mining_2025-07-21_16:00:58.916298"
 ckp_maps=(
-    "0:49-0,1:49-1"
-    "0:49-2,1:49-3"
-    "0:49-4,1:45-0"
+    "0:52-1,1:52-0"
 )
 EVN_NAME="coop_mining"
 ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2025-10-01_11:16:18.051802"
+TIME_STAMP="2025-07-21_16:00:58.916298"
 GPUS="1"
 
 # save_dir="./cross_eval_results/envstep300/baseline-alone"
