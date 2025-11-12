@@ -71,6 +71,25 @@ L+*********=J
 /L~~~~~~~~~J/
 """
 
+SMALLER_16x16_ASCII_MAP = """
+/;____________,/
+;]************[,
+!vvvvvvvvvvvvvv|
+!''XXXXXXXXXX''|
+!''XaaaaaaAaX''|
+!aAa&aaAaaAaaa'|
+!aaaa&aAaaAaaa'|
+!aaaaaAaaaaaaA'|
+!aaaAAaaaaaaaa'|
+!aAa&aaaAaaaaA'|
+!AaAaaaaaa&aaA'|
+!''XaaaaAaaaX''|
+!''XXXXXXXXXX''|
+!^^^^^^^^^^^^^^|
+L+************=J
+/L~~~~~~~~~~~~J/
+"""
+
 # `prefab` determines which prefab game object to use for each `char` in the
 # ascii map.
 CHAR_PREFAB_MAP = {
@@ -114,6 +133,8 @@ def get_config(**kwargs):
   # Select the map layout.
   if kwargs.get("smaller_13x13"):
     config.layout.ascii_map = SMALLER_13x13_ASCII_MAP
+  elif kwargs.get("smaller_16x16"):
+    config.layout.ascii_map = SMALLER_16x16_ASCII_MAP
   else:  
     config.layout.ascii_map = ASCII_MAP
   config.layout.char_prefab_map = CHAR_PREFAB_MAP
