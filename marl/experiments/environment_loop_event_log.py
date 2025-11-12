@@ -101,6 +101,11 @@ class EnvironmentLoopEvents(core.Worker):
             "mine_gold": defaultdict(int),
             "extract_gold": defaultdict(int),
             "follower_mining": defaultdict(int),
+            "acron_collected": defaultdict(int),
+            "acron_consumed": defaultdict(int),
+            "acorn_consumed_grass": defaultdict(int),
+            "apple": defaultdict(int),
+            "prey_caught": defaultdict(int),
         }
         timestep_data = []
         # For evaluation, this keeps track of the total undiscounted reward
@@ -155,6 +160,11 @@ class EnvironmentLoopEvents(core.Worker):
             mine_iron = [0] * len(rewards)
             mine_gold = [0] * len(rewards)
             extract_gold = [0] * len(rewards)
+            acron_collected = [0] * len(rewards)
+            acron_consumed = [0] * len(rewards)
+            acron_consumed_grass = [0] * len(rewards)
+            apple = [0] * len(rewards)
+            prey_caught = [0] * len(rewards)
             for event in events:
                 event_type = event[0]
                 if event_type == "mining" and event[1][4] == 1:
@@ -168,6 +178,22 @@ class EnvironmentLoopEvents(core.Worker):
                 elif event_type == "extraction" and event[1][4] == 2: # extracted gold 
                     episode_data["extract_gold"][int(event[1][2])] += 1
                     extract_gold[int(event[1][2])-1] = 1
+                # predator-prey 
+                elif event_type == "acron_collected":
+                    episode_data["acron_collected"][int(event[1][2])] += 1
+                    acron_collected[int(event[1][2])-1] = 1
+                elif event_type == "acron_consumed":
+                    episode_data["acron_consumed"][int(event[1][2])] += 1
+                    acron_consumed[int(event[1][2])-1] = 1
+                elif event_type == "acorn_consumed_safely":
+                    episode_data["acron_consumed_grass"][int(event[1][2])] += 1
+                    acron_consumed_grass[int(event[1][2])-1] = 1
+                elif event_type == "apple_consumed":
+                    episode_data["apple"][int(event[1][2])] += 1
+                    apple[int(event[1][2])-1] = 1
+                elif event_type == "prey_consumed":
+                    episode_data["prey_caught"][int(event[1][4])] += 1
+                    prey_caught[int(event[1][4])-1] = 1
                 # elif event_type == "overextration" or any([r == -0.5 for r in rewards]):
                 #     print(rewards)
                 #     f.write(json.dump(timestep.observation.to_list()))
@@ -177,6 +203,11 @@ class EnvironmentLoopEvents(core.Worker):
                 "mine_iron":mine_iron,
                 "mine_gold":mine_gold,
                 "extract_gold":extract_gold,
+                "acron_collected":acron_collected,
+                "acron_consumed":acron_consumed,
+                "acron_consumed_grass":acron_consumed_grass,
+                "apple":apple,
+                "prey_caught":prey_caught,
                 "reward":list(map(float, rewards)),
                 "timestep":int(episode_steps),
                 "position": position,
@@ -231,6 +262,11 @@ class EnvironmentLoopEvents(core.Worker):
                     f"mine_gold_{agent_id}": episode_data["mine_gold"].get(agent_id, 0),
                     f"extract_gold_{agent_id}": episode_data["extract_gold"].get(agent_id, 0),
                     f"follower_mining_{agent_id}": episode_data["follower_mining"].get(agent_id, 0),
+                    f"acron_collected_{agent_id}": episode_data["acron_collected"].get(agent_id, 0),
+                    f"acron_consumed_{agent_id}": episode_data["acron_consumed"].get(agent_id, 0),
+                    f"acorn_consumed_grass_{agent_id}": episode_data["acorn_consumed_grass"].get(agent_id, 0),
+                    f"apple_{agent_id}": episode_data["apple"].get(agent_id, 0),
+                    f"prey_caught_{agent_id}": episode_data["prey_caught"].get(agent_id, 0),
                 }
             )
 
