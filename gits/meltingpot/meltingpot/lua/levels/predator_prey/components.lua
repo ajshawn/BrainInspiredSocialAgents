@@ -284,11 +284,13 @@ function AvatarEdible:__init__(kwargs)
       {'groupRadius', args.default(2), args.positive},
       {'framesToDisplayBeingEaten', args.default(5), args.positive},
       {'predatorRewardForEating', args.default(1), args.numberType},
+      {'preyPunishmentForBeingEaten', args.default(-5)}
   })
   AvatarEdible.Base.__init__(self, kwargs)
   self._groupRadius = kwargs.groupRadius
   self._framesToDisplayBeingEaten = kwargs.framesToDisplayBeingEaten
-  self._config.predatorRewardForEating = kwargs.predatorRewardForEating
+  self._config.predatorRewardForEating = kwargs.predatorRewardForEating,
+  self._config.preyPunishmentForBeingEaten = kwargs.preyPunishmentForBeingEaten
 end
 
 function AvatarEdible:reset()
@@ -353,6 +355,8 @@ function AvatarEdible:onHit(hitterObject, hitName)
           self._framesToDisplayBeingEaten)
       local hitterAvatar = hitterObject:getComponent('Avatar')
       hitterAvatar:addReward(self._config.predatorRewardForEating)
+      local preyAvatar = self.gameObject:getComponent('Avatar')
+      preyAvatar:addReward(self._config.preyPunishmentForBeingEaten)
       events:add(
         'prey_consumed', 'dict',
         'predator_player_index', hitterAvatar:getIndex(),

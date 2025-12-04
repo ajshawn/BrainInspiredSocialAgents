@@ -101,8 +101,8 @@ class EnvironmentLoopEvents(core.Worker):
             "mine_gold": defaultdict(int),
             "extract_gold": defaultdict(int),
             "follower_mining": defaultdict(int),
-            "acron_collected": defaultdict(int),
-            "acron_consumed": defaultdict(int),
+            "acorn_collected": defaultdict(int),
+            "acorn_consumed": defaultdict(int),
             "acorn_consumed_grass": defaultdict(int),
             "apple": defaultdict(int),
             "prey_caught": defaultdict(int),
@@ -133,7 +133,7 @@ class EnvironmentLoopEvents(core.Worker):
 
             position = timestep.observation['observation'].get('POSITION', np.array([])).tolist(),
             orientation = timestep.observation['observation'].get('ORIENTATION', np.array([])).tolist(),
-            obj_in_view = timestep.observation['observation'].get('OBJECTS_IN_VIEW_TENSOR', np.array([])).tolist()
+            obj_in_view = timestep.observation['observation'].get('OBJECTS_IN_VIEW', np.array([])).tolist()
             
             # Generate an action from the agent's policy.
             select_action_start = time.time()
@@ -160,9 +160,9 @@ class EnvironmentLoopEvents(core.Worker):
             mine_iron = [0] * len(rewards)
             mine_gold = [0] * len(rewards)
             extract_gold = [0] * len(rewards)
-            acron_collected = [0] * len(rewards)
-            acron_consumed = [0] * len(rewards)
-            acron_consumed_grass = [0] * len(rewards)
+            acorn_collected = [0] * len(rewards)
+            acorn_consumed = [0] * len(rewards)
+            acorn_consumed_grass = [0] * len(rewards)
             apple = [0] * len(rewards)
             prey_caught = [0] * len(rewards)
             for event in events:
@@ -179,15 +179,15 @@ class EnvironmentLoopEvents(core.Worker):
                     episode_data["extract_gold"][int(event[1][2])] += 1
                     extract_gold[int(event[1][2])-1] = 1
                 # predator-prey 
-                elif event_type == "acron_collected":
-                    episode_data["acron_collected"][int(event[1][2])] += 1
-                    acron_collected[int(event[1][2])-1] = 1
-                elif event_type == "acron_consumed":
-                    episode_data["acron_consumed"][int(event[1][2])] += 1
-                    acron_consumed[int(event[1][2])-1] = 1
+                elif event_type == "acorn_collected":
+                    episode_data["acorn_collected"][int(event[1][2])] += 1
+                    acorn_collected[int(event[1][2])-1] = 1
+                elif event_type == "acorn_consumed":
+                    episode_data["acorn_consumed"][int(event[1][2])] += 1
+                    acorn_consumed[int(event[1][2])-1] = 1
                 elif event_type == "acorn_consumed_safely":
-                    episode_data["acron_consumed_grass"][int(event[1][2])] += 1
-                    acron_consumed_grass[int(event[1][2])-1] = 1
+                    episode_data["acorn_consumed_grass"][int(event[1][2])] += 1
+                    acorn_consumed_grass[int(event[1][2])-1] = 1
                 elif event_type == "apple_consumed":
                     episode_data["apple"][int(event[1][2])] += 1
                     apple[int(event[1][2])-1] = 1
@@ -203,9 +203,9 @@ class EnvironmentLoopEvents(core.Worker):
                 "mine_iron":mine_iron,
                 "mine_gold":mine_gold,
                 "extract_gold":extract_gold,
-                "acron_collected":acron_collected,
-                "acron_consumed":acron_consumed,
-                "acron_consumed_grass":acron_consumed_grass,
+                "acorn_collected":acorn_collected,
+                "acorn_consumed":acorn_consumed,
+                "acorn_consumed_grass":acorn_consumed_grass,
                 "apple":apple,
                 "prey_caught":prey_caught,
                 "reward":list(map(float, rewards)),
@@ -262,8 +262,8 @@ class EnvironmentLoopEvents(core.Worker):
                     f"mine_gold_{agent_id}": episode_data["mine_gold"].get(agent_id, 0),
                     f"extract_gold_{agent_id}": episode_data["extract_gold"].get(agent_id, 0),
                     f"follower_mining_{agent_id}": episode_data["follower_mining"].get(agent_id, 0),
-                    f"acron_collected_{agent_id}": episode_data["acron_collected"].get(agent_id, 0),
-                    f"acron_consumed_{agent_id}": episode_data["acron_consumed"].get(agent_id, 0),
+                    f"acorn_collected_{agent_id}": episode_data["acorn_collected"].get(agent_id, 0),
+                    f"acorn_consumed_{agent_id}": episode_data["acorn_consumed"].get(agent_id, 0),
                     f"acorn_consumed_grass_{agent_id}": episode_data["acorn_consumed_grass"].get(agent_id, 0),
                     f"apple_{agent_id}": episode_data["apple"].get(agent_id, 0),
                     f"prey_caught_{agent_id}": episode_data["prey_caught"].get(agent_id, 0),

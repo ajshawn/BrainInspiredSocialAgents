@@ -319,9 +319,9 @@ function Avatar:addObservations(tileSet, world, observations)
         local vy = center_y + rel[2]
   
         if vx >= 1 and vx <= view_width and vy >= 1 and vy <= view_height then
-          if obj:getState() == "goldRaw" or obj:getState() == "goldPartial" or obj:hasComponent('Avatar') then
+          if obj:getState() == "floorAcorn" then
             view[1][vy][vx] = 1  -- Channel 1: acorn
-          elseif obj:getState() == "ironRaw" then
+          elseif obj:getState() == "apple" then
             view[2][vy][vx] = 1  -- Channel 2: apple
           elseif obj:hasComponent('Avatar') then
             view[3][vy][vx] = 1  -- Channel 3: other player
@@ -393,65 +393,67 @@ function Avatar:addObservations(tileSet, world, observations)
   -- }
   
 
---   observations[#observations + 1] = {
---     name = id .. ".OBJECTS_IN_VIEW_TENSOR",
---     type = 'tensor.Int32Tensor',
---     shape = {100, 3},  -- 50 objects max, each with [typeIndex, dx, dy]
---     func = function(grid)
---       local MAX_OBJECTS = 100
+  observations[#observations + 1] = {
+    name = id .. ".OBJECTS_IN_VIEW_TENSOR",
+    type = 'tensor.Int32Tensor',
+    shape = {100, 3},  -- 50 objects max, each with [typeIndex, dx, dy]
+    func = function(grid)
+      local MAX_OBJECTS = 100
 
---       -- Custom type-to-index mapping
---       local nameRefs = {
---         player = 1,
---         ironRaw = 2,
---         goldRaw = 3,
---         goldPartial = 4,
---         -- add more if needed
---       }
+      -- Custom type-to-index mapping
+      local nameRefs = {
+        player = 1,
+        ironRaw = 2,
+        goldRaw = 3,
+        goldPartial = 4,
+        apple = 5,
+        acorn = 6
+        -- add more if needed
+      }
 
---       -- Gather objects from both layers
---       local objectsInView = self:queryPartialObservationWindow('upperPhysical')
---       local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
---       for _, obj in ipairs(objectsInViewLower) do
---         table.insert(objectsInView, obj)
---       end
+      -- Gather objects from both layers
+      local objectsInView = self:queryPartialObservationWindow('upperPhysical')
+      local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
+      for _, obj in ipairs(objectsInViewLower) do
+        table.insert(objectsInView, obj)
+      end
 
---       local avatar = self.gameObject
---       local transform = avatar:getComponent('Transform')
---       local avatarPos = avatar:getPosition()
+      local avatar = self.gameObject
+      local transform = avatar:getComponent('Transform')
+      local avatarPos = avatar:getPosition()
 
---       -- Each entry is {typeIndex, dx, dy}
---       local nestedData = {}
+      -- Each entry is {typeIndex, dx, dy}
+      local nestedData = {}
 
---       for _, obj in ipairs(objectsInView) do
---         local pos = obj:getPosition()
---         local rel = transform:getRelativeDirectionFromAbsolute{
---           pos[1] - avatarPos[1],
---           pos[2] - avatarPos[2]
---         }
+      for _, obj in ipairs(objectsInView) do
+        local pos = obj:getPosition()
+        local rel = transform:getRelativeDirectionFromAbsolute{
+          pos[1] - avatarPos[1],
+          pos[2] - avatarPos[2]
+        }
 
---         local typeName = obj:getState()
---         local typeIndex = nameRefs[typeName]
+        local typeName = obj:getState()
+        local typeIndex = nameRefs[typeName]
 
---         if typeIndex then
---           table.insert(nestedData, {typeIndex, rel[1], rel[2]})
---         end
---       end
+        if typeIndex then
+          table.insert(nestedData, {typeIndex, rel[1], rel[2]})
+        end
+      end
 
---       if #nestedData > MAX_OBJECTS then
---         error(string.format(
---           "[OBJECTS_IN_VIEW_TENSOR] Too many objects: %d (max %d)",
---           #nestedData, MAX_OBJECTS))
---       end
+      if #nestedData > MAX_OBJECTS then
+        error(string.format(
+          "[OBJECTS_IN_VIEW_TENSOR] Too many objects: %d (max %d)",
+          #nestedData, MAX_OBJECTS))
+      end
 
---       -- Pad with [0, 0, 0] if needed
---       while #nestedData < MAX_OBJECTS do
---         table.insert(nestedData, {0, 0, 0})
---       end
+      -- Pad with [0, 0, 0] if needed
+      while #nestedData < MAX_OBJECTS do
+        table.insert(nestedData, {0, 0, 0})
+      end
 
---       return tensor.Int32Tensor(nestedData)
---     end
---   }
+      return tensor.Int32Tensor(nestedData)
+    end
+  }
 end
 
 function Avatar:reset()

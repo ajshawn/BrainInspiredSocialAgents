@@ -1,14 +1,15 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_item_aware_1_meltingpot_predator_prey__open_2025-06-21_13:24:43.145268"
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2025-11-13_15:32:49.069310"
 EVN_NAME="predator_prey__open"
-ALGORITHM_NAME="PopArtIMPALA_attention_item_aware"
-TIME_STAMP="2025-06-21_13:24:43.145268"
+map_layout="smaller_16x16"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead"
+TIME_STAMP="2025-11-13_15:32:49.069310"
 LOG_INTERVAL=1
-N_AGENTS=13
-GPUS="4"
+N_AGENTS=3
+GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 167 ;do # {2..195}
+for ckp in 151 ;do # {2..195}
 
     obs_out_dir="data/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"
@@ -21,18 +22,20 @@ for ckp in 167 ;do # {2..195}
         --algo_name ${ALGORITHM_NAME} \
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
+        --map_layout ${map_layout} \
         --experiment_dir ${EXP_DIR_PREFIX} \
         --ckp ${ckp} \
         --n_episodes 1 \
         --record_video True \
         --positional_embedding learnable \
+        --num_heads 1 \
         --log_timesteps True \
         --log_obs True \
         --log_filename ${log_filename} \
         --log_img_dir ${log_img_dir} \
         --log_interval ${LOG_INTERVAL} \
-        --attn_enhance_multiplier 10.0 \
-        --agent_param_indices "0,1,2,3,4,5,6,7,8,9,10,11,12"
+        --agent_roles "predator, prey, prey" \
+        --agent_param_indices "0,1,2"
         
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"

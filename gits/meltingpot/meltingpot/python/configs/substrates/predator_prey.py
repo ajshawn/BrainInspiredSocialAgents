@@ -60,7 +60,7 @@ from meltingpot.python.utils.substrates import shapes
 from meltingpot.python.utils.substrates import specs
 
 # Warning: setting `_ENABLE_DEBUG_OBSERVATIONS = True` may cause slowdown.
-_ENABLE_DEBUG_OBSERVATIONS = False
+_ENABLE_DEBUG_OBSERVATIONS = True
 
 _COMPASS = ("N", "E", "S", "W")
 ITEMS = ("empty", "acorn")
@@ -1449,12 +1449,13 @@ def _create_avatar_object(player_idx: int, is_predator: bool,
             "kwargs": {
                 "groupRadius": 3,
                 "predatorRewardForEating": 1.0,
+                "preyPunishmentForBeingEaten": -5.0,
             }
         },
         {
             "component": "AvatarRespawn",
             "kwargs": {
-                "framesTillRespawn": 200,
+                "framesTillRespawn": 5,
             }
         },
         {
