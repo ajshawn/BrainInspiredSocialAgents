@@ -1,15 +1,15 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2025-11-13_15:32:49.069310"
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2025-12-03_16:25:37.920054"
 EVN_NAME="predator_prey__open"
 map_layout="smaller_16x16"
 ALGORITHM_NAME="PopArtIMPALA_attention_multihead"
-TIME_STAMP="2025-11-13_15:32:49.069310"
+TIME_STAMP="2025-12-03_16:25:37.920054"
 LOG_INTERVAL=1
 N_AGENTS=3
 GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 151 ;do # {2..195}
+for ckp in 117 ;do # {2..195}
 
     obs_out_dir="data/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"

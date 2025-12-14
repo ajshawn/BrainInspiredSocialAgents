@@ -1,10 +1,15 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_1_meltingpot_predator_prey__open_2024-11-26_17:36:18.023323_ckp"
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2025-12-12_00:25:34.057868"
 EVN_NAME="predator_prey__open"
-ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2024-11-26_17:36:18.023323"
-GPUS="5, 6"
+map_layout="smaller_16x16"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead"
+TIME_STAMP="2025-12-12_00:25:34.057868"
+LOG_INTERVAL=1
+N_AGENTS=3
+GPUS="0"
 
-for ckp in 6752
+export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
+
+for ckp in 64
 do
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
@@ -13,10 +18,15 @@ do
         --algo_name ${ALGORITHM_NAME} \
         --env_name meltingpot \
         --map_name ${EVN_NAME} \
-        --record_video true \
-        --experiment_dir ${EXP_DIR_PREFIX}${ckp}
-        # --map_layout smaller_13x13 \
-        # --agent_roles "predator, prey, prey, prey"        
+        --map_layout ${map_layout} \
+        --experiment_dir ${EXP_DIR_PREFIX} \
+        --ckp ${ckp} \
+        --agent_roles "predator, prey, prey" \
+        --agent_param_indices "0,1,2" \
+        --n_episodes 1 \
+        --positional_embedding learnable \
+        --num_heads 1 \
+        --record_video True \
 
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"

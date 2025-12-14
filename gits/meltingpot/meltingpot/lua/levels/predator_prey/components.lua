@@ -289,7 +289,7 @@ function AvatarEdible:__init__(kwargs)
   AvatarEdible.Base.__init__(self, kwargs)
   self._groupRadius = kwargs.groupRadius
   self._framesToDisplayBeingEaten = kwargs.framesToDisplayBeingEaten
-  self._config.predatorRewardForEating = kwargs.predatorRewardForEating,
+  self._config.predatorRewardForEating = kwargs.predatorRewardForEating
   self._config.preyPunishmentForBeingEaten = kwargs.preyPunishmentForBeingEaten
 end
 

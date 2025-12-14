@@ -76,14 +76,14 @@ SMALLER_16x16_ASCII_MAP = """
 ;]************[,
 !vvvvvvvvvvvvvv|
 !''XXXXXXXXXX''|
-!''XaaaaaaAaX''|
-!aAa&aaAaaAaaa'|
-!aaaa&aAaaAaaa'|
-!aaaaaAaaaaaaA'|
-!aaaAAaaaaaaaa'|
-!aAa&aaaAaaaaA'|
-!AaAaaaaaa&aaA'|
-!''XaaaaAaaaX''|
+!''X'a''''a'X''|
+!'a'&''a'''''''|
+!''''&''''a''''|
+!'''a''''''''a'|
+!a''''a'''a''''|
+!'a'&''''''a'''|
+!''''a'''&a''''|
+!'aX''''''''Xa'|
 !''XXXXXXXXXX''|
 !^^^^^^^^^^^^^^|
 L+************=J
@@ -94,7 +94,7 @@ L+************=J
 # ascii map.
 CHAR_PREFAB_MAP = {
     "*": {"type": "all", "list": ["safe_grass", "spawn_point_prey"]},
-    "&": {"type": "all", "list": ["tiled_floor", "apple", "spawn_point_prey"]},
+    "&": {"type": "all", "list": ["tiled_floor", "spawn_point_prey"]},
     "X": {"type": "all", "list": ["tiled_floor", "spawn_point_predator"]},
     "a": {"type": "all", "list": ["tiled_floor", "apple"]},
     "A": {"type": "all", "list": ["tiled_floor", "floor_acorn"]},
