@@ -133,7 +133,7 @@ class EnvironmentLoopEvents(core.Worker):
 
             position = timestep.observation['observation'].get('POSITION', np.array([])).tolist(),
             orientation = timestep.observation['observation'].get('ORIENTATION', np.array([])).tolist(),
-            obj_in_view = timestep.observation['observation'].get('OBJECTS_IN_VIEW', np.array([])).tolist()
+            obj_in_view = timestep.observation['observation'].get('OBJECTS_IN_VIEW_TENSOR', np.array([])).tolist()
             
             # Generate an action from the agent's policy.
             select_action_start = time.time()

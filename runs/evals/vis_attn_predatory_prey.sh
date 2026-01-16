@@ -1,15 +1,16 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2025-12-03_16:25:37.920054"
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2025-12-28_08:26:01.896233"
 EVN_NAME="predator_prey__open"
 map_layout="smaller_16x16"
 ALGORITHM_NAME="PopArtIMPALA_attention_multihead"
-TIME_STAMP="2025-12-03_16:25:37.920054"
+TIME_STAMP="2025-12-28_08:26:01.896233"
 LOG_INTERVAL=1
 N_AGENTS=3
+N_HEADS=2
 GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 117 ;do # {2..195}
+for ckp in 258 ;do # {2..195}
 
     obs_out_dir="data/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"
@@ -28,7 +29,7 @@ for ckp in 117 ;do # {2..195}
         --n_episodes 1 \
         --record_video True \
         --positional_embedding learnable \
-        --num_heads 1 \
+        --num_heads ${N_HEADS} \
         --log_timesteps True \
         --log_obs True \
         --log_filename ${log_filename} \
@@ -68,7 +69,8 @@ for ckp in 117 ;do # {2..195}
         --csv_path ${attn_src_csv} \
         --image_dir ${attn_src_img_dir} \
         --save_dir ${attn_vis_out_dir} \
-        --n_agents ${N_AGENTS}
+        --n_agents ${N_AGENTS} \
+        --n_heads ${N_HEADS}
 
     echo "Attention visualization saved to ${attn_vis_out_dir}"
 

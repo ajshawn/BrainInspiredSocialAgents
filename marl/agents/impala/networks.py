@@ -1329,7 +1329,8 @@ class IMPALANetwork_attention(hk.RNNCore):
     new_state = ContextState(cell=new_state.cell, hidden=new_state.hidden, buffer=jnp.array([1], dtype=jnp.int32))
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    return (logits, value, op, attn_weights), new_state
+    #return (logits, value, op, attn_weights), new_state
+    return (logits, value, op, attended), new_state
 
   # def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
   #   return self._lstm_core.initial_state(batch_size)
@@ -1607,7 +1608,7 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       add_selection_vec=False, 
       attn_enhance_multiplier=0.0,
       use_layer_norm=False,
-      hidden_scale = 0):
+      hidden_scale = 1):
     super().__init__(
       num_actions, 
       recurrent_dim, 
@@ -1616,11 +1617,15 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       add_selection_vec, 
       attn_enhance_multiplier,
       use_layer_norm,)
-    self._attention = MultiHeadAttentionLayer_blend(
+    # self._attention = MultiHeadAttentionLayer_blend(
+    #     num_heads=num_heads,
+    #     key_size_per_head=key_size // num_heads,
+    #     positional_embedding=positional_embedding,
+    #     hidden_scale = hidden_scale)
+    self._attention = MultiHeadAttentionLayer(
         num_heads=num_heads,
         key_size_per_head=key_size // num_heads,
-        positional_embedding=positional_embedding,
-        hidden_scale = hidden_scale)
+        positional_embedding=positional_embedding,)
 
 class IMPALANetwork_multihead_attention_disturb(IMPALANetwork_attention):
   # TODO: Since call and unroll are not overridden, this class is

@@ -60,7 +60,7 @@ from meltingpot.python.utils.substrates import shapes
 from meltingpot.python.utils.substrates import specs
 
 # Warning: setting `_ENABLE_DEBUG_OBSERVATIONS = True` may cause slowdown.
-_ENABLE_DEBUG_OBSERVATIONS = True
+_ENABLE_DEBUG_OBSERVATIONS = False
 
 _COMPASS = ("N", "E", "S", "W")
 ITEMS = ("empty", "acorn")
@@ -589,6 +589,10 @@ TILED_FLOOR = {
                 "spriteShapes": [shapes.TILED_FLOOR_GREY],
                 "palettes": [{"o": (204, 199, 192, 255),
                               "-": (194, 189, 182, 255),}],
+
+                # for dark background 
+                # "palettes": [{"o": (0,0,0, 255),
+                #               "-": (0,0,0, 255),}],
                 "noRotates": [False]
             }
         },
@@ -1309,7 +1313,7 @@ def _create_avatar_object(player_idx: int, is_predator: bool,
         {
             "component": "AvatarRespawn",
             "kwargs": {
-                "framesTillRespawn": 5,
+                "framesTillRespawn": 10,
             }
         },
         ])
@@ -1449,13 +1453,13 @@ def _create_avatar_object(player_idx: int, is_predator: bool,
             "kwargs": {
                 "groupRadius": 3,
                 "predatorRewardForEating": 1.0,
-                "preyPunishmentForBeingEaten": -5.0,
+                "preyPunishmentForBeingEaten": -2.0,
             }
         },
         {
             "component": "AvatarRespawn",
             "kwargs": {
-                "framesTillRespawn": 5,
+                "framesTillRespawn": 10,
             }
         },
         {

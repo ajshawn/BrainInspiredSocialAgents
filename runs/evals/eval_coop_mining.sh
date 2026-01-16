@@ -1,25 +1,30 @@
-EXP_DIR_PREFIX="./results/PopArtIMPALA_2_meltingpot_coop_mining_2025-08-14_16:12:58.502508"
-EVN_NAME="coop_mining"
-ALGORITHM_NAME="PopArtIMPALA"
-TIME_STAMP="2025-08-14_16:12:58.502508"
+# EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-10-15_04:32:45.743946" 
+# EVN_NAME="coop_mining"
+# ALGORITHM_NAME="simple_transformer_attention"
+# TIME_STAMP="2025-10-15_04:32:45.743946"
 
 # EXP_DIR_PREFIX="./results/PopArtIMPALA_attention_1_meltingpot_coop_mining_2025-06-10_21:32:15.740274" 
 # EVN_NAME="coop_mining"
 # ALGORITHM_NAME="PopArtIMPALA_attention"
 # TIME_STAMP="2025-06-10_21:32:15.740274"
 
+EXP_DIR_PREFIX="./results/PopArtIMPALA_1_meltingpot_coop_mining_2025-06-13_11:31:14.677056" 
+EVN_NAME="coop_mining"
+ALGORITHM_NAME="PopArtIMPALA"
+TIME_STAMP="2025-06-13_11:31:14.677056"
+
 # EXP_DIR_PREFIX="./results/simple_transformer_attention_1_meltingpot_coop_mining_2025-09-22_14:58:38.778330" 
 # EVN_NAME="coop_mining"
 # ALGORITHM_NAME="simple_transformer_attention"
 # TIME_STAMP="2025-09-22_14:58:38.778330"
 
-GPUS="1"
+GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 # comment out --record video to suppress video recording 
 # comment out --log_timesteps to suppress timestep log 
 
-for ckp in 100; do
+for ckp in 50;do # {2..195} #{4,20,73,99,123} {4,40,70,100,135}
     CUDA_VISIBLE_DEVICES=${GPUS} python evaluate.py \
         --async_distributed \
         --available_gpus ${GPUS} \
@@ -39,15 +44,14 @@ for ckp in 100; do
         --gold_reward 6 \
         --mining_reward 0 \
         --ckp ${ckp} \
-        --n_episodes 1 \
+        --n_episodes 10 \
         --positional_embedding learnable \
-        --agent_param_indices '1,2'\
-        --hidden_scale 0.5 \
-        --record_video True \
+        --agent_param_indices '0,1'\
         --max_episode_length 500 \
         --log_timesteps True \
-        --log_obs True
-        #--add_selection_vector True \
+        --add_selection_vector True \
+        #--hidden_scale 0.5 \
+        #--record_video True \
         
         
 
