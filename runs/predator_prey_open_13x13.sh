@@ -1,6 +1,6 @@
 GPUS="0"
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
-exp_dir='results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2026-01-08_02:40:43.111077'
+#exp_dir='results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2026-01-08_02:40:43.111077'
 
 CUDA_VISIBLE_DEVICES=${GPUS} python train.py \
   --async_distributed \
@@ -14,4 +14,4 @@ CUDA_VISIBLE_DEVICES=${GPUS} python train.py \
   --seed 1 \
   --map_layout smaller_16x16 \
   --agent_roles "predator, prey, prey" \
-  --experiment_dir ${exp_dir}
+  #--experiment_dir ${exp_dir}
