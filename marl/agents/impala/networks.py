@@ -680,6 +680,10 @@ class MultiHeadAttentionLayer(hk.Module):
     self.dropout_rate = dropout_rate
     self.is_training = is_training
     self.temperature = temperature
+    self._ff = hk.Sequential([
+        hk.Linear(64),
+        jax.nn.relu,
+    ])
 
   def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
     if jnp.ndim(query) == 1:
@@ -786,6 +790,10 @@ class MultiHeadAttentionLayer(hk.Module):
     #output += jnp.mean(v,axis = 2) # residue connection 
 
     output = output.reshape(output.shape[0], -1)  # [B, model_dim]
+
+    # Additional nonlinear transformations after attention
+    output = self._ff(output)
+
     return output, weights
 
 class MultiHeadAttentionDisturbLayer(hk.Module):
@@ -1329,8 +1337,9 @@ class IMPALANetwork_attention(hk.RNNCore):
     new_state = ContextState(cell=new_state.cell, hidden=new_state.hidden, buffer=jnp.array([1], dtype=jnp.int32))
     logits = self._policy_layer(op)
     value = jnp.squeeze(self._value_layer(op), axis=-1)
-    #return (logits, value, op, attn_weights), new_state
-    return (logits, value, op, attended), new_state
+    # return attention output (attended)
+    return (logits, value, op, attn_weights), new_state
+    #return (logits, value, op, attended), new_state
 
   # def initial_state(self, batch_size: int, **unused_kwargs) -> hk.LSTMState:
   #   return self._lstm_core.initial_state(batch_size)
