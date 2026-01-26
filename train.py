@@ -99,7 +99,7 @@ flags.DEFINE_string("wandb_tags", "", "Comma separated list of tags for wandb.")
 flags.DEFINE_string("available_gpus", "0", "Comma separated list of GPU ids.")
 flags.DEFINE_integer(
     "num_actors",
-    2,
+    8,
     "Number of actors to use (should be less than total number of CPU cores).",
 )
 flags.DEFINE_integer("actors_per_node", 1, "Number of actors per thread.")
@@ -441,6 +441,26 @@ def build_experiment_config():
             positional_embedding=positional_embedding,
             add_selection_vec=add_selection_vector,
             attn_enhance_multiplier=attn_enhance_multiplier,
+            num_heads=n_heads,
+            key_size=attn_key_size,
+            hidden_scale = hidden_scale,
+        )
+        network = network_factory(
+            environment_specs.get_single_agent_environment_specs()
+        )
+        # Construct the agent.
+        config = impala.IMPALAConfig(
+            n_agents=environment_specs.num_agents, memory_efficient=memory_efficient, head_entropy_cost=head_entropy_cost, attn_entropy_cost=attn_entropy_cost,
+        )
+        core_spec = network.initial_state_fn(jax.random.PRNGKey(0))
+        builder = impala.PopArtIMPALABuilder(config, core_state_spec=core_spec)
+    
+    elif FLAGS.algo_name == "PopArtIMPALA_attention_multihead_ff":
+        # Create network
+        network_factory = functools.partial(
+            impala.make_network_attention_multihead_ff, 
+            feature_extractor=AttentionCNN_FE, 
+            positional_embedding=positional_embedding,
             num_heads=n_heads,
             key_size=attn_key_size,
             hidden_scale = hidden_scale,
