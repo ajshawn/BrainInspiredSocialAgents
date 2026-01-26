@@ -68,6 +68,7 @@ flags.DEFINE_enum(
         "PopArtIMPALA_attention_spatial",
         "PopArtIMPALA_attention_item_aware",
         "PopArtIMPALA_attention_multihead",
+        "PopArtIMPALA_attention_multihead_ff",
         "PopArtIMPALA_attention_multihead_disturb",
         "PopArtIMPALA_attention_multihead_enhance",
         "PopArtIMPALA_attention_multihead_item_aware",

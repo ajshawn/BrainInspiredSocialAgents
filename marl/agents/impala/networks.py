@@ -351,6 +351,60 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
       critic_fn=critic_fn,
   )                       
 
+def make_network_attention_multihead_ff(environment_spec: EnvironmentSpec,
+                                feature_extractor: hk.Module,
+                                recurrent_dim: int = 128,
+                                positional_embedding: Optional[str] = None,
+                                num_heads: int = 4,
+                                key_size: int = 64,):   
+  def forward_fn(inputs, state: hk.LSTMState, ):
+    model = IMPALANetwork_multihead_attention_ff(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        num_heads=num_heads,
+        key_size=key_size)
+    return model(inputs, state, ) 
+
+  def initial_state_fn(batch_size=None) -> hk.LSTMState:
+    model = IMPALANetwork_multihead_attention_ff(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        num_heads=num_heads,
+        key_size=key_size)
+    return model.initial_state(batch_size)
+
+  def unroll_fn(inputs, state: hk.LSTMState, ):
+    model = IMPALANetwork_multihead_attention_ff(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        num_heads=num_heads,
+        key_size=key_size,)
+    return model.unroll(inputs, state, )
+
+  def critic_fn(inputs):
+    model = IMPALANetwork_multihead_attention_ff(
+        environment_spec.actions.num_values,
+        recurrent_dim=recurrent_dim,
+        feature_extractor=feature_extractor,
+        positional_embedding=positional_embedding,
+        num_heads=num_heads,
+        key_size=key_size,)
+    return model.critic(inputs)
+
+  return make_haiku_networks_2(
+      env_spec=environment_spec,
+      forward_fn=forward_fn,
+      initial_state_fn=initial_state_fn,
+      unroll_fn=unroll_fn,
+      critic_fn=critic_fn,
+  )                       
+
 def make_network_attention_multihead_disturb(environment_spec: EnvironmentSpec,
                                 feature_extractor: hk.Module,
                                 recurrent_dim: int = 128,
@@ -1746,6 +1800,28 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
     #     positional_embedding=positional_embedding,
     #     hidden_scale = hidden_scale)
     self._attention = MultiHeadAttentionLayer(
+        num_heads=num_heads,
+        key_size_per_head=key_size // num_heads,
+        positional_embedding=positional_embedding,)
+    
+class IMPALANetwork_multihead_attention_ff(IMPALANetwork_attention):
+  # TODO: Since call and unroll are not overridden, this class is
+  # not supporting item-aware attention for now.
+  def __init__(
+      self, 
+      num_actions,
+      recurrent_dim, 
+      feature_extractor, 
+      num_heads=4,
+      key_size=64,
+      positional_embedding=None, 
+      ):
+    super().__init__(
+      num_actions, 
+      recurrent_dim, 
+      feature_extractor, 
+      positional_embedding, )
+    self._attention = MultiHeadAttentionLayer_ff(
         num_heads=num_heads,
         key_size_per_head=key_size // num_heads,
         positional_embedding=positional_embedding,)
