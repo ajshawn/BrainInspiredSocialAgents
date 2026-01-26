@@ -355,8 +355,11 @@ def make_network_attention_multihead_ff(environment_spec: EnvironmentSpec,
                                 feature_extractor: hk.Module,
                                 recurrent_dim: int = 128,
                                 positional_embedding: Optional[str] = None,
+                                add_selection_vec: bool = False,
+                                attn_enhance_multiplier: float = 0.0,
                                 num_heads: int = 4,
-                                key_size: int = 64,):   
+                                key_size: int = 64,
+                                hidden_scale: float = 1):   
   def forward_fn(inputs, state: hk.LSTMState, ):
     model = IMPALANetwork_multihead_attention_ff(
         environment_spec.actions.num_values,
