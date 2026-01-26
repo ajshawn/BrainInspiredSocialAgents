@@ -684,10 +684,6 @@ class MultiHeadAttentionLayer(hk.Module):
         hk.Linear(64),
         jax.nn.relu,
     ])
-    self.gate_ff = hk.Sequential([
-      hk.Linear(self.model_dim),
-      jax.nn.sigmoid,
-    ])
 
   def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
     if jnp.ndim(query) == 1:
@@ -796,9 +792,7 @@ class MultiHeadAttentionLayer(hk.Module):
     output = output.reshape(output.shape[0], -1)  # [B, model_dim]
 
     # Additional nonlinear transformations after attention
-    #output = self._ff(output)
-    gate = self.gate_ff(query)
-    output = gate * output
+    output = self._ff(output)
 
     return output, weights
 
