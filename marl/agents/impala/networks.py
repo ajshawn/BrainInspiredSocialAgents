@@ -794,14 +794,14 @@ class MultiHeadAttentionLayer(hk.Module):
     self.dropout_rate = dropout_rate
     self.is_training = is_training
     self.temperature = temperature
-    self._ff = hk.Sequential([
-        hk.Linear(64),
-        jax.nn.relu,
-    ])
-    self.gate_ff = hk.Sequential([
-      hk.Linear(self.model_dim),
-      jax.nn.sigmoid,
-    ])
+    # self._ff = hk.Sequential([
+    #     hk.Linear(64),
+    #     jax.nn.relu,
+    # ])
+    # self.gate_ff = hk.Sequential([
+    #   hk.Linear(self.model_dim),
+    #   jax.nn.sigmoid,
+    # ])
 
   def __call__(self, query, key, value, enhance_map=jnp.zeros((1, 121))):
     if jnp.ndim(query) == 1:
@@ -910,7 +910,7 @@ class MultiHeadAttentionLayer(hk.Module):
     output = output.reshape(output.shape[0], -1)  # [B, model_dim]
 
     # Additional nonlinear transformations after attention
-    output = self._ff(output)
+    #output = self._ff(output)
     #gate = self.gate_ff(query)
     #output = gate * output
 
@@ -1040,6 +1040,10 @@ class MultiHeadAttentionLayer_gated(hk.Module):
     self.model_dim = num_heads * key_size_per_head
     self.is_training = is_training
     self.temperature = temperature
+    # self._ff = hk.Sequential([
+    # hk.Linear(64),
+    # jax.nn.relu,
+    # ])
     self.gate_ff = hk.Sequential([
       hk.Linear(self.model_dim),
       jax.nn.sigmoid,
