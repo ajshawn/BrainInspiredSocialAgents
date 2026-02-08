@@ -36,7 +36,7 @@ for p = 1:length(E_Dlx.exp)
             test_pccall((p-1)*2+a,:,:) = pcc_test;
         else
         proj_train = []; proj_test = [];
-        [proj_train,proj_test,r2_train,r2_test,pcc_test,mse,npc(p)] = regression(neural,coop_features,nfold);
+        [proj_train,proj_test,r2_train,r2_test,pcc_test,mse,npc(p)] = regression_whole_session(neural,coop_features,nfold);
         test_r2all((p-1)*2+a,:) = r2_test;
         train_r2all((p-1)*2+a,:) = r2_train;
         test_pccall((p-1)*2+a,:) = pcc_test;
@@ -45,7 +45,7 @@ for p = 1:length(E_Dlx.exp)
         if run_shuffle
             parfor s = 1:10
             neural_sh = circshift(neural,randperm(size(neural,1),1),1);
-            [~,~,r2_trains(s,:),r2_tests(s,:),pcc_tests(s,:),~,~] = regression(neural_sh,coop_features,nfold);
+            [~,~,r2_trains(s,:),r2_tests(s,:),pcc_tests(s,:),~,~] = regression_whole_session(neural_sh,coop_features,nfold);
             end
             test_r2sh((p-1)*2+a,:) = mean(r2_tests,1);
             train_r2sh((p-1)*2+a,:) = mean(r2_trains,1);
