@@ -18,7 +18,7 @@ Based on the neural findings, we replaced standard CNN encoders with a Two-Head 
 **Head 2 (Social/Partner)**: Dedicated representational capacity for partner movement and egocentric tracking.
 
 ## Environments 
-We utilize the [Meltingpot](https://github.com/deepmind/meltingpot/) suite implemented with the [IMPALA algorithm (marl-jax)](https://github.com/kinalmehta/marl-jax) for parallelism:
+We utilize the [Meltingpot](https://github.com/deepmind/meltingpot/) suite implemented with the IMPALA algorithm for parallelism. This impenmentation is developed on top of [marl-jax](https://github.com/kinalmehta/marl-jax).
 
 **Cooperative interactions: Coop-Mining**: Agents must coordinate to mine gold and can individually mine irons.  
 **Competitive interactions: Predator-Prey**: Predators must track prey egocentrically while prey attends to environmental resources.
