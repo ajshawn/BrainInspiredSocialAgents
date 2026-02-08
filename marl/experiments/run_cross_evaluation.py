@@ -5,7 +5,7 @@ with some modifications to work with MARL setup.
 """
 
 """Runner used for executing local MARL agent."""
-
+import os
 import acme
 from acme import core
 from acme.jax import variable_utils
@@ -15,7 +15,9 @@ import dm_env
 import haiku as hk
 import jax
 import jax.numpy as jnp
-from typing import Optional
+from typing import Optional, List, Tuple, Callable
+
+import train
 from marl import specs as ma_specs
 from marl.experiments import config as ma_config
 from marl.utils import experiment_utils as ma_utils
@@ -24,110 +26,88 @@ from marl.experiments.environment_loop_event_log import EnvironmentLoopEvents
 
 
 def run_cross_evaluation(
-    experiment: ma_config.MAExperimentConfig,
-    checkpointing_config: ma_config.CheckpointingConfig,
+    base_exp_config: ma_config.MAExperimentConfig,
+    cross_play_config: dict,
     environment_name: str,
-    num_eval_episodes: int = 1,
-    ckp_map: Optional[dict[int, int]] = None,   # agent_id → checkpoint mapping
+    num_eval_episodes: int = 1,    
     log_timesteps: bool = False,
 ):
     """
     Runs a simple evaluation loop where agents can come from different checkpoints.
 
     Arguments:
-      experiment: Definition and configuration of the agent to run.
-      checkpointing_config: Configuration for checkpointing to load checkpoint from.
+      cross_play_config: Configuration dict specifying the checkpoint mapping for cross evaluation.
       environment_name: The scenario to evaluate.
       num_eval_episodes: Number of episodes to run.
-      ckp_map: Mapping {agent_idx: checkpoint_number} telling which checkpoint
-               each agent should load params from.
       log_timesteps: Whether to log timesteps in addition to episodes.
     """
 
-    key = jax.random.PRNGKey(experiment.seed)
+    key = jax.random.PRNGKey(base_exp_config.seed)
 
     # Environment setup
-    environment = experiment.environment_factory(experiment.seed)
-    environment_specs: ma_specs.MAEnvironmentSpec = experiment.environment_spec
-
-    network = experiment.network_factory(
-        environment_specs.get_single_agent_environment_specs()
-    )
-
+    environment = base_exp_config.environment_factory(base_exp_config.seed)
+    environment_specs: ma_specs.MAEnvironmentSpec = base_exp_config.environment_spec
     parent_counter = counting.Counter(time_delta=0.0)
-    dataset = None
 
-    learner_key, key = jax.random.split(key)
-    learner = experiment.builder.make_learner(
-        random_key=learner_key,
-        networks=network,
-        dataset=dataset,
-        logger_fn=experiment.logger_factory,
-        environment_spec=environment_specs,
-    )
+    cross_data = []
 
-    template = learner._combined_states.params
-    combined_params = jax.tree_map(lambda x: jnp.zeros_like(x), template)
-
-    # Load params from each dir and checkpoint needed 
-    jax.debug.print(f"ckpdir{checkpointing_config.directory}")
-    dirs = checkpointing_config.directory.split(",")
-    dummy = dirs[0]
-    dirs = dirs[1:]
-    jax.debug.print(dirs[0])
-
-    for target_id, info in ckp_map.items():
-        ckpt_num = info["ckpt_num"]
-        ckpt_agent = info["ckpt_agent"]
+    for agent_info in cross_play_config["agents"]:
+        exp, _ = train.build_experiment_config(override_config_args=agent_info)
+        ckpt_config = ma_config.CheckpointingConfig(directory=agent_info["ckp_dir"], add_uid=False)
+        # Build the network and learner to load the checkpoint parameters.
+        network_i = exp.network_factory(exp.environment_spec.get_single_agent_environment_specs())
+        tmp_env_spec = exp.environment_factory(exp.seed)
+        learner_key, key = jax.random.split(key)
+        learner = exp.builder.make_learner(
+            random_key=learner_key,
+            networks=network_i,
+            dataset=None,
+            logger_fn=exp.logger_factory,
+            environment_spec=tmp_env_spec,
+        )
+        
+        s0 = learner._combined_states.params.copy()
         checkpointer = tf_savers.Checkpointer(
             objects_to_save={"learner": learner},
-            directory=dirs[target_id],
+            directory=ckpt_config.directory,
             subdirectory="learner",
-            time_delta_minutes=checkpointing_config.model_time_delta_minutes,
-            add_uid=checkpointing_config.add_uid,
-            max_to_keep=checkpointing_config.max_to_keep,
+            time_delta_minutes=ckpt_config.model_time_delta_minutes,
+            add_uid=ckpt_config.add_uid,
+            max_to_keep=ckpt_config.max_to_keep,
         )
-        checkpointer.restore(ckp=ckpt_num)
-        cache = learner._combined_states.params.copy()
-        for k in combined_params.keys():
-            for k_ in combined_params[k].keys():
-                combined_params[k][k_] = combined_params[k][k_].at[target_id].set(
-                    cache[k][k_][ckpt_agent]
-                )
-    print("Combined parameters from checkpoints:", ckp_map)
+        checkpointer.restore()
+        s1 = learner._combined_states.params.copy()        
 
-    # Variable client as usual 
-    variable_client = variable_utils.VariableClient(
-        client=learner, key="network", update_period=int(1), device="cpu"
+        # testing that the learner parameters are actually loaded
+        for k, v in s0.items():
+            for k_, v_ in v.items():
+                assert (s0[k][k_] - s1[k][k_]
+                        ).sum() != 0, f'New parameters are the same as old {k}.{k_}'
+        print(f'Learner parameters successfully updated for agent {agent_info["agent_idx"]} from checkpoint {agent_info["ckp_dir"]}.')
+
+        variable_client = variable_utils.VariableClient(
+            client=learner, key="network", update_period=int(1), device="cpu")
+        params = learner._combined_states.params.copy()
+        params = ma_utils.select_idx(params, jnp.array(agent_info["source_agent_idx"])).copy()
+        cross_data.append((network_i.forward_fn, network_i.initial_state_fn, params, variable_client))
+
+    # Create an evaluation actor that uses the separate network data.
+    eval_actor = EvaluateCross(
+        cross_data=cross_data,
+        rng=hk.PRNGSequence(base_exp_config.seed),        
     )
 
-    # Create evaluation actor
-    agent_idx_offset = SCENARIO_2_AGENT_IDX_OFFSET.get(environment_name, 0)
-    eval_actor = Evaluate(
-        network.forward_fn,
-        network.initial_state_fn,
-        n_agents=environment.num_agents,
-        n_params=environment_specs.num_agents,
-        agent_idx_offset=agent_idx_offset,
-        variable_client=variable_client,
-        rng=hk.PRNGSequence(experiment.seed),
-        agent_param_indices=experiment.agent_param_indices,
-    )
-
-    # Inject merged params into actor
-    eval_actor.params = combined_params
-
-    # Evaluation loop 
+    # Set up evaluation logging.
     eval_counter = counting.Counter(
         parent_counter, prefix=environment_name, time_delta=0.0
     )
-    eval_logger = experiment.logger_factory(
+    eval_logger = base_exp_config.logger_factory(
         label=f"{environment_name}", steps_key=eval_counter.get_steps_key(), task_instance=0
     )
-    timestep_logger = experiment.logger_factory(
+    timestep_logger = base_exp_config.logger_factory(
         label=f"{environment_name}-timesteps", steps_key=eval_counter.get_steps_key(), task_instance=0
     ) if log_timesteps else None
-
+    
     eval_loop = EnvironmentLoopEvents(
         environment,
         eval_actor,
@@ -139,75 +119,79 @@ def run_cross_evaluation(
     )
 
     eval_loop.run(num_episodes=num_eval_episodes)
+    
 
-class Evaluate(core.Actor):
+class EvaluateCross(core.Actor):
+  """Evaluation actor for cross-checkpoint rollouts with separate network factories.
 
-    def __init__(
-        self,
-        forward_fn,
-        initial_state_fn,
-        n_agents,
-        n_params,
-        agent_idx_offset,
-        variable_client,
-        rng,
-        agent_param_indices,
-    ):
-        self.forward_fn = forward_fn
-        self.n_agents = n_agents
-        self.n_params = n_params
-        self.agent_idx_offset = agent_idx_offset
-        self._rng = rng
-        self._variable_client = variable_client
-        self.agent_param_indices = agent_param_indices
+  This actor receives a list of tuples containing the forward function,
+  initial state function, and parameters for each agent.
+  """
+  def __init__(
+      self,
+      cross_data: List[Tuple[Callable, Callable, hk.Params, variable_utils.VariableClient]],
+      rng,      
+  ):
+    self.cross_data = cross_data  # List of (forward_fn, initial_state_fn, params)
+    self.n_agents = len(cross_data)
+    self._rng = rng    
+    
+    self._initial_states = [
+      init_fn(next(self._rng)) for (_, init_fn, _, _) in cross_data # No need to expand dims
+    ]
+    self._variable_client = [client for (_, _, _, client) in cross_data]
+    self._states = None
+    self._logits = None
+    self._embedding = None
 
-        # Params storage
-        self._merged_params = None   # will be injected externally
-        self._initial_states = ma_utils.merge_data(
-            [initial_state_fn(next(rng)) for _ in range(self.n_agents)]
-        )
-        self._p_forward = jax.vmap(self.forward_fn)
+  def select_action(self, observations):
+    if self._states is None:
+        self._states = self._initial_states
+        self.update(True)
+    actions = []
+    new_states = []
+    embeddings = []
+    for agent_idx in range(self.n_agents):
+        forward_fn, _, params, _ = self.cross_data[agent_idx]
+        # obs = observations[agent_idx]
+        obs = {}
+        for k, v in observations.items():
+            if k == 'observation':
+                obs[k] = {}
+                for k_, v_ in v.items():
+                    # obs[k][k_] = jnp.expand_dims(v_[agent_idx], axis=0)
+                    obs[k][k_] = v_[agent_idx]
+            else:
+                # obs[k] = jnp.expand_dims(v[agent_idx], axis=0)
+                obs[k] = v[agent_idx]
+        state = self._states[agent_idx]
+        # if state.
+        (logits, _, _, embedding), new_state = forward_fn(params, obs, state)      
 
-        self._states = None
-        self._embedding = None
+        action = int(jnp.argmax(logits, axis=-1))
+        actions.append(action)
+        new_states.append(new_state)
+        embeddings.append(embedding)
 
-    @property
-    def params(self) -> hk.Params:
-        """Prefer externally injected merged params, otherwise fall back to variable client."""
-        if self._merged_params is not None:
-            return self._merged_params
-        return self._variable_client.params
+    self._states = new_states
+    self._logits = logits
+    self._embedding = embeddings
 
-    @params.setter
-    def params(self, value: hk.Params):
-        """Allow external code to inject merged params directly."""
-        self._merged_params = value
+    return [action for action in actions]
 
-    def select_action(self, observations):
-        if self._states is None:
-            self._states = self._initial_states
-            self.update(True)
+  def observe_first(self, timestep: dm_env.TimeStep):
+    self._states = None
 
-            # Deterministic agent selection
-            selected_params = jnp.array(self.agent_param_indices) + self.agent_idx_offset
-            self.episode_params = ma_utils.select_idx(self.params, selected_params)
+  def observe(self, action, next_timestep: dm_env.TimeStep):
+    pass
 
-        (logits, _, _, embedding), new_states = self._p_forward(
-            self.episode_params, observations, self._states
-        )
+  def update(self, wait: bool = True):
+    # self._variable_client.update(wait)
+    # pass
+    for client in self._variable_client:
+      client.update(wait)
 
-        # Greedy action selection
-        actions = jnp.argmax(logits, axis=-1)
-
-        self._embedding = embedding
-        self._states = new_states
-        return jax.tree_util.tree_map(lambda a: [*a], actions)
-
-    def observe_first(self, timestep: dm_env.TimeStep):
-        self._states = None
-
-    def observe(self, action, next_timestep: dm_env.TimeStep):
-        pass
-
-    def update(self, wait: bool = True):
-        self._variable_client.update(wait)
+  def _params(self) -> hk.Params:
+    # return self._variable_client.params
+    # return None
+    return [client.params for client in self._variable_client]

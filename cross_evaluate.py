@@ -15,7 +15,7 @@ import functools
 
 from absl import app
 from absl import flags
-from meltingpot.python import scenario
+import yaml
 
 from marl import experiments
 from marl.experiments import config as ma_config
@@ -34,53 +34,30 @@ flags.DEFINE_integer(
     "n_episodes", 1, "The number of roll out episode to run"
 )
 flags.DEFINE_string(
-    "ckp_map", None, "map which agent comes from which checkpoint"
-) # example: 0:50, 1:50, 2:50
+    "cross_play_config_path", None, "Path to YAML config file specifying the checkpoint mapping for cross evaluation."
+) 
 
 flags.DEFINE_string(
     "save_dir", None, "save directory for cross evaluation results"
 ) 
 
 def main(_):
-    if FLAGS.experiment_dir is None:
-        raise ValueError("experiment_dir must be specified")
+    cross_play_config_path = FLAGS.cross_play_config_path
+    with open(cross_play_config_path, "r") as f:
+        cross_play_config = yaml.safe_load(f)
     
     if FLAGS.save_dir is None:
         FLAGS.save_dir = FLAGS.experiment_dir
 
-    config, experiment_dir = train.build_experiment_config()
-
-    ckpt_config = ma_config.CheckpointingConfig(
-        max_to_keep=3, directory=experiment_dir, add_uid=False
+    base_exp_config, _ = train.build_experiment_config(
+        override_config_args=cross_play_config['env']
     )
 
-    config.logger_factory = functools.partial(
-        make_experiment_logger, log_dir=FLAGS.save_dir, use_tb=False
-    )
-
-    agent_param_indices = [int(idx) for idx in FLAGS.agent_param_indices.split(",")]
-    config.agent_param_indices = agent_param_indices
-
-    if FLAGS.ckp_map is not None:
-        #print(FLAGS.ckp_map)
-        #print(FLAGS.ckp_map.split(","))
-        ckp_map = {
-            int(target): {
-                "ckpt_num": int(ckpt_num),
-                "ckpt_agent": int(ckpt_agent)
-            }
-            for target, pair in (entry.split(":") for entry in FLAGS.ckp_map.split(","))
-            for ckpt_num, ckpt_agent in [pair.split("-")]
-        }
-    else:
-        ckp_map = None
-    
-    # running evaluation on substrate
-    experiments.run_cross_evaluation(
-        config,
-        ckpt_config,
-        environment_name=f"{FLAGS.env_name}_{FLAGS.map_name}",
-        ckp_map=ckp_map,
+    # running evaluation
+    experiments.run_cross_evaluation( 
+        base_exp_config = base_exp_config,    
+        cross_play_config = cross_play_config,
+        environment_name=f"{FLAGS.env_name}_{FLAGS.map_name}",        
         num_eval_episodes = FLAGS.n_episodes,
         log_timesteps = FLAGS.log_timesteps,
     )

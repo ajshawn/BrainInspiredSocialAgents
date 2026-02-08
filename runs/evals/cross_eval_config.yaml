@@ -1,0 +1,22 @@
+# Configuration for cross-evaluation of multiple agents with different architectures and checkpoints.
+env:
+  name: "meltingpot"
+  map_name: "coop_mining"
+  agent_roles: ['default', 'default']
+  
+agents:
+  - agent_idx: 0
+    algo_name: "PopArtIMPALA"
+    ckp_dir: "/home3/shawn7237/social-agents-JAX/results/PopArtIMPALA_6_meltingpot_coop_mining_2026-02-07_19:39:05.974620"
+    ckp_num: 1
+    source_agent_idx: 0
+    agent_roles: ['default', 'default', 'default']
+  
+  - agent_idx: 1
+    algo_name: "PopArtIMPALA_attention_multihead"
+    ckp_dir: "/home3/shawn7237/social-agents-JAX/results/PopArtIMPALA_attention_multihead_1_meltingpot_coop_mining_2026-02-07_17:30:02.315082"
+    ckp_num: 1
+    source_agent_idx: 0
+    num_heads: 2
+    positional_embedding: "learnable"
+    agent_roles: ['default', 'default', 'default']
