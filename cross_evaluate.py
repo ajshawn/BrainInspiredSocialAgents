@@ -1,26 +1,21 @@
 import os
+import sys
 
 os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
-import sys
-
-cwd = os.getcwd()
-sys.path.append(cwd)
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
     "0.6"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
-import functools
+cwd = os.getcwd()
+sys.path.append(cwd)
 
 from absl import app
 from absl import flags
 import yaml
 
 from marl import experiments
-from marl.experiments import config as ma_config
-from marl.utils import helpers
-from marl.utils.experiment_utils import make_experiment_logger
 import train
 
 FLAGS = flags.FLAGS

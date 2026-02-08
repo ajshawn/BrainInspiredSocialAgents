@@ -5,8 +5,6 @@ with some modifications to work with MARL setup.
 """
 
 """Runner used for executing local MARL agent."""
-import os
-import acme
 from acme import core
 from acme.jax import variable_utils
 from acme.tf import savers as tf_savers
@@ -15,13 +13,12 @@ import dm_env
 import haiku as hk
 import jax
 import jax.numpy as jnp
-from typing import Optional, List, Tuple, Callable
+from typing import List, Tuple, Callable
 
 import train
 from marl import specs as ma_specs
 from marl.experiments import config as ma_config
 from marl.utils import experiment_utils as ma_utils
-from marl.utils.scenario2agent_idx import SCENARIO_2_AGENT_IDX_OFFSET
 from marl.experiments.environment_loop_event_log import EnvironmentLoopEvents
 
 
