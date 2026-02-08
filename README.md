@@ -1,72 +1,32 @@
-# marl-jax
-JAX library for MARL research
+## Neural Principles of Social Representation for Robust Multi-agent AI
 
-[Demo Video](https://youtu.be/WQVQXPIUZxk)
-[Paper Link](https://arxiv.org/abs/2303.13808)
+This project bridges computational neuroscience and Multi-Agent Reinforcement Learning (MARL). By uncovering how the brain represents social information (self vs. partner manifolds), we introduce a brain-inspired two-head attention architecture that enhances social coordination and interpretability in artificial agents.
 
-## Implemented Algorithms
-- [x] Independent-IMPALA for multi-agent environments
-- [x] [OPRE](https://www.deepmind.com/publications/options-as-responses-grounding-behavioural-hierarchies-in-multi-agent-rl)
+## Part I: Neural Principles (/brain_decoder_analysis)
+Our biological findings suggest that neurons in the prefrontal cortex represent self and others-related information in two distinct geometric manifolds. Linear regression models trained to predict both self and partner's movement trajectories recovered social dynamics between the two animals.   
+We verified results in both cooperative interactions and competitive interactions.   
 
+**Usage**:  
+Demostration script: /brain_decoder_analysis/demo.mlx  
+Demo video:/brain_decoder_analysis/coop_with_traces3.mp4  
+<img src="images/trajectory_demo.png" alt="Comparison of true and predicted mouse trajectories using neural decoding" width="500">
 
-## Environments supported
-- [x] [Meltingpot](https://github.com/deepmind/meltingpot/)
-- [x] [Overcooked](https://github.com/HumanCompatibleAI/overcooked_ai)
-- [x] [Sequential Social Dilemma](https://github.com/eugenevinitsky/sequential_social_dilemma_games)
+## Part 2: Brain-Inspired Multi-Agent AI
+Based on the neural findings, we replaced standard CNN encoders with a Two-Head Attention Architecture that enforces a structural separation between:
 
-## Other Features
-- [x] Distributed training (IMPALA style architecture)
-  - Dynamically distribute load of multiple agents across available GPUs
-  - Run multiple environment instances, one per CPU core for experience collection
-- [x] Wandb and Tensorboard logging
-- [x] PopArt normalization
+**Head 1 (Environmental/Self)**: Focuses on static arena features, rewards (gold/apples), and walls.   
+**Head 2 (Social/Partner)**: Dedicated representational capacity for partner movement and egocentric tracking.
 
-## Help
+## Environments 
+We utilize the [Meltingpot](https://github.com/deepmind/meltingpot/) suite implemented with the [IMPALA algorithm (marl-jax)](https://github.com/kinalmehta/marl-jax) for parallelism:
+
+**Cooperative interactions: Coop-Mining**: Agents must coordinate to mine gold and can individually mine irons.  
+**Competitive interactions: Predator-Prey**: Predators must track prey egocentrically while prey attends to environmental resources.
+
+**Installation**:
 - [Installation Instructions](installation.md)
 - [Environment Details](environments.md)
 
-## Results
-
-### Daycare
-![daycare](images/daycare.png)
-|            | IMPALA     | OPRE       |
-|------------|------------|------------|
-| Substrate  | 65.944444  | 67.833333  |
-| Scenario 0 | 0.888889   | 0.333333   |
-| Scenario 1 | 109.111111 | 126.000000 |
-| Scenario 2 | 0.222222   | 0.000000   |
-| Scenario 3 | 154.555556 | 171.333333 |
-
-### Prisoner's Dilemma in the Matrix Repeated
-![pditn](images/prisoners_dilemma_in_the_matrix.png) 
-
-|            | IMPALA     | OPRE       |
-|------------|------------|------------|
-| Substrate  | 106.849834 | 38.178917  |
-| Scenario 0 | 131.002046 | 59.706502  |
-| Scenario 1 | 176.537759 | 114.685576 |
-| Scenario 2 | 79.583174  | 27.968283  |
-| Scenario 3 | 62.804043  | 41.763728  |
-| Scenario 4 | 48.626646  | 38.745093  |
-| Scenario 5 | 65.819378  | 47.660647  |
-| Scenario 6 | 101.830552 | 40.335949  |
-| Scenario 7 | 83.325145  | 49.824935  |
-| Scenario 8 | 77.751732  | 32.586948  |
-| Scenario 9 | 78.408784  | 74.622007  |
-
-
-## Implementation References
-- [Deepmind's Acme](https://github.com/deepmind/acme/)
-
-## Citation
-
-If you use this code in your project, please cite the following paper:
-```bibtex
-@article{mehta2023marljax,
-      title={marl-jax: Multi-agent Reinforcement Leaning framework for Social Generalization}, 
-      author={Kinal Mehta and Anuj Mahajan and Pawan Kumar},
-      year={2023},
-      journal={arXiv preprint arXiv:2303.13808},
-      url={https://arxiv.org/abs/2303.13808},
-}
-```
+**Two-head attention**:
+Details of the brain-inspired agent network: /marl/agents/impala/networks.py  
+<img src="images/Prey-attention.png" alt="Diagram of the two-head social attention architecture showing separate self and partner heads" width="500">
