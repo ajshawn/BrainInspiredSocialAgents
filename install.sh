@@ -8,10 +8,11 @@ which python
 
 pip install -r requirements.txt
 
+conda install cudatoolkit
+conda install cudnn
 
 mkdir gits
 cd gits
-
 
 pip install https://github.com/deepmind/lab2d/releases/download/release_candidate_2022-03-24/dmlab2d-1.0-cp39-cp39-manylinux_2_31_x86_64.whl 
 if [ "$?" -eq "0" ]
@@ -28,23 +29,11 @@ else
   cd ..
 fi
 
-
-# install melting pot
-git clone -b main https://github.com/deepmind/meltingpot
-cd meltingpot
-git reset --hard 9d3c74e68f9b506571706dd8be89e0809a8b4744
-curl -L https://storage.googleapis.com/dm-meltingpot/meltingpot-assets-2.1.0.tar.gz \
-    | tar -xz --directory=meltingpot
-pip install -e .
-cd ..
-
-
 git clone https://github.com/deepmind/acme
 cd acme
 git reset --hard 4525ade7015c46f33556e18d76a8d542b916f264
 pip install -e .
 cd ..
-
 
 mkdir -p $CONDA_PREFIX/etc/conda/activate.d
 mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d
