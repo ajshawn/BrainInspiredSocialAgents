@@ -210,7 +210,7 @@ def build_experiment_config(override_config_args=None):
     config_args = dict(        
         # Forward direct flags
         **{k: getattr(FLAGS, k) for k in [
-            'env_name', 'map_name', 'reward_scale', 'prosocial',
+            'env_name', 'map_name', 'reward_scale', 'prosocial', 'num_heads',
             'record_video', 'log_obs', 'log_filename', 'log_img_dir', 'log_interval',             
             'algo_name', 'positional_embedding', 'attn_enhance_multiplier', 'hidden_scale',
             'attn_enhance_item_idx', 'head_entropy_cost', 'attn_entropy_cost',
