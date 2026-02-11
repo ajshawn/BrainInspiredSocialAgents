@@ -17,13 +17,16 @@ from absl import app
 from absl import flags
 from meltingpot.python import scenario
 
+import config
+import train
 from marl import experiments
 from marl.experiments import config as ma_config
 from marl.utils import helpers
 from marl.utils.experiment_utils import make_experiment_logger
-import train
+
 
 FLAGS = flags.FLAGS
+
 flags.DEFINE_bool(
     "run_eval_on_scenarios", False, "Whether to run evaluation on meltingpot scenarios."
 )

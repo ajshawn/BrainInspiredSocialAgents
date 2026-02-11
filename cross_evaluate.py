@@ -15,8 +15,9 @@ from absl import app
 from absl import flags
 import yaml
 
-from marl import experiments
+import config
 import train
+from marl import experiments
 
 FLAGS = flags.FLAGS
 

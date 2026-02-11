@@ -16,6 +16,7 @@ from absl import flags
 import jax
 import launchpad as lp
 
+import config
 from marl import experiments
 from marl import specs as ma_specs
 from marl.agents import impala
