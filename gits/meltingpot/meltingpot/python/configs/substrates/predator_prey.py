@@ -58,9 +58,10 @@ from ml_collections import config_dict as configdict
 from meltingpot.python.utils.substrates import colors
 from meltingpot.python.utils.substrates import shapes
 from meltingpot.python.utils.substrates import specs
+import numpy as np
 
 # Warning: setting `_ENABLE_DEBUG_OBSERVATIONS = True` may cause slowdown.
-_ENABLE_DEBUG_OBSERVATIONS = False
+_ENABLE_DEBUG_OBSERVATIONS = True
 
 _COMPASS = ("N", "E", "S", "W")
 ITEMS = ("empty", "acorn")
@@ -897,8 +898,7 @@ def create_apple(apple_reward: float = 1.0):
           {
               "component": "StateManager",
               "kwargs": {
-                  "initialState":
-                      "apple",
+                  "initialState": "appleWait",
                   "stateConfigs": [
                       {
                           "state": "apple",
@@ -945,7 +945,7 @@ def create_apple(apple_reward: float = 1.0):
                   "name": "AppleFixedRateRegrow",
                   "liveState": "apple",
                   "waitState": "appleWait",
-                  "regrowRate": 0.007,
+                  "regrowRate": 0.003,
               }
           },
       ]

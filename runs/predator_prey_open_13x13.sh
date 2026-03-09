@@ -5,13 +5,13 @@ export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 CUDA_VISIBLE_DEVICES=${GPUS} python train.py \
   --async_distributed \
   --available_gpus ${GPUS} \
-  --num_actors 16 \
-  --algo_name PopArtIMPALA_attention_multihead \
+  --num_actors 30 \
+  --algo_name PopArtIMPALA_attention_multihead_gated \
   --num_heads 2 \
-  --positional_embedding learnable \
+  --positional_embedding frequency \
   --env_name meltingpot \
   --map_name predator_prey__open \
   --seed 1 \
-  --map_layout smaller_16x16 \
+  --map_layout smaller_16x16_rand \
   --agent_roles "predator, prey, prey" \
   #--experiment_dir ${exp_dir}
