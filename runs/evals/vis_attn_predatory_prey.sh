@@ -1,16 +1,21 @@
-EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2025-12-28_08:26:01.896233"
+#EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2026-02-12_13:36:02.493770"
+#EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2026-02-12_13:37:13.248145"
+#EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_0_meltingpot_predator_prey__open_2026-02-20_15:15:03.297548"
+#EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2026-01-08_02:38:20.215119"
+EXP_DIR_PREFIX="results/PopArtIMPALA_attention_multihead_gated_0_meltingpot_predator_prey__open_2026-03-17_15:02:13.856789"
 EVN_NAME="predator_prey__open"
 map_layout="smaller_16x16"
-ALGORITHM_NAME="PopArtIMPALA_attention_multihead"
-TIME_STAMP="2025-12-28_08:26:01.896233"
+ALGORITHM_NAME="PopArtIMPALA_attention_multihead_gated"
+TIME_STAMP="2026-03-17_15:02:13.856789"
+positional_embedding="frequency"
 LOG_INTERVAL=1
-N_AGENTS=3
+N_AGENTS=4
 N_HEADS=2
 GPUS="0"
 
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-for ckp in 258 ;do # {2..195}
+for ckp in 123 ;do # {2..195}
 
     obs_out_dir="data/${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
     log_filename="${obs_out_dir}/observations.jsonl"
@@ -28,15 +33,15 @@ for ckp in 258 ;do # {2..195}
         --ckp ${ckp} \
         --n_episodes 1 \
         --record_video True \
-        --positional_embedding learnable \
+        --positional_embedding ${positional_embedding} \
         --num_heads ${N_HEADS} \
         --log_timesteps True \
         --log_obs True \
         --log_filename ${log_filename} \
         --log_img_dir ${log_img_dir} \
         --log_interval ${LOG_INTERVAL} \
-        --agent_roles "predator, prey, prey" \
-        --agent_param_indices "0,1,2"
+        --agent_roles "predator, prey, prey, prey" \
+        --agent_param_indices "0,1,2,3"
         
     recording_dir="recordings/meltingpot/${EVN_NAME}"
     new_recording_name="${ALGORITHM_NAME}_${EVN_NAME}_${TIME_STAMP}_ckp${ckp}"
