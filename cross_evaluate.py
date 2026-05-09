@@ -53,8 +53,14 @@ def create_config_sweep():
     ckps = {
         'cnn_0': ("results/cross_play/PopArtIMPALA_1_meltingpot_predator_prey__open_2026-04-12_00_46_30.783807", 65),
         'cnn_1': ("results/cross_play/PopArtIMPALA_0_meltingpot_predator_prey__open_2026-04-07_17_10_45.655515", 86),
+        'cnn_2': ("results/cross_play/PopArtIMPALA_2_meltingpot_predator_prey__open_2026-04-12_00_47_22.704925", 65),
+        'cnn_3': ("results/cross_play/PopArtIMPALA_3_meltingpot_predator_prey__open_2026-04-15_14_10_32.876746", 54),
+        'cnn_4': ("results/cross_play/PopArtIMPALA_4_meltingpot_predator_prey__open_2026-04-15_14_10_58.033055", 65),
         'attn_0': ("results/cross_play/PopArtIMPALA_attention_multihead_0_meltingpot_predator_prey__open_2026-04-02_16_21_03.610948", 105),
         'attn_1': ("results/cross_play/PopArtIMPALA_attention_multihead_2_meltingpot_predator_prey__open_2026-04-02_16_38_57.810965", 106),
+        'attn_2': ("results/cross_play/PopArtIMPALA_attention_multihead_1_meltingpot_predator_prey__open_2026-04-23_15_48_45.124070", 76),
+        'attn_3': ("results/cross_play/PopArtIMPALA_attention_multihead_3_meltingpot_predator_prey__open_2026-04-30_13_32_28.699609", 43),
+        'attn_4': ("results/cross_play/PopArtIMPALA_attention_multihead_4_meltingpot_predator_prey__open_2026-04-17_21_17_32.406172", 85),
     }
 
     cnn_template = {

@@ -1,15 +1,10 @@
 export PYTHONPATH="./gits/meltingpot:gits/acme:${PYTHONPATH}"
 
-GPUS="1"
+GPUS="2"
 CUDA_VISIBLE_DEVICES=${GPUS} python cross_evaluate.py \
     --cross_play_config_path "runs/evals/cross_eval_config.yaml" \
     --env_name meltingpot \
-    --map_name coop_mining \
-    --map_layout original \
-    --dense_ore_regrow True \
-    --iron_rate 0.00012 \
-    --gold_rate 0.00008 \
-    --conservative_mine_beam True \
-    --iron_reward 1 \
-    --gold_reward 6 \
-    --mining_reward 0 
+    --map_name predator_prey__open \
+    --map_layout smaller_16x16_rand \
+    --n_episodes 20 \
+    --run_config_sweep True
