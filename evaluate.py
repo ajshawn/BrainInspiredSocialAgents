@@ -7,7 +7,7 @@ import sys
 cwd = os.getcwd()
 sys.path.append(cwd)
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = (
-    "0.6"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+    "0.2"  # see https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 )
 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 
@@ -80,7 +80,7 @@ def main(_):
                 env_factory = lambda seed: helpers.make_meltingpot_scenario(
                     seed=seed,
                     scenario_name=scenario_name,
-                    record=True,#(FLAGS.record_video == "True"),
+                    record=(FLAGS.record_video == "True"),
                 )
                 env_factory(0)
                 config.environment_factory = env_factory
@@ -89,6 +89,7 @@ def main(_):
                     ckpt_config,
                     environment_name=scenario_name,
                     ckp=FLAGS.ckp,
+                    num_eval_episodes = FLAGS.n_episodes,
                 )
         else:
             # running evaluation on substrate

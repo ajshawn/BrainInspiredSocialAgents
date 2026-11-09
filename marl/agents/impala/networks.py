@@ -98,7 +98,8 @@ def make_network_attention(environment_spec: EnvironmentSpec,
                    feature_extractor: hk.Module,
                    recurrent_dim: int = 128,
                    positional_embedding: Optional[str] = None,
-                   add_selection_vec: bool = False):
+                   add_selection_vec: bool = False,
+                   ablate_memory: bool = False):
 
   def forward_fn(inputs, state: hk.LSTMState):
     model = IMPALANetwork_attention(
@@ -106,7 +107,8 @@ def make_network_attention(environment_spec: EnvironmentSpec,
         recurrent_dim=recurrent_dim,
         feature_extractor=feature_extractor,
         positional_embedding=positional_embedding,
-        add_selection_vec=add_selection_vec)
+        add_selection_vec=add_selection_vec,
+        ablate_memory=ablate_memory)
     return model(inputs, state)
 
   def initial_state_fn(batch_size=None) -> hk.LSTMState:
@@ -115,7 +117,8 @@ def make_network_attention(environment_spec: EnvironmentSpec,
         recurrent_dim=recurrent_dim,
         feature_extractor=feature_extractor,
         positional_embedding=positional_embedding,
-        add_selection_vec=add_selection_vec)
+        add_selection_vec=add_selection_vec,
+        ablate_memory=ablate_memory)
     return model.initial_state(batch_size)
 
   def unroll_fn(inputs, state: hk.LSTMState):
@@ -124,7 +127,8 @@ def make_network_attention(environment_spec: EnvironmentSpec,
         recurrent_dim=recurrent_dim,
         feature_extractor=feature_extractor,
         positional_embedding=positional_embedding,
-        add_selection_vec=add_selection_vec)
+        add_selection_vec=add_selection_vec,
+        ablate_memory=ablate_memory)
     return model.unroll(inputs, state)
 
   def critic_fn(inputs):
@@ -133,7 +137,8 @@ def make_network_attention(environment_spec: EnvironmentSpec,
         recurrent_dim=recurrent_dim,
         feature_extractor=feature_extractor,
         positional_embedding=positional_embedding,
-        add_selection_vec=add_selection_vec)
+        add_selection_vec=add_selection_vec,
+        ablate_memory=ablate_memory)
     return model.critic(inputs)
 
   return make_haiku_networks_2(
@@ -290,7 +295,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
                                 attn_enhance_multiplier: float = 0.0,
                                 num_heads: int = 4,
                                 key_size: int = 64,
-                                hidden_scale: float = 1):   
+                                hidden_scale: float = 1,
+                                ablate_memory: bool = False):   
   def forward_fn(inputs, state: hk.LSTMState, ):
     model = IMPALANetwork_multihead_attention(
         environment_spec.actions.num_values,
@@ -301,7 +307,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
         key_size=key_size,
-        hidden_scale = hidden_scale)
+        hidden_scale = hidden_scale,
+        ablate_memory=ablate_memory)
     return model(inputs, state, ) 
 
   def initial_state_fn(batch_size=None) -> hk.LSTMState:
@@ -314,7 +321,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
         key_size=key_size,
-        hidden_scale = hidden_scale)
+        hidden_scale = hidden_scale,
+        ablate_memory=ablate_memory)
     return model.initial_state(batch_size)
 
   def unroll_fn(inputs, state: hk.LSTMState, ):
@@ -327,7 +335,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
         key_size=key_size,
-        hidden_scale = hidden_scale)
+        hidden_scale = hidden_scale,
+        ablate_memory=ablate_memory)
     return model.unroll(inputs, state, )
 
   def critic_fn(inputs):
@@ -340,7 +349,8 @@ def make_network_attention_multihead(environment_spec: EnvironmentSpec,
         attn_enhance_multiplier=attn_enhance_multiplier,
         num_heads=num_heads,
         key_size=key_size,
-        hidden_scale = hidden_scale)
+        hidden_scale = hidden_scale,
+        ablate_memory=ablate_memory)
     return model.critic(inputs)
 
   return make_haiku_networks_2(
@@ -1629,9 +1639,12 @@ class IMPALANetwork_attention(hk.RNNCore):
       add_selection_vec=False, 
       attn_enhance_multiplier: float = 0.0,
       use_layer_norm: bool = False,
-      zero_state: bool = False,):
+      zero_state: bool = False,
+      ablate_memory: bool = False,):
     super().__init__(name="impala_network")
     self.num_actions = num_actions
+    self.recurrent_dim = recurrent_dim
+    self.ablate_memory = ablate_memory
     self.use_layer_norm = use_layer_norm
     self._embed = feature_extractor(num_actions)
     self._attention = AttentionLayer(
@@ -1648,11 +1661,20 @@ class IMPALANetwork_attention(hk.RNNCore):
       self._recurrent = self._lstm_core
     self._policy_layer = hk.Linear(num_actions, name="policy")
     self._value_layer = hk.Linear(1, name="value_layer")
+
+  def _attn_query(self, hidden):
+    # Attention query: LSTM hidden state, or a fixed learnable vector when memory is ablated
+    if not self.ablate_memory:
+      return hidden
+    memory_query = hk.get_parameter(
+      "memory_query", [self.recurrent_dim], dtype=hidden.dtype,
+      init=hk.initializers.TruncatedNormal(stddev=1.0))
+    return jnp.broadcast_to(memory_query, hidden.shape)
     
   def __call__(self, inputs, state: hk.LSTMState, ):
     embedding = self._embed(inputs) # [B, 121, F]
     # Apply attention between CNN features and LSTM hidden state
-    attended, attn_weights = self._attention(state.hidden, embedding, embedding)
+    attended, attn_weights = self._attention(self._attn_query(state.hidden), embedding, embedding)
     if self.use_layer_norm:
       attended = self._attn_layer_norm(attended)
 
@@ -1713,7 +1735,7 @@ class IMPALANetwork_attention(hk.RNNCore):
       # Reshape it back to the original shape
       attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
       # Apply attention
-      attended, attn_weights = self._attention(state.hidden, attn_input, attn_input)
+      attended, attn_weights = self._attention(self._attn_query(state.hidden), attn_input, attn_input)
       if self.use_layer_norm:
         attended = self._attn_layer_norm(attended)
       # Combine with the rest of the input
@@ -1754,7 +1776,7 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
   def __call__(self, inputs, state: hk.LSTMState):
     embedding = self._embed(inputs) # [B, 11, 11, F]
     # Apply attention between CNN features and LSTM hidden state
-    attended, attn_weights = self._attention(state.hidden, embedding, embedding) # [B, 11, 11, F]
+    attended, attn_weights = self._attention(self._attn_query(state.hidden), embedding, embedding) # [B, 11, 11, F]
     attended = self._post_attn_cnn(attended)  # [B, 64]
 
     # extract other observations
@@ -1803,7 +1825,7 @@ class IMPALANetwork_attention_spatial(IMPALANetwork_attention):
       # Reshape it back to the original shape
       attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
       # Apply attention
-      attended, attn_weights = self._attention(state.hidden, attn_input, attn_input)
+      attended, attn_weights = self._attention(self._attn_query(state.hidden), attn_input, attn_input)
       # Apply post-attention CNN
       attended = self._post_attn_cnn(attended)
       # Combine with the rest of the input
@@ -1867,7 +1889,7 @@ class IMPALANetwork_attention_item_aware(IMPALANetwork_attention):
     obs = inputs["observation"]
 
     enhance_mask = obs["OBJECTS_IN_VIEW"]  # [B, 11, 11]
-    attended, attn_weights = self._attention(state.hidden, embedding, embedding, enhance_mask)
+    attended, attn_weights = self._attention(self._attn_query(state.hidden), embedding, embedding, enhance_mask)
 
     # extract other observations
     inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
@@ -1919,7 +1941,7 @@ class IMPALANetwork_attention_item_aware(IMPALANetwork_attention):
       attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
       enhance_mask_input = jnp.reshape(enhance_mask_input, (self.enhance_mask_shape[-2], self.enhance_mask_shape[-1]))
       # Apply attention
-      attended, attn_weights = self._attention(state.hidden, attn_input, attn_input, enhance_mask_input)
+      attended, attn_weights = self._attention(self._attn_query(state.hidden), attn_input, attn_input, enhance_mask_input)
       # Combine with the rest of the input
       rest_input = input_t[self.flatten_op_dim + self.flatten_enhance_mask_dim:]
       if rest_input.ndim < attended.ndim:
@@ -1953,7 +1975,8 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       add_selection_vec=False, 
       attn_enhance_multiplier=0.0,
       use_layer_norm=False,
-      hidden_scale = 1):
+      hidden_scale = 1,
+      ablate_memory=False):
     super().__init__(
       num_actions, 
       recurrent_dim, 
@@ -1961,7 +1984,8 @@ class IMPALANetwork_multihead_attention(IMPALANetwork_attention):
       positional_embedding, 
       add_selection_vec, 
       attn_enhance_multiplier,
-      use_layer_norm,)
+      use_layer_norm,
+      ablate_memory=ablate_memory,)
     # self._attention = MultiHeadAttentionLayer_blend(
     #     num_heads=num_heads,
     #     key_size_per_head=key_size // num_heads,
@@ -2078,7 +2102,7 @@ class IMPALANetwork_multihead_attention_item_aware(IMPALANetwork_attention):
     obs = inputs["observation"]
 
     objects_in_view = obs["OBJECTS_IN_VIEW"]  # [B, n_item_types, 11, 11]
-    attended, attn_weights = self._attention(state.hidden, embedding, embedding)
+    attended, attn_weights = self._attention(self._attn_query(state.hidden), embedding, embedding)
 
     # extract other observations
     inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
@@ -2131,7 +2155,7 @@ class IMPALANetwork_multihead_attention_item_aware(IMPALANetwork_attention):
       # Reshape it back to the original shape
       attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
       # Apply attention
-      attended, attn_weights = self._attention(state.hidden, attn_input, attn_input)
+      attended, attn_weights = self._attention(self._attn_query(state.hidden), attn_input, attn_input)
       if self.use_layer_norm:
         attended = self._attn_layer_norm(attended)
       # Combine with the rest of the input
@@ -2188,7 +2212,7 @@ class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention
   
     embedding, self_guidance_attn_map = self._embed(inputs) # [B, 121, F]
     obs = inputs["observation"]
-    attended, attn_weights = self._attention(state.hidden, embedding, embedding)
+    attended, attn_weights = self._attention(self._attn_query(state.hidden), embedding, embedding)
     inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]
     # Do a one-hot embedding of the actions.
     action = jax.nn.one_hot(
@@ -2241,7 +2265,7 @@ class IMPALANetwork_multihead_attention_self_supervision(IMPALANetwork_attention
       # Reshape it back to the original shape
       attn_input = jnp.reshape(attn_input, self.op_shape[1:]) # skip batch/time dimension
       # Apply attention
-      attended, attn_weights = self._attention(state.hidden, attn_input, attn_input)
+      attended, attn_weights = self._attention(self._attn_query(state.hidden), attn_input, attn_input)
       if self.use_layer_norm:
         attended = self._attn_layer_norm(attended)
       # Combine with the rest of the input
@@ -2303,7 +2327,7 @@ class IMPALANetwork_multihead_attention_enhance(IMPALANetwork_attention):
     objects_in_view = obs["OBJECTS_IN_VIEW"]  # [n_item_types, 11, 11]
     focal_objects = objects_in_view[self.attn_enhance_item_idx]  # [11, 11]
     focal_objects = jnp.reshape(focal_objects, (-1, focal_objects.shape[-1]*focal_objects.shape[-2]))  # [B, 121]
-    attended, attn_weights = self._attention(state.hidden, embedding, embedding, enhance_map=focal_objects)
+    attended, attn_weights = self._attention(self._attn_query(state.hidden), embedding, embedding, enhance_map=focal_objects)
 
     # extract other observations
     inventory, ready_to_shoot = obs["INVENTORY"], obs["READY_TO_SHOOT"]

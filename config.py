@@ -58,10 +58,10 @@ flags.DEFINE_float("mining_reward", 0, "negative reward for mining")
 flags.DEFINE_float("iron_reward", 1, "reward for iron")
 flags.DEFINE_float("gold_reward", 4, "reward for gold")
 flags.DEFINE_bool(
-    "dense_ore_regrow", False, "Whether to use a larger ore regrowth rate"
+    "dense_ore_regrow", True, "Whether to use a larger ore regrowth rate"
 )
-flags.DEFINE_float("iron_rate", 0.0003, "iron regrow")
-flags.DEFINE_float("gold_rate", 0.0002, "gold regrow")
+flags.DEFINE_float("iron_rate", 0.00012, "iron regrow")
+flags.DEFINE_float("gold_rate", 0.00008, "gold regrow")
 
 # Algorithm configurations
 flags.DEFINE_enum(
@@ -100,6 +100,10 @@ flags.DEFINE_string("attn_enhance_head_indices", "0", "Comma separated list of a
 flags.DEFINE_string("attn_enhance_agent_skip_indices", "", "Comma separated list of agent indices to skip for attention enhancement.")
 flags.DEFINE_integer("attn_enhance_item_idx", 0, "Index of the item to enhance attention on.")
 flags.DEFINE_integer("attn_key_size", 64, "Size of the attention key vector.")
+flags.DEFINE_bool(
+    "ablate_memory", False,
+    "Use a fixed learnable attention query instead of the LSTM hidden state.",
+)
 flags.DEFINE_string(
     "disturb_heads", "0",
     "Comma separated list of attention heads to disturb.",

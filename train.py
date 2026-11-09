@@ -70,7 +70,8 @@ def build_experiment_config(override_config_args=None):
             'record_video', 'log_obs', 'log_filename', 'log_img_dir', 'log_interval',             
             'algo_name', 'positional_embedding', 'attn_enhance_multiplier', 'hidden_scale',
             'attn_enhance_item_idx', 'head_entropy_cost', 'attn_entropy_cost',
-            'head_cross_entropy_cost', 'head_mse_cost', 'reward_pred_cost', 'attn_key_size'
+            'head_cross_entropy_cost', 'head_mse_cost', 'reward_pred_cost', 'attn_key_size',
+            'ablate_memory',
         ]},
         # Parsed fields
         add_selection_vector=(FLAGS.add_selection_vector == "True"),
@@ -88,6 +89,9 @@ def build_experiment_config(override_config_args=None):
 
     # Assert at most one of the attention head auxiliary losses is used
     assert sum([c.head_entropy_cost > 0, c.head_cross_entropy_cost > 0, c.head_mse_cost > 0]) <= 1
+    assert not c.ablate_memory or c.algo_name in (
+        "PopArtIMPALA_attention", "PopArtIMPALA_attention_multihead"
+    ), f"ablate_memory is not supported for {c.algo_name}"
 
     autoreset = False
 
@@ -218,7 +222,8 @@ def build_experiment_config(override_config_args=None):
     elif c.algo_name == "PopArtIMPALA_attention":
         # Create network
         network_factory = functools.partial(
-            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=c.positional_embedding, add_selection_vec = c.add_selection_vector
+            impala.make_network_attention, feature_extractor=AttentionCNN_FE, positional_embedding=c.positional_embedding, add_selection_vec = c.add_selection_vector,
+            ablate_memory=c.ablate_memory,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
@@ -289,6 +294,7 @@ def build_experiment_config(override_config_args=None):
             num_heads=c.num_heads,
             key_size=c.attn_key_size,
             hidden_scale = c.hidden_scale,
+            ablate_memory=c.ablate_memory,
         )
         network = network_factory(
             environment_specs.get_single_agent_environment_specs()
