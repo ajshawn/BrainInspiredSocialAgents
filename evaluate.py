@@ -47,7 +47,9 @@ def main(_):
         raise ValueError("experiment_dir must be specified")
     if FLAGS.save_dir is None:
         FLAGS.save_dir = FLAGS.experiment_dir
-    config, experiment_dir = train.build_experiment_config()
+    # OBJECTS_IN_VIEW_TENSOR is only consumed by the timestep log
+    config, experiment_dir = train.build_experiment_config(
+        objects_in_view_tensor=FLAGS.log_timesteps)
 
     ckpt_config = ma_config.CheckpointingConfig(
         max_to_keep=3, directory=experiment_dir, add_uid=False

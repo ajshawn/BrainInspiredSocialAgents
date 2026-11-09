@@ -96,6 +96,9 @@ function Avatar:__init__(kwargs)
       -- are assigned randomly at the start of each episode. If you instead
       -- set this to false then initial Avatar orientation is always North.
       {'randomizeInitialOrientation', args.default(true), args.booleanType},
+      -- `objectsInViewTensor` (bool) default False. When true, register the
+      -- OBJECTS_IN_VIEW_TENSOR debug observation (expensive, evaluation only).
+      {'objectsInViewTensor', args.default(false), args.booleanType},
   })
   Avatar.Base.__init__(self, kwargs)
   self._config.kwargs = kwargs
@@ -117,6 +120,7 @@ function Avatar:__init__(kwargs)
 
   self._config.skipWaitStateRewards = kwargs.skipWaitStateRewards
   self._config.randomizeInitialOrientation = kwargs.randomizeInitialOrientation
+  self._config.objectsInViewTensor = kwargs.objectsInViewTensor
 
   if kwargs.postInitialSpawnGroup ~= '_DEFAULT' then
     self._config.postInitialSpawnGroup = kwargs.postInitialSpawnGroup
@@ -333,65 +337,67 @@ function Avatar:addObservations(tileSet, world, observations)
     end
   }
   
-  observations[#observations + 1] = {
-    name = id .. ".OBJECTS_IN_VIEW_TENSOR",
-    type = 'tensor.Int32Tensor',
-    shape = {50, 3},  -- 50 objects max, each with [typeIndex, dx, dy]
-    func = function(grid)
-      local MAX_OBJECTS = 50
+  if self._config.objectsInViewTensor then
+    observations[#observations + 1] = {
+      name = id .. ".OBJECTS_IN_VIEW_TENSOR",
+      type = 'tensor.Int32Tensor',
+      shape = {50, 3},  -- 50 objects max, each with [typeIndex, dx, dy]
+      func = function(grid)
+        local MAX_OBJECTS = 50
 
-      local nameRefs = {
-        player = 1,
-        ironRaw = 2,
-        goldRaw = 3,
-        goldPartial = 4,
-        wall = 5,
-        -- add more if needed
-      }
-
-      -- Gather objects from both layers
-      local objectsInView = self:queryPartialObservationWindow('upperPhysical')
-      local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
-      for _, obj in ipairs(objectsInViewLower) do
-        table.insert(objectsInView, obj)
-      end
-
-      local avatar = self.gameObject
-      local transform = avatar:getComponent('Transform')
-      local avatarPos = avatar:getPosition()
-
-      -- Each entry is {typeIndex, dx, dy}
-      local nestedData = {}
-
-      for _, obj in ipairs(objectsInView) do
-        local pos = obj:getPosition()
-        local rel = transform:getRelativeDirectionFromAbsolute{
-          pos[1] - avatarPos[1],
-          pos[2] - avatarPos[2]
+        local nameRefs = {
+          player = 1,
+          ironRaw = 2,
+          goldRaw = 3,
+          goldPartial = 4,
+          wall = 5,
+          -- add more if needed
         }
 
-        local typeName = obj:getState()
-        local typeIndex = nameRefs[typeName]
-
-        if typeIndex then
-          table.insert(nestedData, {typeIndex, rel[1], rel[2]})
+        -- Gather objects from both layers
+        local objectsInView = self:queryPartialObservationWindow('upperPhysical')
+        local objectsInViewLower = self:queryPartialObservationWindow("lowerPhysical")
+        for _, obj in ipairs(objectsInViewLower) do
+          table.insert(objectsInView, obj)
         end
-      end
 
-      if #nestedData > MAX_OBJECTS then
-        error(string.format(
-          "[OBJECTS_IN_VIEW_TENSOR] Too many objects: %d (max %d)",
-          #nestedData, MAX_OBJECTS))
-      end
+        local avatar = self.gameObject
+        local transform = avatar:getComponent('Transform')
+        local avatarPos = avatar:getPosition()
 
-      -- Pad with [0, 0, 0] if needed
-      while #nestedData < MAX_OBJECTS do
-        table.insert(nestedData, {0, 0, 0})
-      end
+        -- Each entry is {typeIndex, dx, dy}
+        local nestedData = {}
 
-      return tensor.Int32Tensor(nestedData)
-    end
-  }
+        for _, obj in ipairs(objectsInView) do
+          local pos = obj:getPosition()
+          local rel = transform:getRelativeDirectionFromAbsolute{
+            pos[1] - avatarPos[1],
+            pos[2] - avatarPos[2]
+          }
+
+          local typeName = obj:getState()
+          local typeIndex = nameRefs[typeName]
+
+          if typeIndex then
+            table.insert(nestedData, {typeIndex, rel[1], rel[2]})
+          end
+        end
+
+        if #nestedData > MAX_OBJECTS then
+          error(string.format(
+            "[OBJECTS_IN_VIEW_TENSOR] Too many objects: %d (max %d)",
+            #nestedData, MAX_OBJECTS))
+        end
+
+        -- Pad with [0, 0, 0] if needed
+        while #nestedData < MAX_OBJECTS do
+          table.insert(nestedData, {0, 0, 0})
+        end
+
+        return tensor.Int32Tensor(nestedData)
+      end
+    }
+  end
 end
 
 function Avatar:reset()

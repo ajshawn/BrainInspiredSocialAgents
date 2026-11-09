@@ -42,9 +42,11 @@ def parse_list(flag_val, item_type=int, default=None):
     return [item_type(x.strip()) for x in flag_val.split(",")]
 
 
-def _get_custom_env_configs():
+def _get_custom_env_configs(objects_in_view_tensor=False):
     result = {}
     if FLAGS.env_name == "meltingpot" and FLAGS.map_name == "coop_mining":
+        if objects_in_view_tensor:
+            result["objects_in_view_tensor"] = True
         if FLAGS.conservative_mine_beam:
             result["conservative_mine_beam"] = True
             result["mining_reward"] = FLAGS.mining_reward
@@ -61,7 +63,7 @@ def _get_custom_env_configs():
     return result
 
 
-def build_experiment_config(override_config_args=None):
+def build_experiment_config(override_config_args=None, objects_in_view_tensor=False):
     """Builds experiment config which can be executed in different ways."""
     config_args = dict(        
         # Forward direct flags
@@ -147,7 +149,7 @@ def build_experiment_config(override_config_args=None):
         feature_extractor = ImageFE
         num_options = 8
     elif c.env_name == "meltingpot":
-        custom_env_configs = _get_custom_env_configs()
+        custom_env_configs = _get_custom_env_configs(objects_in_view_tensor)
         env_factory = lambda seed: helpers.env_factory(
             seed,
             c.map_name,

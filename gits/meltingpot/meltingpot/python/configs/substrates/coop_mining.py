@@ -684,7 +684,6 @@ def get_config(**kwargs):
         "POSITION",
         "ORIENTATION",
         "OBJECTS_IN_VIEW",
-        "OBJECTS_IN_VIEW_TENSOR",
         # "OBJECTS_IN_VIEW_STR",
     ]
     config.global_observation_names = [
@@ -693,19 +692,21 @@ def get_config(**kwargs):
 
     # The specs of the environment (from a single-agent perspective).
     config.action_spec = specs.action(len(ACTION_SET))
-    config.timestep_spec = specs.timestep(
-        {
-            "RGB": specs.OBSERVATION["RGB"],
-            "READY_TO_SHOOT": specs.OBSERVATION["READY_TO_SHOOT"],
-            # Debug only (do not use the following observations in policies).
-            "WORLD.RGB": specs.rgb(216, 216),
-            "POSITION": specs.OBSERVATION["POSITION"],
-            "ORIENTATION": specs.OBSERVATION["ORIENTATION"],
-            "OBJECTS_IN_VIEW": specs.OBSERVATION["OBJECTS_IN_VIEW"],
-            # "OBJECTS_IN_VIEW_STR": specs.OBSERVATION["OBJECTS_IN_VIEW_STR"],
-            "OBJECTS_IN_VIEW_TENSOR": specs.OBSERVATION["OBJECTS_IN_VIEW_TENSOR"],
-        }
-    )
+    observation_specs = {
+        "RGB": specs.OBSERVATION["RGB"],
+        "READY_TO_SHOOT": specs.OBSERVATION["READY_TO_SHOOT"],
+        # Debug only (do not use the following observations in policies).
+        "WORLD.RGB": specs.rgb(216, 216),
+        "POSITION": specs.OBSERVATION["POSITION"],
+        "ORIENTATION": specs.OBSERVATION["ORIENTATION"],
+        "OBJECTS_IN_VIEW": specs.OBSERVATION["OBJECTS_IN_VIEW"],
+        # "OBJECTS_IN_VIEW_STR": specs.OBSERVATION["OBJECTS_IN_VIEW_STR"],
+    }
+    # OBJECTS_IN_VIEW_TENSOR is expensive to compute; only enable it for evaluation logging.
+    if kwargs.get("objects_in_view_tensor", False):
+        config.individual_observation_names.append("OBJECTS_IN_VIEW_TENSOR")
+        observation_specs["OBJECTS_IN_VIEW_TENSOR"] = specs.OBSERVATION["OBJECTS_IN_VIEW_TENSOR"]
+    config.timestep_spec = specs.timestep(observation_specs)
 
     # The roles assigned to each player.
     config.valid_roles = frozenset({"default", "target"})
@@ -724,6 +725,12 @@ def build(
     num_players = len(roles)
     gameObjects = get_avatar_objects(num_players)
     prefabs = PREFABS
+
+    if config.custom_args.get("objects_in_view_tensor", False):
+        for avatar in gameObjects:
+            for c in avatar["components"]:
+                if c["component"] == "Avatar":
+                    c["kwargs"]["objectsInViewTensor"] = True
 
     if config.custom_args.get("CONSERVATIVE_MINE_BEAM", True):
         mining_rew = config.custom_args.get("mining_reward", 0)  # Default: 0
