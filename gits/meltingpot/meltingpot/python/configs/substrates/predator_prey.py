@@ -62,7 +62,6 @@ import numpy as np
 
 # Warning: setting `_ENABLE_DEBUG_OBSERVATIONS = True` may cause slowdown.
 _ENABLE_DEBUG_OBSERVATIONS = True
-
 _COMPASS = ("N", "E", "S", "W")
 ITEMS = ("empty", "acorn")
 INVISIBLE = (0, 0, 0, 0)
@@ -945,7 +944,7 @@ def create_apple(apple_reward: float = 1.0):
                   "name": "AppleFixedRateRegrow",
                   "liveState": "apple",
                   "waitState": "appleWait",
-                  "regrowRate": 0.003,
+                  "regrowRate": 0.0015,
               }
           },
       ]
